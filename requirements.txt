@@ -63,6 +63,7 @@ httpx==0.28.1
 aiohttp==3.11.11
 
 # --- Rate Limiting ---
+limits==3.14.1
 slowapi==0.1.10
 
 # --- Logging & Monitoring ---
