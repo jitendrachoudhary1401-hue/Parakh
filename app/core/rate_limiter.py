@@ -7,6 +7,8 @@ login, upload, analysis, evidence commitment, citizen reports.
 
 from __future__ import annotations
 
+from app.config import get_settings
+
 try:
     from slowapi import Limiter
     from slowapi.util import get_remote_address
