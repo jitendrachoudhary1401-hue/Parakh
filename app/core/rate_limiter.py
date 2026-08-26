@@ -16,10 +16,13 @@ try:
     def _key_func(request):
         return get_remote_address(request)
 
+    settings = get_settings()
+    storage_uri = "memory://" if settings.app_env == "testing" or not settings.redis_url or settings.redis_url == "memory://" else settings.redis_url
+
     limiter = Limiter(
         key_func=_key_func,
         default_limits=["60/minute"],
-        storage_uri=get_settings().redis_url if get_settings().redis_url else "memory://",
+        storage_uri=storage_uri,
     )
 except ImportError:
     class DummyLimiter:
