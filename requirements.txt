@@ -63,7 +63,7 @@ httpx==0.28.1
 aiohttp==3.11.11
 
 # --- Rate Limiting ---
-slowapi>=0.1.9
+slowapi==0.1.10
 
 # --- Logging & Monitoring ---
 structlog==24.4.0
