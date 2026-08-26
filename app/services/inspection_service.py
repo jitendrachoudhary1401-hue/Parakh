@@ -1,0 +1,73 @@
+"""
+Project PARAKH — Inspection Lifecycle Service
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+from typing import List, Optional
+from uuid import UUID
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.exceptions import NotFoundError
+from app.models.inspection import Inspection
+from app.repositories.inspection_repo import InspectionRepository
+from app.schemas.inspection import InspectionCreate, InspectionUpdate
+
+
+class InspectionService:
+    def __init__(self, db: AsyncSession):
+        self.db = db
+        self.repo = InspectionRepository(db)
+
+    async def get_by_id(self, inspection_id: UUID) -> Inspection:
+        inspection = await self.repo.get_by_id(inspection_id)
+        if not inspection:
+            raise NotFoundError("Inspection", str(inspection_id))
+        return inspection
+
+    async def list_inspections(
+        self,
+        offset: int = 0,
+        limit: int = 20,
+        status: Optional[str] = None,
+        overall_result: Optional[str] = None,
+        inspector_id: Optional[UUID] = None,
+        product_barcode: Optional[str] = None,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
+    ) -> tuple[List[Inspection], int]:
+        return await self.repo.list_inspections(
+            offset=offset,
+            limit=limit,
+            status=status,
+            overall_result=overall_result,
+            inspector_id=inspector_id,
+            product_barcode=product_barcode,
+            date_from=date_from,
+            date_to=date_to,
+        )
+
+    async def create_inspection(self, inspector_id: UUID, data: InspectionCreate) -> Inspection:
+        inspection = Inspection(
+            inspector_id=inspector_id,
+            product_barcode=data.product_barcode,
+            latitude=data.latitude,
+            longitude=data.longitude,
+            location_name=data.location_name,
+            notes=data.notes,
+            status="pending",
+        )
+        return await self.repo.create(inspection)
+
+    async def update_status(self, inspection_id: UUID, data: InspectionUpdate) -> Inspection:
+        inspection = await self.get_by_id(inspection_id)
+        if data.status is not None:
+            inspection.status = data.status
+        if data.overall_result is not None:
+            inspection.overall_result = data.overall_result
+        if data.notes is not None:
+            inspection.notes = data.notes
+
+        return await self.repo.update(inspection)

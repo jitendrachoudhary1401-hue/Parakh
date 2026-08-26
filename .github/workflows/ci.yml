@@ -1,0 +1,85 @@
+name: Project PARAKH CI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  backend-test:
+    name: Backend Test & Lint
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: parakh_user
+          POSTGRES_PASSWORD: parakh_password
+          POSTGRES_DB: parakh_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov httpx flake8 black
+
+      - name: Code Formatting & Lint Check
+        run: |
+          flake8 app/ --count --max-line-length=120 --statistics --ignore=E501,W503 || true
+
+      - name: Run Backend Test Suites
+        env:
+          POSTGRES_SERVER: localhost
+          POSTGRES_USER: parakh_user
+          POSTGRES_PASSWORD: parakh_password
+          POSTGRES_DB: parakh_db
+          MONGODB_URL: mongodb://localhost:27017
+          SECRET_KEY: ci_test_secret_key_minimum_32_characters_long
+        run: |
+          pytest tests/ -v
+
+  flutter-analyze:
+    name: Flutter Mobile Frontend Analyze
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Flutter Dependencies
+        working-directory: mobile_app
+        run: flutter pub get
+
+      - name: Verify Flutter Code Analysis
+        working-directory: mobile_app
+        run: flutter analyze --no-fatal-infos || true

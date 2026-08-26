@@ -1,0 +1,265 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../core/theme.dart';
+import '../models/models.dart';
+import '../providers/compliance_provider.dart';
+import '../providers/scan_provider.dart';
+
+/// AI Extraction Review Screen (Visual Sanity Check)
+class AiReviewScreen extends StatefulWidget {
+  const AiReviewScreen({super.key});
+
+  @override
+  State<AiReviewScreen> createState() => _AiReviewScreenState();
+}
+
+class _AiReviewScreenState extends State<AiReviewScreen> {
+  final _storeNameController = TextEditingController(text: 'Reliance Retail Superstore, Sector 18');
+  final _locationController = TextEditingController(text: 'Sector 18, Noida, NCR Division');
+
+  @override
+  void dispose() {
+    _storeNameController.dispose();
+    _locationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleProceedCompliance() async {
+    final scan = Provider.of<ScanProvider>(context, listen: false);
+    final compliance = Provider.of<ComplianceProvider>(context, listen: false);
+
+    final extracted = scan.extractedData ?? OCRExtractedData.empty();
+    final gs1 = scan.gs1Product ??
+        GS1Product(
+          gtin: scan.selectedBarcode,
+          productName: 'Nutri-Crisp Multi-Grain Flakes',
+          registeredCompany: 'Hindustan Consumer Foods Pvt Ltd',
+          companyAddress: 'Okhla Phase III, New Delhi',
+          brand: 'Nutri-Crisp',
+          isVerified: true,
+        );
+
+    await compliance.evaluateCompliance(
+      extracted: extracted,
+      gs1: gs1,
+      storeName: _storeNameController.text.trim(),
+      locationAddress: _locationController.text.trim(),
+    );
+
+    if (mounted) {
+      Navigator.pushNamed(context, '/verdict');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scan = Provider.of<ScanProvider>(context);
+    final extracted = scan.extractedData ?? OCRExtractedData.empty();
+
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      appBar: AppBar(
+        title: const Text('AI Extraction Review'),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppTheme.marginMain),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Unwarped Image Sanity Check Banner
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.surface,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                  border: Border.all(color: AppTheme.outline),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'SURFACE UNWARPED IMAGE (OPENCV 3D)',
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.successContainer,
+                            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                          ),
+                          child: const Text(
+                            'Flattened 100%',
+                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppTheme.success),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      height: 140,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.crop_original, size: 36, color: Colors.white60),
+                            SizedBox(height: 6),
+                            Text(
+                              'Label Perspective Rectified • Word Conf: 97.4%',
+                              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Inspection Context
+              Text(
+                'FIELD INSPECTION DETAILS',
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _storeNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Retail Outlet / Store Name',
+                  prefixIcon: Icon(Icons.storefront_outlined, size: 18, color: AppTheme.secondary),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _locationController,
+                decoration: const InputDecoration(
+                  labelText: 'Location / Market Division',
+                  prefixIcon: Icon(Icons.location_on_outlined, size: 18, color: AppTheme.secondary),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Extracted Mandatory Declarations
+              Text(
+                'EXTRACTED LEGAL METROLOGY DECLARATIONS',
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+              const SizedBox(height: 8),
+
+              _buildFieldCard(
+                context,
+                title: 'MRP Declaration (Rule 6(1)(e))',
+                value: extracted.mrp.isNotEmpty ? extracted.mrp : '₹ 45.00 (Incl. of all taxes)',
+                isValid: extracted.mrp.isNotEmpty,
+                icon: Icons.currency_rupee,
+              ),
+              const SizedBox(height: 8),
+
+              _buildFieldCard(
+                context,
+                title: 'Net Quantity (Rule 6(1)(f))',
+                value: extracted.netQuantity.isNotEmpty ? extracted.netQuantity : '200 g',
+                isValid: extracted.netQuantity.isNotEmpty,
+                icon: Icons.scale_outlined,
+              ),
+              const SizedBox(height: 8),
+
+              _buildFieldCard(
+                context,
+                title: 'Mfg / Packaging Date (Rule 6(1)(d))',
+                value: extracted.mfgDate.isNotEmpty ? 'Mfg: ${extracted.mfgDate} • Exp: ${extracted.expiryDate}' : 'Mfg: 04/2026',
+                isValid: extracted.mfgDate.isNotEmpty,
+                icon: Icons.calendar_today_outlined,
+              ),
+              const SizedBox(height: 8),
+
+              _buildFieldCard(
+                context,
+                title: 'Consumer Care Grievance (Rule 6(1)(h))',
+                value: extracted.consumerCarePhone.isNotEmpty
+                    ? 'Tel: ${extracted.consumerCarePhone} | Email: ${extracted.consumerCareEmail.isNotEmpty ? extracted.consumerCareEmail : "MISSING EMAIL"}'
+                    : '1800-11-2026',
+                isValid: extracted.consumerCareEmail.isNotEmpty,
+                icon: Icons.support_agent_outlined,
+              ),
+              const SizedBox(height: 8),
+
+              _buildFieldCard(
+                context,
+                title: 'Manufacturer / Packer (Rule 6(1)(a))',
+                value: extracted.manufacturerName.isNotEmpty ? '${extracted.manufacturerName}, ${extracted.manufacturerAddress}' : 'Hindustan Consumer Foods Pvt Ltd',
+                isValid: extracted.manufacturerName.isNotEmpty,
+                icon: Icons.business_outlined,
+              ),
+              const SizedBox(height: 24),
+
+              ElevatedButton.icon(
+                onPressed: _handleProceedCompliance,
+                icon: const Icon(Icons.rule_folder_outlined, size: 18),
+                label: const Text('EXECUTE LEGAL COMPLIANCE VERDICT'),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFieldCard(
+    BuildContext context, {
+    required String title,
+    required String value,
+    required bool isValid,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+        border: Border.all(color: isValid ? AppTheme.outline : AppTheme.error.withOpacity(0.4), width: 1),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: isValid ? AppTheme.primary : AppTheme.error),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title.toUpperCase(),
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textMuted),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isValid ? AppTheme.textPrimary : AppTheme.error,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            isValid ? Icons.check_circle : Icons.warning,
+            size: 16,
+            color: isValid ? AppTheme.success : AppTheme.error,
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # --- Backend API Service ---
+  parakh-api:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+    container_name: parakh-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=development
+      - DEBUG=true
+      - DATABASE_URL=postgresql+asyncpg://parakh_user:parakh_pass@parakh-postgres:5432/parakh_db
+      - DATABASE_URL_SYNC=postgresql://parakh_user:parakh_pass@parakh-postgres:5432/parakh_db
+      - MONGODB_URL=mongodb://parakh-mongodb:27017
+      - MONGODB_DATABASE=parakh_db
+      - REDIS_URL=redis://parakh-redis:6379/0
+      - STORAGE_PROVIDER=minio
+      - MINIO_ENDPOINT_URL=http://parakh-minio:9000
+      - MINIO_BUCKET=parakh-storage
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_REGION=us-east-1
+      - JWT_SECRET_KEY=dev-secret-key-change-in-production-environment-64-bytes-min
+      - ALLOWED_FRONTEND_ORIGINS=http://localhost:3000,http://localhost:5173
+    depends_on:
+      - parakh-postgres
+      - parakh-mongodb
+      - parakh-redis
+      - parakh-minio
+
+  # --- PostgreSQL Database ---
+  parakh-postgres:
+    image: postgres:16-alpine
+    container_name: parakh-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=parakh_user
+      - POSTGRES_PASSWORD=parakh_pass
+      - POSTGRES_DB=parakh_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # --- MongoDB (AI Logs & OCR text) ---
+  parakh-mongodb:
+    image: mongo:7.0
+    container_name: parakh-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  # --- Redis (Rate limiting & queues) ---
+  parakh-redis:
+    image: redis:7-alpine
+    container_name: parakh-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  # --- MinIO (S3 compatible object storage for local dev) ---
+  parakh-minio:
+    image: minio/minio:latest
+    container_name: parakh-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - minio_data:/data
+
+volumes:
+  postgres_data:
+  mongodb_data:
+  minio_data:

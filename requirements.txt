@@ -1,0 +1,91 @@
+# ============================================================
+# Project PARAKH — Backend Dependencies (Open / Self-Hosted Stack)
+# ============================================================
+
+# --- Core Framework ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+python-multipart==0.0.20
+
+# --- Authentication & Security ---
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.2.1
+cryptography==44.0.0
+
+# --- PostgreSQL ---
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+alembic==1.14.1
+psycopg2-binary==2.9.10
+
+# --- MongoDB ---
+motor==3.7.0
+pymongo==4.10.1
+
+# --- Redis (rate limiting, caching) ---
+redis==5.2.1
+aioredis==2.0.1
+
+# --- AI / Computer Vision ---
+opencv-python-headless==4.10.0.84
+numpy==2.2.1
+Pillow==11.1.0
+
+# --- OCR (Google Cloud Vision) ---
+google-cloud-vision==3.9.0
+
+# --- NLP (HuggingFace) ---
+transformers==4.47.1
+torch==2.5.1
+tokenizers==0.21.0
+
+# --- Anomaly Detection (Vision Transformers) ---
+timm==1.0.12
+
+# --- Predictive Analytics ---
+scikit-learn==1.6.1
+pandas==2.2.3
+joblib==1.4.2
+
+# --- Object Storage (MinIO & Local Filesystem) ---
+boto3==1.36.2
+aiofiles==24.1.0
+
+# --- PDF Generation ---
+reportlab==4.2.5
+PyPDF2==3.0.1
+
+# --- HTTP Client ---
+httpx==0.28.1
+aiohttp==3.11.11
+
+# --- Rate Limiting ---
+slowapi==0.1.9
+limits==3.14.3
+
+# --- Logging & Monitoring ---
+structlog==24.4.0
+python-json-logger==3.2.1
+
+# --- File Validation ---
+python-magic==0.4.27
+filetype==1.2.0
+
+# --- Testing ---
+pytest==8.3.4
+pytest-asyncio==0.25.0
+pytest-cov==6.0.0
+factory-boy==3.3.1
+faker==33.1.0
+
+# --- Development ---
+black==24.10.0
+ruff==0.8.6
+mypy==1.14.1
+pre-commit==4.0.1
+
+# --- Environment ---
+python-dotenv==1.0.1
