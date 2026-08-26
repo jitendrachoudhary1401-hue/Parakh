@@ -5,8 +5,6 @@ Implements §9 & §37:
 Retrieve authorized immutable audit logs for administrative oversight.
 """
 
-from __future__ import annotations
-
 from datetime import datetime
 from typing import Optional
 from uuid import UUID

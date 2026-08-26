@@ -5,8 +5,6 @@ Implements §9:
 Retrieve compliance determination and granular rule results.
 """
 
-from __future__ import annotations
-
 from uuid import UUID
 
 from fastapi import APIRouter, Depends

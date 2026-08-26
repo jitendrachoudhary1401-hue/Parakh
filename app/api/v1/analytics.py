@@ -5,8 +5,6 @@ Implements §9, §27, §28:
 Dashboard metrics, historical trends, and predictive risk analytics.
 """
 
-from __future__ import annotations
-
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query

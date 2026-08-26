@@ -5,8 +5,6 @@ Implements §8 & §19:
 POST /api/v1/analysis/verify-compliance — Execute AI vision pipeline and rule engine.
 """
 
-from __future__ import annotations
-
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request

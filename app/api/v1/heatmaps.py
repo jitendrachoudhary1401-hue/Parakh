@@ -5,8 +5,6 @@ Implements §8 & §29:
 GET /api/v1/dashboard/heatmaps — Return actual aggregated geospatial analytics.
 """
 
-from __future__ import annotations
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 

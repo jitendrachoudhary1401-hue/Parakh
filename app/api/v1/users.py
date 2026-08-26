@@ -5,8 +5,6 @@ Implements §9 & §11:
 User self profile and authorized administration.
 """
 
-from __future__ import annotations
-
 from typing import Optional
 from uuid import UUID
 

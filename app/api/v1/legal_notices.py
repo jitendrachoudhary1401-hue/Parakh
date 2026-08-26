@@ -5,8 +5,6 @@ Implements §9 & §26:
 Generate and retrieve statutory PDF legal notices based on actual inspection data.
 """
 
-from __future__ import annotations
-
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request

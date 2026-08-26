@@ -5,8 +5,6 @@ Implements §8:
 POST /api/v1/scan/upload — Receive product inspection images securely.
 """
 
-from __future__ import annotations
-
 from typing import Optional
 from uuid import UUID
 

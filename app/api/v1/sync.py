@@ -5,8 +5,6 @@ Implements §33:
 Mobile edge client offline sync endpoint.
 """
 
-from __future__ import annotations
-
 from typing import Any, Dict, List
 from uuid import UUID
 

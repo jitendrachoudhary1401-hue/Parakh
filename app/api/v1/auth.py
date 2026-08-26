@@ -5,8 +5,6 @@ Implements §9 & §10:
 Login, token refresh, and logout.
 """
 
-from __future__ import annotations
-
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 

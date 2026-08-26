@@ -5,8 +5,6 @@ Implements §8, §23, §24, §25:
 Commit evidence to Hyperledger Fabric, retrieve cryptographic receipts, and verify evidence integrity.
 """
 
-from __future__ import annotations
-
 from typing import List
 from uuid import UUID
 

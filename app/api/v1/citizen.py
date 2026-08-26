@@ -5,8 +5,6 @@ Implements §9 & §30:
 Submit reports, retrieve triage status, and administrative triage actions.
 """
 
-from __future__ import annotations
-
 from typing import Optional
 from uuid import UUID
 

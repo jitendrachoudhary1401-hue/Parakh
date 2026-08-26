@@ -5,8 +5,6 @@ Implements §49:
 /health (liveness) and /ready (readiness). Identifies dependencies without exposing secrets.
 """
 
-from __future__ import annotations
-
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
