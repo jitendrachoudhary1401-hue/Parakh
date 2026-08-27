@@ -18,6 +18,16 @@ from app.db.postgres import async_session_factory
 from app.models.cache_entry import CacheEntry
 
 
+def _is_expired(expires_at: Optional[datetime], now: datetime) -> bool:
+    if expires_at is None:
+        return False
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    return expires_at <= now
+
+
 class PostgresCache:
     """Async Key-Value Cache client backed by PostgreSQL."""
 
@@ -37,7 +47,7 @@ class PostgresCache:
             if not entry:
                 return None
 
-            if entry.expires_at and entry.expires_at <= now:
+            if _is_expired(entry.expires_at, now):
                 # Expired key: remove from cache
                 await session.execute(delete(CacheEntry).where(CacheEntry.key == key))
                 await session.commit()
@@ -114,7 +124,7 @@ class PostgresCache:
             result = await session.execute(stmt)
             entry = result.scalar_one_or_none()
 
-            if not entry or (entry.expires_at and entry.expires_at <= now):
+            if not entry or _is_expired(entry.expires_at, now):
                 # Initialize counter
                 entry = CacheEntry(
                     key=key,

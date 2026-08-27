@@ -18,6 +18,14 @@ from app.db.postgres import async_session_factory
 from app.models.task_queue import TaskQueue
 
 
+def _ensure_tz(dt: Optional[datetime]) -> Optional[datetime]:
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 class PostgresQueue:
     """Async Background Job Queue manager backed by PostgreSQL."""
 
@@ -43,7 +51,7 @@ class PostgresQueue:
             status="pending",
             priority=priority,
             max_attempts=max_attempts,
-            scheduled_at=scheduled_at or now,
+            scheduled_at=_ensure_tz(scheduled_at) or now,
             created_at=now,
         )
         async with self.session_factory() as session:
@@ -54,6 +62,7 @@ class PostgresQueue:
     async def dequeue(
         self,
         task_types: Optional[List[str]] = None,
+        ignore_schedule: bool = False,
     ) -> Optional[TaskQueue]:
         """
         Safely fetch and claim the highest priority pending task.
@@ -63,14 +72,14 @@ class PostgresQueue:
         async with self.session_factory() as session:
             stmt = (
                 select(TaskQueue)
-                .where(
-                    TaskQueue.status == "pending",
-                    TaskQueue.scheduled_at <= now,
-                )
+                .where(TaskQueue.status == "pending")
                 .order_by(TaskQueue.priority.desc(), TaskQueue.created_at.asc())
                 .with_for_update(skip_locked=True)
                 .limit(1)
             )
+
+            if not ignore_schedule:
+                stmt = stmt.where(TaskQueue.scheduled_at <= now)
 
             if task_types:
                 stmt = stmt.where(TaskQueue.task_type.in_(task_types))
@@ -111,6 +120,7 @@ class PostgresQueue:
         self,
         task_id: uuid.UUID,
         error_message: str,
+        retry_delay_seconds: int = 10,
     ) -> bool:
         """
         Mark task as failed. If max attempts reached, sets status to 'failed',
@@ -128,8 +138,7 @@ class PostgresQueue:
                     task.status = "failed"
                 else:
                     task.status = "pending"
-                    # Backoff schedule for retry (10s * attempt)
-                    task.scheduled_at = now + timedelta(seconds=10 * task.attempts)
+                    task.scheduled_at = now + timedelta(seconds=retry_delay_seconds * task.attempts)
 
                 await session.commit()
                 return True

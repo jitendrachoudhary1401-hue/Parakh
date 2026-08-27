@@ -104,14 +104,14 @@ async def test_postgres_queue_failure_and_retry(test_db_session):
     )
 
     # First attempt fails -> schedules retry (status stays pending)
-    await queue.dequeue(task_types=["blockchain_anchor"])
+    await queue.dequeue(task_types=["blockchain_anchor"], ignore_schedule=True)
     assert await queue.mark_failed(task_id, "Network timeout") is True
     st1 = await queue.get_task_status(task_id)
     assert st1["status"] == "pending"
     assert st1["attempts"] == 1
 
     # Second attempt fails -> max attempts reached (status becomes failed)
-    await queue.dequeue(task_types=["blockchain_anchor"])
+    await queue.dequeue(task_types=["blockchain_anchor"], ignore_schedule=True)
     assert await queue.mark_failed(task_id, "Node unavailable") is True
     st2 = await queue.get_task_status(task_id)
     assert st2["status"] == "failed"
