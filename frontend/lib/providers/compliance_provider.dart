@@ -38,6 +38,7 @@ class ComplianceProvider extends ChangeNotifier {
     required GS1Product gs1,
     required String storeName,
     required String locationAddress,
+    bool isOffline = false,
   }) async {
     _isEvaluating = true;
     _statusMessage =
@@ -124,7 +125,7 @@ class ComplianceProvider extends ChangeNotifier {
       imagePath: '',
       extractedData: extracted,
       violations: violations,
-      isSynced: true,
+      isSynced: !isOffline,
     );
 
     await _storage.saveInspection(_currentInspection!);
@@ -134,6 +135,32 @@ class ComplianceProvider extends ChangeNotifier {
     _statusMessage = null;
     notifyListeners();
     return _currentInspection!;
+  }
+
+  void setInspectionSynced(String id, {required bool isSynced}) {
+    final index = _inspectionHistory.indexWhere((e) => e.id == id);
+    if (index >= 0) {
+      final old = _inspectionHistory[index];
+      _inspectionHistory[index] = InspectionRecord(
+        id: old.id,
+        barcode: old.barcode,
+        productName: old.productName,
+        storeName: old.storeName,
+        locationAddress: old.locationAddress,
+        latitude: old.latitude,
+        longitude: old.longitude,
+        timestamp: old.timestamp,
+        isCompliant: old.isCompliant,
+        imagePath: old.imagePath,
+        extractedData: old.extractedData,
+        violations: old.violations,
+        blockchainReceipt: old.blockchainReceipt,
+        legalNoticePdfUrl: old.legalNoticePdfUrl,
+        isSynced: isSynced,
+      );
+      _storage.saveInspection(_inspectionHistory[index]);
+      notifyListeners();
+    }
   }
 
   /// Commit SHA-256 Tamper-Proof Evidence to Hyperledger Fabric
