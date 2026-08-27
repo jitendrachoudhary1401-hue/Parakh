@@ -30,15 +30,17 @@ The Legal Metrology Rules, 2011 mandate strict declarations on pre-packaged good
     *   *OCR:* Google Cloud Vision / AWS Textract.
     *   *NLP:* SpaCy or HuggingFace Transformers (Entity parsing).
     *   *Computer Vision:* OpenCV (Image unwarping and bounding box generation).
-*   **Databases:** PostgreSQL (Relational) & MongoDB (Unstructured Logs).
+*   **Databases:** PostgreSQL (Relational Data, Key-Value Cache & Task Queue) & MongoDB (Unstructured Logs).
 *   **Blockchain Ledger:** Hyperledger Fabric (for immutable evidence trails).
 
 ### **2.2. Database Schema Design**
 
-**Relational Data (PostgreSQL)** - *Manages access, users, and core ledger.*
+**Unified Sovereign Database (PostgreSQL)** - *Manages access, users, core ledger, cache, and background queue.*
 *   **`users`**: `user_id` (UUID), `full_name`, `role` (Inspector/Admin/Citizen), `zone_id`.
 *   **`inspections`**: `inspection_id` (UUID), `timestamp`, `geo_location` (Lat/Long), `status` (Compliant/Violation), `blockchain_hash`.
 *   **`openfoodfacts_products`**: `barcode_upc`, `registered_manufacturer`, `product_category`.
+*   **`cache_entries`**: `key`, `value`, `counter`, `expires_at`, `created_at`, `updated_at`.
+*   **`task_queue`**: `task_id`, `task_type`, `status`, `payload`, `result`, `priority`, `scheduled_at`.
 
 **Unstructured Logs (MongoDB)** - *Stores AI metadata.*
 *   **`ai_extraction_logs`**:

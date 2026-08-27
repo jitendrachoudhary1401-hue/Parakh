@@ -90,10 +90,10 @@ The core intelligence engine responsible for data extraction and validation.
 2.  **Optical Character Recognition (Google Cloud Vision API):** Extracts raw text from the flattened image.
 3.  **Natural Language Processing (HuggingFace Transformers):** Uses Named Entity Recognition (NER) to classify text into semantic buckets: `MRP`, `Net Weight`, `Mfg Date`, `Customer Care Info`.
 
-### **3.4. Data Storage Strategy (Polyglot Persistence)**
-*   **PostgreSQL (Relational):** Manages strictly typed entities like Users, Roles, Inspection Metadata (ID, location, timestamp, overall status), and product registry tables.
-*   **MongoDB (NoSQL):** Stores highly dynamic, unstructured data such as the raw OCR text dumps, bounding-box coordinates, and rule-engine execution logs.
-*   **AWS S3 / Azure Blob:** Secure object storage for high-resolution evidentiary images and generated PDF reports.
+### **3.4. Data Storage Strategy (Sovereign Stack)**
+*   **PostgreSQL (Relational, Key-Value Cache & Task Queue):** Serves as the primary sovereign database layer managing Users, Roles, Inspection Metadata, Product Registry (`openfoodfacts_products`), Key-Value Cache (`cache_entries`), and Background Task Queue (`task_queue`).
+*   **MongoDB (NoSQL):** Stores highly dynamic, unstructured data such as raw OCR text dumps, bounding-box coordinates, and rule-engine execution logs.
+*   **Object Storage (MinIO / AWS S3):** Secure storage for high-resolution evidentiary images and generated PDF reports.
 
 ### **3.5. Blockchain Evidentiary Ledger**
 Ensures the legal admissibility of digital evidence.

@@ -47,7 +47,7 @@
 
 | Store | Purpose | Key Entities |
 |---|---|---|
-| **PostgreSQL** (Relational) | Users, inspections, product registry | `users`, `inspections`, `openfoodfacts_products` |
+| **PostgreSQL** (Relational & Cache/Queue) | Users, inspections, product registry, key-value cache, and task queues | `users`, `inspections`, `openfoodfacts_products`, `cache_entries`, `task_queue` |
 | **MongoDB** (Unstructured) | AI metadata & logs | `ai_extraction_logs` (raw OCR text, parsed entities, rule-engine pass/fail flags) |
 
 ## 6. Blockchain — Evidentiary Ledger
@@ -92,7 +92,7 @@ Backend        : Python (FastAPI)
 OCR            : Google Cloud Vision API
 NLP            : HuggingFace Transformers
 Computer Vision: OpenCV + HuggingFace ViT
-Databases      : PostgreSQL + MongoDB
+Databases      : PostgreSQL (Relational + Cache & Task Queue) + MongoDB
 Blockchain     : Hyperledger Fabric on NIC MeghRaj (Govt. of India Cloud)
 Integrations   : Open Food Facts API, WhatsApp Business API
 ```
