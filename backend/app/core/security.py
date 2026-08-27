@@ -59,9 +59,23 @@ except ImportError:
         return False
 
 
-# --- OAuth2 Scheme ---
-
+# --- Security Schemes ---
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+
+
+async def verify_api_key(api_key: Optional[str] = Depends(api_key_header)) -> str:
+    """
+    FastAPI dependency that validates the X-API-Key header.
+    """
+    settings = get_settings()
+    if not api_key or api_key != settings.api_key:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing API Key (X-API-Key)",
+        )
+    return api_key
+
 
 
 # --- JWT Token Management ---

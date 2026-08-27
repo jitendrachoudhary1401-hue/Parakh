@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     # --- Redis ---
     redis_url: str = "redis://localhost:6379/0"
 
+    # --- API Key Authentication ---
+    api_key: str = "parakh_sec_api_key_2026"
+
     # --- JWT / Authentication ---
     jwt_secret_key: str = "CHANGE_ME_TO_A_STRONG_RANDOM_SECRET"
     jwt_algorithm: str = "HS256"

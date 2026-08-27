@@ -6,10 +6,19 @@ class AppConstants {
   static const String departmentName = 'Department of Consumer Affairs (DoCA)';
   static const String problemStatementId = '26034';
 
-  // API Base Configuration
+  // API Key Authentication & Base Configuration
+  static const String apiKey = 'parakh_sec_api_key_2026';
+  static const String apiKeyHeaderName = 'X-API-Key';
+
   // Default points to the local FastAPI Gateway
   static const String defaultApiBaseUrl = 'http://10.0.2.2:8000/api/v1'; // Android emulator localhost or standard LAN
   static const String localhostApiUrl = 'http://127.0.0.1:8000/api/v1';
+
+  static Map<String, String> get baseHeaders => {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    apiKeyHeaderName: apiKey,
+  };
 
   // Endpoint routes matching FastAPI backend exactly
   static const String authLogin = '/auth/login';
