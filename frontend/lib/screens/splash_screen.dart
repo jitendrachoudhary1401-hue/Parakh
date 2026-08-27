@@ -184,13 +184,13 @@ class _SplashScreenState extends State<SplashScreen> {
           // Permission Blocker UI (shows if permission denied and not checking)
           if (!_isCheckingPermission && !_isLocationPermissionGranted)
             Container(
-              color: Colors.black.withOpacity(0.85),
+              color: Colors.black.withValues(alpha: 0.85),
               padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
               child: Center(
                 child: Card(
                   color: AppTheme.surfaceContainerLow,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(24.0),
@@ -203,17 +203,17 @@ class _SplashScreenState extends State<SplashScreen> {
                           size: 64,
                         ),
                         const SizedBox(height: 16),
-                        Text(
+                        const Text(
                           'Location Access Required',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.onSurface,
+                            color: AppTheme.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Text(
+                        const Text(
                           'Project PARAKH requires location services to log inspection coordinates and verify evidence committed to the Hyperledger Fabric blockchain. You cannot use the application without location permissions.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
@@ -233,7 +233,7 @@ class _SplashScreenState extends State<SplashScreen> {
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 14.0),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                               ),
                             ),
                           ),

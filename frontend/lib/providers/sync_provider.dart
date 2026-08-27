@@ -35,6 +35,21 @@ class SyncProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Add an inspection to the offline queue
+  Future<void> queueInspection(InspectionRecord record, String localImagePath) async {
+    final item = SyncQueueItem(
+      id: 'SYNC-${DateTime.now().millisecondsSinceEpoch}',
+      inspectionId: record.id,
+      localImagePath: localImagePath,
+      barcode: record.barcode,
+      storeName: record.storeName,
+      createdAt: DateTime.now(),
+      status: 'pending',
+    );
+    await _storage.addToSyncQueue(item);
+    _loadQueue();
+  }
+
   /// Trigger sync of offline queue
   Future<void> syncAllPending() async {
     if (_queue.isEmpty) return;
@@ -42,30 +57,83 @@ class SyncProvider extends ChangeNotifier {
     _isSyncing = true;
     notifyListeners();
 
-    for (int i = 0; i < _queue.length; i++) {
-      await Future.delayed(const Duration(milliseconds: 1200));
+    try {
+      final List<Map<String, dynamic>> recordsPayload = [];
+      final List<InspectionRecord> localInspections = _storage.getInspections();
+
+      for (final item in _queue) {
+        final match = localInspections.firstWhere(
+          (r) => r.id == item.inspectionId,
+          orElse: () => InspectionRecord(
+            id: item.inspectionId,
+            barcode: item.barcode,
+            productName: 'Offline Item',
+            storeName: item.storeName,
+            locationAddress: 'Offline Location',
+            latitude: 28.6139,
+            longitude: 77.2090,
+            timestamp: item.createdAt,
+            isCompliant: true,
+            imagePath: item.localImagePath,
+            extractedData: OCRExtractedData.empty(),
+            violations: [],
+          ),
+        );
+
+        recordsPayload.add({
+          'client_inspection_id': match.id,
+          'product_barcode': match.barcode,
+          'latitude': match.latitude,
+          'longitude': match.longitude,
+          'location_name': match.locationAddress,
+          'notes': match.storeName,
+          'client_timestamp': match.timestamp.toIso8601String(),
+        });
+      }
+
+      final response = await _apiClient.post(
+        '/sync/upload',
+        body: {'records': recordsPayload},
+      );
+
+      if (response.success && response.data != null) {
+        // Mark matched records in local storage as synced
+        for (final item in _queue) {
+          final idx = localInspections.indexWhere((r) => r.id == item.inspectionId);
+          if (idx >= 0) {
+            final old = localInspections[idx];
+            final updated = InspectionRecord(
+              id: old.id,
+              barcode: old.barcode,
+              productName: old.productName,
+              storeName: old.storeName,
+              locationAddress: old.locationAddress,
+              latitude: old.latitude,
+              longitude: old.longitude,
+              timestamp: old.timestamp,
+              isCompliant: old.isCompliant,
+              imagePath: old.imagePath,
+              extractedData: old.extractedData,
+              violations: old.violations,
+              blockchainReceipt: old.blockchainReceipt,
+              legalNoticePdfUrl: old.legalNoticePdfUrl,
+              isSynced: true,
+            );
+            await _storage.saveInspection(updated);
+          }
+          await _storage.removeSyncQueueItem(item.id);
+        }
+
+        final count = (response.data!['synced_count'] as num?)?.toInt() ?? _queue.length;
+        _syncedCount += count;
+        _queue.clear();
+      }
+    } catch (_) {
+      // Keep items in the queue on failure
+    } finally {
+      _isSyncing = false;
+      _loadQueue();
     }
-
-    _syncedCount += _queue.length;
-    _queue.clear();
-    await _storage.saveInspection(InspectionRecord(
-      id: 'INSP-2026-OFFLINE-01',
-      barcode: '8901030382910',
-      productName: 'Packaged Wheat Atta (10kg)',
-      storeName: 'Basement Grocery Mart, Connaught Place',
-      locationAddress: 'Connaught Place, New Delhi',
-      latitude: 28.6315,
-      longitude: 77.2167,
-      timestamp: DateTime.now(),
-      isCompliant: true,
-      imagePath: '',
-      extractedData: OCRExtractedData.empty(),
-      violations: [],
-      isSynced: true,
-    ));
-
-    _isSyncing = false;
-    notifyListeners();
   }
 
   Future<void> removeQueueItem(String id) async {
