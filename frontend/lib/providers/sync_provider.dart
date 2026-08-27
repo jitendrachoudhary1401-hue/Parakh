@@ -93,7 +93,7 @@ class SyncProvider extends ChangeNotifier {
 
       final response = await _apiClient.post(
         '/sync/upload',
-        body: {'records': recordsPayload},
+        body: recordsPayload,
       );
 
       if (response.success && response.data != null) {

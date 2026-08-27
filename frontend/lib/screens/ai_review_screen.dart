@@ -5,6 +5,8 @@ import '../models/models.dart';
 import '../providers/compliance_provider.dart';
 import '../providers/scan_provider.dart';
 
+import '../providers/sync_provider.dart';
+
 /// AI Extraction Review Screen (Visual Sanity Check)
 class AiReviewScreen extends StatefulWidget {
   const AiReviewScreen({super.key});
@@ -29,6 +31,8 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
   Future<void> _handleProceedCompliance() async {
     final scan = Provider.of<ScanProvider>(context, listen: false);
     final compliance = Provider.of<ComplianceProvider>(context, listen: false);
+    final sync = Provider.of<SyncProvider>(context, listen: false);
+    final isOffline = !sync.isOnline;
 
     final extracted = scan.extractedData ?? OCRExtractedData.empty();
     final gs1 = scan.gs1Product ??
@@ -41,12 +45,25 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
           isVerified: true,
         );
 
-    await compliance.evaluateCompliance(
+    final record = await compliance.evaluateCompliance(
       extracted: extracted,
       gs1: gs1,
       storeName: _storeNameController.text.trim(),
       locationAddress: _locationController.text.trim(),
+      isOffline: isOffline,
     );
+
+    if (isOffline) {
+      await sync.queueInspection(record, scan.capturedImage?.path ?? '');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Offline: Inspection saved locally and queued to Sync Hub.'),
+            backgroundColor: AppTheme.warning,
+          ),
+        );
+      }
+    }
 
     if (mounted) {
       Navigator.pushNamed(context, '/verdict');

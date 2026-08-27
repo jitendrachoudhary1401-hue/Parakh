@@ -66,7 +66,7 @@ class ApiClient {
   }
 
   /// Generic POST
-  Future<ApiResponse<Map<String, dynamic>>> post(String endpoint, {Map<String, dynamic>? body}) async {
+  Future<ApiResponse<Map<String, dynamic>>> post(String endpoint, {dynamic body}) async {
     try {
       final uri = Uri.parse('$_baseUrl$endpoint');
       final response = await http
