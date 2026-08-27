@@ -40,7 +40,8 @@ class ComplianceProvider extends ChangeNotifier {
     required String locationAddress,
   }) async {
     _isEvaluating = true;
-    _statusMessage = 'Validating extracted data against Legal Metrology Rules, 2011...';
+    _statusMessage =
+        'Validating extracted data against Legal Metrology Rules, 2011...';
     notifyListeners();
 
     await Future.delayed(const Duration(milliseconds: 900));
@@ -48,7 +49,8 @@ class ComplianceProvider extends ChangeNotifier {
     final List<RuleViolation> violations = [];
 
     // Rule 1: MRP Check
-    if (extracted.mrp.isEmpty || !extracted.mrp.contains('₹') && !extracted.mrp.contains('Rs')) {
+    if (extracted.mrp.isEmpty ||
+        !extracted.mrp.contains('₹') && !extracted.mrp.contains('Rs')) {
       violations.add(RuleViolation(
         ruleCode: 'RULE_MRP',
         ruleName: 'Rule 6(1)(e): MRP Declaration',
@@ -81,11 +83,13 @@ class ComplianceProvider extends ChangeNotifier {
     }
 
     // Rule 4: Consumer Care
-    if (extracted.consumerCareEmail.isEmpty || extracted.consumerCarePhone.isEmpty) {
+    if (extracted.consumerCareEmail.isEmpty ||
+        extracted.consumerCarePhone.isEmpty) {
       violations.add(RuleViolation(
         ruleCode: 'RULE_CONSUMER_CARE',
         ruleName: 'Rule 6(1)(h): Consumer Care Details',
-        description: 'Incomplete consumer grievance contact details (Mandatory phone and email address required).',
+        description:
+            'Incomplete consumer grievance contact details (Mandatory phone and email address required).',
         severity: 'High',
         isPassed: false,
       ));
@@ -96,14 +100,16 @@ class ComplianceProvider extends ChangeNotifier {
       violations.add(RuleViolation(
         ruleCode: 'RULE_GS1',
         ruleName: 'GS1 Verification Check',
-        description: 'Manufacturer barcode mismatch with official national registry.',
+        description:
+            'Manufacturer barcode mismatch with official national registry.',
         severity: 'High',
         isPassed: false,
       ));
     }
 
     final isPassed = violations.isEmpty;
-    final inspectionId = 'INSP-${DateTime.now().year}-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    final inspectionId =
+        'INSP-${DateTime.now().year}-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
 
     _currentInspection = InspectionRecord(
       id: inspectionId,
@@ -131,13 +137,16 @@ class ComplianceProvider extends ChangeNotifier {
   }
 
   /// Commit SHA-256 Tamper-Proof Evidence to Hyperledger Fabric
-  Future<BlockchainReceipt> commitEvidenceToBlockchain(InspectionRecord record) async {
+  Future<BlockchainReceipt> commitEvidenceToBlockchain(
+      InspectionRecord record) async {
     _isCommittingBlockchain = true;
-    _statusMessage = 'Anchoring cryptographic SHA-256 hash to Hyperledger Fabric...';
+    _statusMessage =
+        'Anchoring cryptographic SHA-256 hash to Hyperledger Fabric...';
     notifyListeners();
 
     // Compute deterministic SHA-256 hash of (InspectionId + Timestamp + Barcode + Violations)
-    final payload = '${record.id}|${record.timestamp.toIso8601String()}|${record.barcode}|${record.violations.length}';
+    final payload =
+        '${record.id}|${record.timestamp.toIso8601String()}|${record.barcode}|${record.violations.length}';
     final bytes = utf8.encode(payload);
     final sha256Hash = sha256.convert(bytes).toString();
 
@@ -164,7 +173,8 @@ class ComplianceProvider extends ChangeNotifier {
 
     await Future.delayed(const Duration(milliseconds: 1000));
     final receipt = BlockchainReceipt(
-      txHash: '0x${sha256.convert(utf8.encode(DateTime.now().toIso8601String())).toString()}',
+      txHash:
+          '0x${sha256.convert(utf8.encode(DateTime.now().toIso8601String())).toString()}',
       evidenceHash: sha256Hash,
       blockNumber: '${10480 + _inspectionHistory.length}',
       timestamp: DateTime.now().toIso8601String(),
@@ -195,7 +205,7 @@ class ComplianceProvider extends ChangeNotifier {
         extractedData: _currentInspection!.extractedData,
         violations: _currentInspection!.violations,
         blockchainReceipt: receipt,
-        legalNoticePdfUrl: 'https://doca.gov.in/notices/LEGAL-NOTICE-${id}.pdf',
+        legalNoticePdfUrl: 'https://doca.gov.in/notices/LEGAL-NOTICE-$id.pdf',
         isSynced: true,
       );
       _storage.saveInspection(_currentInspection!);

@@ -38,7 +38,7 @@ The Legal Metrology Rules, 2011 mandate strict declarations on pre-packaged good
 **Relational Data (PostgreSQL)** - *Manages access, users, and core ledger.*
 *   **`users`**: `user_id` (UUID), `full_name`, `role` (Inspector/Admin/Citizen), `zone_id`.
 *   **`inspections`**: `inspection_id` (UUID), `timestamp`, `geo_location` (Lat/Long), `status` (Compliant/Violation), `blockchain_hash`.
-*   **`gs1_products`**: `barcode_upc`, `registered_manufacturer`, `product_category`.
+*   **`openfoodfacts_products`**: `barcode_upc`, `registered_manufacturer`, `product_category`.
 
 **Unstructured Logs (MongoDB)** - *Stores AI metadata.*
 *   **`ai_extraction_logs`**:
@@ -54,7 +54,7 @@ The Legal Metrology Rules, 2011 mandate strict declarations on pre-packaged good
 **Phase 1: Input & Data Capture (Edge)**
 1.  An Enforcement Official or Citizen opens the *PARAKH App*.
 2.  The camera scans the physical product using **AR Overlays**. The app captures multiple angles.
-3.  The app automatically scans the GS1 Barcode to fetch registered manufacturer details for cross-referencing.
+3.  The app automatically scans the barcode to fetch registered product details from Open Food Facts for cross-referencing.
 
 **Phase 2: AI Processing (Vision Engine)**
 4.  **3D Unwarping:** Curved packages (bottles/cans) are digitally flattened.

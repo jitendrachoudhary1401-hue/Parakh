@@ -14,7 +14,8 @@ class ProfileSettingsScreen extends StatefulWidget {
 
 class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   String _selectedLanguage = 'English';
-  final _serverUrlController = TextEditingController(text: AppConstants.defaultApiBaseUrl);
+  final _serverUrlController =
+      TextEditingController(text: AppConstants.defaultApiBaseUrl);
 
   @override
   void dispose() {
@@ -48,10 +49,10 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                 ),
                 child: Row(
                   children: [
-                    CircleAvatar(
+                    const CircleAvatar(
                       radius: 28,
                       backgroundColor: AppTheme.primaryContainer,
-                      child: const Icon(Icons.person, size: 32, color: Colors.white),
+                      child: Icon(Icons.person, size: 32, color: Colors.white),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -60,17 +61,22 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                         children: [
                           Text(
                             user?.fullName ?? 'Inspector Rajesh Kumar',
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                            style: const TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             'Badge: ${user?.officialId ?? "DOCA-INSP-2026"}',
-                            style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: AppTheme.primary),
+                            style: const TextStyle(
+                                fontSize: 11,
+                                fontFamily: 'monospace',
+                                color: AppTheme.primary),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             user?.zone ?? 'North Zone (New Delhi Division)',
-                            style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                            style: const TextStyle(
+                                fontSize: 11, color: AppTheme.textMuted),
                           ),
                         ],
                       ),
@@ -99,22 +105,32 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: const [
-                            Icon(Icons.language, size: 18, color: AppTheme.secondary),
+                        const Row(
+                          children: [
+                            Icon(Icons.language,
+                                size: 18, color: AppTheme.secondary),
                             SizedBox(width: 10),
-                            Text('Language / भाषा', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                            Text('Language / भाषा',
+                                style: TextStyle(
+                                    fontSize: 13, fontWeight: FontWeight.w600)),
                           ],
                         ),
                         DropdownButton<String>(
                           value: _selectedLanguage,
                           underline: const SizedBox(),
                           items: const [
-                            DropdownMenuItem(value: 'English', child: Text('English', style: TextStyle(fontSize: 13))),
-                            DropdownMenuItem(value: 'Hindi', child: Text('हिन्दी (Hindi)', style: TextStyle(fontSize: 13))),
+                            DropdownMenuItem(
+                                value: 'English',
+                                child: Text('English',
+                                    style: TextStyle(fontSize: 13))),
+                            DropdownMenuItem(
+                                value: 'Hindi',
+                                child: Text('हिन्दी (Hindi)',
+                                    style: TextStyle(fontSize: 13))),
                           ],
                           onChanged: (val) {
-                            if (val != null) setState(() => _selectedLanguage = val);
+                            if (val != null)
+                              setState(() => _selectedLanguage = val);
                           },
                         ),
                       ],
@@ -123,16 +139,19 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: const [
-                            Icon(Icons.fingerprint, size: 18, color: AppTheme.secondary),
+                        const Row(
+                          children: [
+                            Icon(Icons.fingerprint,
+                                size: 18, color: AppTheme.secondary),
                             SizedBox(width: 10),
-                            Text('Biometric Field Unlock', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                            Text('Biometric Field Unlock',
+                                style: TextStyle(
+                                    fontSize: 13, fontWeight: FontWeight.w600)),
                           ],
                         ),
                         Switch(
                           value: true,
-                          activeColor: AppTheme.primary,
+                          activeThumbColor: AppTheme.primary,
                           onChanged: (val) {},
                         ),
                       ],
@@ -161,15 +180,18 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                   children: [
                     const Text(
                       'FastAPI Gateway Server URL',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                      style:
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 6),
                     TextField(
                       controller: _serverUrlController,
-                      style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                      style: const TextStyle(
+                          fontSize: 12, fontFamily: 'monospace'),
                       decoration: const InputDecoration(
                         hintText: 'http://10.0.2.2:8000/api/v1',
-                        prefixIcon: Icon(Icons.dns_outlined, size: 18, color: AppTheme.secondary),
+                        prefixIcon: Icon(Icons.dns_outlined,
+                            size: 18, color: AppTheme.secondary),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -184,20 +206,22 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
 
               // Logout Button
               OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(foregroundColor: AppTheme.error),
+                style:
+                    OutlinedButton.styleFrom(foregroundColor: AppTheme.error),
                 onPressed: () async {
                   await auth.logout();
-                  if (mounted) Navigator.pushReplacementNamed(context, '/login');
+                  if (mounted)
+                    Navigator.pushReplacementNamed(context, '/login');
                 },
                 icon: const Icon(Icons.logout, size: 18, color: AppTheme.error),
                 label: const Text('LOGOUT OF ENFORCEMENT PORTAL'),
               ),
               const SizedBox(height: 20),
 
-              Center(
+              const Center(
                 child: Text(
                   'Project PARAKH Mobile v1.0.0 • DoCA PS-26034',
-                  style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                  style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
                 ),
               ),
               const SizedBox(height: 16),

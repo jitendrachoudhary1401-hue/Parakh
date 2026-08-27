@@ -68,33 +68,39 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                         height: 120,
                         decoration: BoxDecoration(
                           border: Border.all(color: AppTheme.success, width: 2),
-                          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusSm),
                         ),
-                        child: Column(
+                        child: const Column(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.qr_code_2, size: 48, color: Colors.white70),
+                          children: [
+                            Icon(Icons.qr_code_2,
+                                size: 48, color: Colors.white70),
                             SizedBox(height: 6),
                             Text(
                               'ALIGN EAN-13 BARCODE',
-                              style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700),
                             ),
                           ],
                         ),
                       ),
                     ),
-                    Positioned(
+                    const Positioned(
                       bottom: 12,
                       left: 12,
                       right: 12,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
+                        children: [
                           Icon(Icons.bolt, size: 14, color: AppTheme.warning),
                           SizedBox(width: 4),
                           Text(
                             'Real-Time GS1 National Registry Cross-Check',
-                            style: TextStyle(color: Colors.white70, fontSize: 10),
+                            style:
+                                TextStyle(color: Colors.white70, fontSize: 10),
                           ),
                         ],
                       ),
@@ -118,7 +124,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
                         hintText: 'e.g. 8901030382910',
-                        prefixIcon: Icon(Icons.qr_code, size: 20, color: AppTheme.secondary),
+                        prefixIcon: Icon(Icons.qr_code,
+                            size: 20, color: AppTheme.secondary),
                       ),
                     ),
                   ),
@@ -155,37 +162,49 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: const [
-                              Icon(Icons.verified, size: 16, color: AppTheme.success),
+                          const Row(
+                            children: [
+                              Icon(Icons.verified,
+                                  size: 16, color: AppTheme.success),
                               SizedBox(width: 6),
                               Text(
                                 'Verified GTIN Registry',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.success),
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.success),
                               ),
                             ],
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
                               color: AppTheme.secondaryLight,
-                              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                              borderRadius:
+                                  BorderRadius.circular(AppTheme.radiusPill),
                             ),
                             child: Text(
                               scan.gs1Product!.gtin,
-                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.primary),
+                              style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.primary),
                             ),
                           ),
                         ],
                       ),
                       const Divider(height: 20),
-                      _buildInfoRow('Product Name', scan.gs1Product!.productName),
+                      _buildInfoRow(
+                          'Product Name', scan.gs1Product!.productName),
                       const SizedBox(height: 8),
-                      _buildInfoRow('Registered Company', scan.gs1Product!.registeredCompany),
+                      _buildInfoRow('Registered Company',
+                          scan.gs1Product!.registeredCompany),
                       const SizedBox(height: 8),
                       _buildInfoRow('Brand', scan.gs1Product!.brand),
                       const SizedBox(height: 8),
-                      _buildInfoRow('Registered Address', scan.gs1Product!.companyAddress),
+                      _buildInfoRow('Registered Address',
+                          scan.gs1Product!.companyAddress),
                     ],
                   ),
                 ),
@@ -211,12 +230,18 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
       children: [
         Text(
           label.toUpperCase(),
-          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppTheme.textMuted),
+          style: const TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textMuted),
         ),
         const SizedBox(height: 1),
         Text(
           value,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+          style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary),
         ),
       ],
     );

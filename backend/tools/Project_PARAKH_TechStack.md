@@ -14,7 +14,7 @@
 | Cross-platform app framework | **Flutter** |
 | Augmented Reality engine | **ARCore** (Android) & **ARKit** (iOS) — native AR plugins invoked through Flutter for live overlay scanning and red/green bounding-box projection |
 | Offline support | Local on-device storage with background sync once connectivity is restored |
-| Barcode scanning | Native barcode/QR reader for GS1 EAN/UPC lookup |
+| Barcode scanning | Native barcode/QR reader for Open Food Facts product lookup |
 
 ## 2. Web Dashboard (DoCA Command Center)
 
@@ -47,7 +47,7 @@
 
 | Store | Purpose | Key Entities |
 |---|---|---|
-| **PostgreSQL** (Relational) | Users, inspections, GS1 product registry | `users`, `inspections`, `gs1_products` |
+| **PostgreSQL** (Relational) | Users, inspections, product registry | `users`, `inspections`, `openfoodfacts_products` |
 | **MongoDB** (Unstructured) | AI metadata & logs | `ai_extraction_logs` (raw OCR text, parsed entities, rule-engine pass/fail flags) |
 
 ## 6. Blockchain — Evidentiary Ledger
@@ -63,7 +63,7 @@
 
 | Integration | Purpose |
 |---|---|
-| **GS1 India API** | Cross-reference scanned barcode against registered manufacturer to catch "ghost" manufacturers |
+| **Open Food Facts API** | Cross-reference scanned barcode against registered manufacturer to catch "ghost" manufacturers |
 | **WhatsApp Business API** | Citizen "Lite" reporting bot for public crowdsourced complaints |
 
 ## 8. Core API Endpoints
@@ -94,5 +94,5 @@ NLP            : HuggingFace Transformers
 Computer Vision: OpenCV + HuggingFace ViT
 Databases      : PostgreSQL + MongoDB
 Blockchain     : Hyperledger Fabric on NIC MeghRaj (Govt. of India Cloud)
-Integrations   : GS1 India API, WhatsApp Business API
+Integrations   : Open Food Facts API, WhatsApp Business API
 ```

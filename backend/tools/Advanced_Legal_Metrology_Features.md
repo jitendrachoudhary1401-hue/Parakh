@@ -25,10 +25,10 @@ Scaling enforcement by empowering the public:
 ## **4. Predictive Enforcement & External Integrations**
 Moving from reactive enforcement to proactive policing:
 * **Predictive Risk Heatmaps:** Machine learning models that analyze historical violation data (seasonality, geography, product categories) to predict future offenses. The dashboard can alert officials to high-risk zones (e.g., predicting an influx of non-compliant packaged sweets in specific districts ahead of Diwali).
-* **GS1 Barcode Cross-Referencing:** The system reads the standard EAN/UPC barcode and queries the global GS1 database via API. It cross-checks if the manufacturer details extracted via OCR match the registered owner of the barcode, instantly catching unregistered ghost manufacturers.
+* **Open Food Facts Barcode Cross-Referencing:** The system reads the standard EAN/UPC barcode and queries the Open Food Facts database via API. It cross-checks if the manufacturer details extracted via OCR match the registered owner of the barcode, instantly catching unregistered ghost manufacturers.
 
 ## **5. Updated Technology Stack (V2)**
 * **AR/Mobile:** Flutter with ARCore/ARKit plugins.
 * **Blockchain:** Hyperledger Fabric (managed via AWS Managed Blockchain or Azure).
 * **Advanced AI:** HuggingFace Vision Transformers, OpenCV (for 3D unwarping).
-* **Integrations:** GS1 India API, WhatsApp Business API (for consumer bot).
+* **Integrations:** Open Food Facts API, WhatsApp Business API (for consumer bot).

@@ -46,7 +46,7 @@ graph TD
     end
 
     subgraph "External APIs"
-        O[GS1 India API - Barcode Verification]
+        O[Open Food Facts API - Barcode Verification]
     end
 
     A --> D
@@ -91,7 +91,7 @@ The core intelligence engine responsible for data extraction and validation.
 3.  **Natural Language Processing (HuggingFace Transformers):** Uses Named Entity Recognition (NER) to classify text into semantic buckets: `MRP`, `Net Weight`, `Mfg Date`, `Customer Care Info`.
 
 ### **3.4. Data Storage Strategy (Polyglot Persistence)**
-*   **PostgreSQL (Relational):** Manages strictly typed entities like Users, Roles, Inspection Metadata (ID, location, timestamp, overall status), and GS1 registered manufacturer tables.
+*   **PostgreSQL (Relational):** Manages strictly typed entities like Users, Roles, Inspection Metadata (ID, location, timestamp, overall status), and product registry tables.
 *   **MongoDB (NoSQL):** Stores highly dynamic, unstructured data such as the raw OCR text dumps, bounding-box coordinates, and rule-engine execution logs.
 *   **AWS S3 / Azure Blob:** Secure object storage for high-resolution evidentiary images and generated PDF reports.
 
@@ -104,10 +104,10 @@ Ensures the legal admissibility of digital evidence.
 
 ## **4. System Data Flow: Compliance Check Workflow**
 
-1.  **Capture:** Field officer captures product images via the Flutter app. App reads the GS1 Barcode.
+1.  **Capture:** Field officer captures product images via the Flutter app. App reads the barcode.
 2.  **Ingest:** Image and barcode data are sent securely (TLS) to the FastAPI Gateway. Image is stored in S3; a temporary URL is generated.
 3.  **Process:** FastAPI routes the image URL to the AI Pipeline. OpenCV unwarps the image -> OCR extracts text -> NLP parses entities.
-4.  **Validate:** The parsed entities (e.g., "MRP ₹ 50") and the GS1 barcode data are fed into the **Compliance Rule Engine**.
+4.  **Validate:** The parsed entities (e.g., "MRP ₹ 50") and the Open Food Facts barcode data are fed into the **Compliance Rule Engine**.
 5.  **Assess:**
     *   *Scenario A (Compliant):* Engine passes all rules. Status logged to PostgreSQL. Response sent to mobile app (flashes green).
     *   *Scenario B (Violation):* Engine fails a rule (e.g., missing expiry date).

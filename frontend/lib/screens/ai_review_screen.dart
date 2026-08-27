@@ -14,8 +14,10 @@ class AiReviewScreen extends StatefulWidget {
 }
 
 class _AiReviewScreenState extends State<AiReviewScreen> {
-  final _storeNameController = TextEditingController(text: 'Reliance Retail Superstore, Sector 18');
-  final _locationController = TextEditingController(text: 'Sector 18, Noida, NCR Division');
+  final _storeNameController =
+      TextEditingController(text: 'Reliance Retail Superstore, Sector 18');
+  final _locationController =
+      TextEditingController(text: 'Sector 18, Noida, NCR Division');
 
   @override
   void dispose() {
@@ -86,14 +88,19 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
                           style: Theme.of(context).textTheme.labelSmall,
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: AppTheme.successContainer,
-                            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                            borderRadius:
+                                BorderRadius.circular(AppTheme.radiusPill),
                           ),
                           child: const Text(
                             'Flattened 100%',
-                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppTheme.success),
+                            style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.success),
                           ),
                         ),
                       ],
@@ -105,15 +112,19 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
                         color: const Color(0xFF1E293B),
                         borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                       ),
-                      child: Center(
+                      child: const Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.crop_original, size: 36, color: Colors.white60),
+                          children: [
+                            Icon(Icons.crop_original,
+                                size: 36, color: Colors.white60),
                             SizedBox(height: 6),
                             Text(
                               'Label Perspective Rectified • Word Conf: 97.4%',
-                              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600),
                             ),
                           ],
                         ),
@@ -134,7 +145,8 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
                 controller: _storeNameController,
                 decoration: const InputDecoration(
                   labelText: 'Retail Outlet / Store Name',
-                  prefixIcon: Icon(Icons.storefront_outlined, size: 18, color: AppTheme.secondary),
+                  prefixIcon: Icon(Icons.storefront_outlined,
+                      size: 18, color: AppTheme.secondary),
                 ),
               ),
               const SizedBox(height: 8),
@@ -142,7 +154,8 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
                 controller: _locationController,
                 decoration: const InputDecoration(
                   labelText: 'Location / Market Division',
-                  prefixIcon: Icon(Icons.location_on_outlined, size: 18, color: AppTheme.secondary),
+                  prefixIcon: Icon(Icons.location_on_outlined,
+                      size: 18, color: AppTheme.secondary),
                 ),
               ),
               const SizedBox(height: 20),
@@ -157,7 +170,9 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
               _buildFieldCard(
                 context,
                 title: 'MRP Declaration (Rule 6(1)(e))',
-                value: extracted.mrp.isNotEmpty ? extracted.mrp : '₹ 45.00 (Incl. of all taxes)',
+                value: extracted.mrp.isNotEmpty
+                    ? extracted.mrp
+                    : '₹ 45.00 (Incl. of all taxes)',
                 isValid: extracted.mrp.isNotEmpty,
                 icon: Icons.currency_rupee,
               ),
@@ -166,7 +181,9 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
               _buildFieldCard(
                 context,
                 title: 'Net Quantity (Rule 6(1)(f))',
-                value: extracted.netQuantity.isNotEmpty ? extracted.netQuantity : '200 g',
+                value: extracted.netQuantity.isNotEmpty
+                    ? extracted.netQuantity
+                    : '200 g',
                 isValid: extracted.netQuantity.isNotEmpty,
                 icon: Icons.scale_outlined,
               ),
@@ -175,7 +192,9 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
               _buildFieldCard(
                 context,
                 title: 'Mfg / Packaging Date (Rule 6(1)(d))',
-                value: extracted.mfgDate.isNotEmpty ? 'Mfg: ${extracted.mfgDate} • Exp: ${extracted.expiryDate}' : 'Mfg: 04/2026',
+                value: extracted.mfgDate.isNotEmpty
+                    ? 'Mfg: ${extracted.mfgDate} • Exp: ${extracted.expiryDate}'
+                    : 'Mfg: 04/2026',
                 isValid: extracted.mfgDate.isNotEmpty,
                 icon: Icons.calendar_today_outlined,
               ),
@@ -195,7 +214,9 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
               _buildFieldCard(
                 context,
                 title: 'Manufacturer / Packer (Rule 6(1)(a))',
-                value: extracted.manufacturerName.isNotEmpty ? '${extracted.manufacturerName}, ${extracted.manufacturerAddress}' : 'Hindustan Consumer Foods Pvt Ltd',
+                value: extracted.manufacturerName.isNotEmpty
+                    ? '${extracted.manufacturerName}, ${extracted.manufacturerAddress}'
+                    : 'Hindustan Consumer Foods Pvt Ltd',
                 isValid: extracted.manufacturerName.isNotEmpty,
                 icon: Icons.business_outlined,
               ),
@@ -226,12 +247,17 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
       decoration: BoxDecoration(
         color: AppTheme.surface,
         borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-        border: Border.all(color: isValid ? AppTheme.outline : AppTheme.error.withOpacity(0.4), width: 1),
+        border: Border.all(
+            color: isValid
+                ? AppTheme.outline
+                : AppTheme.error.withValues(alpha: 0.4),
+            width: 1),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: isValid ? AppTheme.primary : AppTheme.error),
+          Icon(icon,
+              size: 18, color: isValid ? AppTheme.primary : AppTheme.error),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -239,7 +265,10 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
               children: [
                 Text(
                   title.toUpperCase(),
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textMuted),
+                  style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textMuted),
                 ),
                 const SizedBox(height: 2),
                 Text(

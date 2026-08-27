@@ -55,7 +55,9 @@ class ComplianceVerdictScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      isPassed ? 'COMPLIANT WITH LEGAL METROLOGY' : 'NON-COMPLIANCE VIOLATION DETECTED',
+                      isPassed
+                          ? 'COMPLIANT WITH LEGAL METROLOGY'
+                          : 'NON-COMPLIANCE VIOLATION DETECTED',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 15,
@@ -70,7 +72,8 @@ class ComplianceVerdictScreen extends StatelessWidget {
                           ? 'All declarations satisfy the Packaged Commodities Rules, 2011.'
                           : '${record.violations.length} mandatory declaration rule(s) violated.',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 12, color: Colors.white70),
+                      style:
+                          const TextStyle(fontSize: 12, color: Colors.white70),
                     ),
                   ],
                 ),
@@ -104,12 +107,14 @@ class ComplianceVerdictScreen extends StatelessWidget {
                     const Divider(height: 20),
                     Text(
                       record.productName,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '${record.storeName} • ${record.locationAddress}',
-                      style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                      style: const TextStyle(
+                          fontSize: 12, color: AppTheme.textMuted),
                     ),
                   ],
                 ),
@@ -156,22 +161,27 @@ class ComplianceVerdictScreen extends StatelessWidget {
               _buildRuleCheckCard(
                 title: 'Rule 6(1)(a): Manufacturer Registry & GS1',
                 isPassed: true,
-                note: 'GTIN 8901030382910 matches registered manufacturer record',
+                note:
+                    'GTIN 8901030382910 matches registered manufacturer record',
               ),
               const SizedBox(height: 24),
 
               if (!isPassed) ...[
                 ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
-                  onPressed: () => Navigator.pushNamed(context, '/evidence-report'),
-                  icon: const Icon(Icons.shield_outlined, size: 18, color: Colors.white),
+                  style:
+                      ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
+                  onPressed: () =>
+                      Navigator.pushNamed(context, '/evidence-report'),
+                  icon: const Icon(Icons.shield_outlined,
+                      size: 18, color: Colors.white),
                   label: const Text('GENERATE BLOCKCHAIN EVIDENCE & NOTICE'),
                 ),
                 const SizedBox(height: 10),
               ],
 
               OutlinedButton(
-                onPressed: () => Navigator.pushReplacementNamed(context, '/dashboard'),
+                onPressed: () =>
+                    Navigator.pushReplacementNamed(context, '/dashboard'),
                 child: const Text('LOG TO LOCAL LEDGER & RETURN TO DASHBOARD'),
               ),
               const SizedBox(height: 20),
@@ -193,7 +203,9 @@ class ComplianceVerdictScreen extends StatelessWidget {
         color: AppTheme.surface,
         borderRadius: BorderRadius.circular(AppTheme.radiusSm),
         border: Border.all(
-          color: isPassed ? AppTheme.outline : AppTheme.error.withOpacity(0.3),
+          color: isPassed
+              ? AppTheme.outline
+              : AppTheme.error.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -221,7 +233,8 @@ class ComplianceVerdictScreen extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   note,
-                  style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                  style:
+                      const TextStyle(fontSize: 11, color: AppTheme.textMuted),
                 ),
               ],
             ),

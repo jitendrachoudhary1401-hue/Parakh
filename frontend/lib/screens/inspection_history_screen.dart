@@ -11,7 +11,8 @@ class InspectionHistoryScreen extends StatefulWidget {
   const InspectionHistoryScreen({super.key});
 
   @override
-  State<InspectionHistoryScreen> createState() => _InspectionHistoryScreenState();
+  State<InspectionHistoryScreen> createState() =>
+      _InspectionHistoryScreenState();
 }
 
 class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
@@ -52,13 +53,15 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
                     onChanged: (val) => setState(() => _searchQuery = val),
                     decoration: const InputDecoration(
                       hintText: 'Search by Product, GTIN, Store, or ID...',
-                      prefixIcon: Icon(Icons.search, size: 20, color: AppTheme.secondary),
+                      prefixIcon: Icon(Icons.search,
+                          size: 20, color: AppTheme.secondary),
                     ),
                   ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      _buildFilterChip('ALL', 'All Scans (${compliance.inspectionHistory.length})'),
+                      _buildFilterChip('ALL',
+                          'All Scans (${compliance.inspectionHistory.length})'),
                       const SizedBox(width: 8),
                       _buildFilterChip('PASS', 'Compliant'),
                       const SizedBox(width: 8),
@@ -73,13 +76,15 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
             // Ledger List
             Expanded(
               child: history.isEmpty
-                  ? Center(
+                  ? const Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Icon(Icons.inventory_outlined, size: 40, color: AppTheme.textMuted),
+                        children: [
+                          Icon(Icons.inventory_outlined,
+                              size: 40, color: AppTheme.textMuted),
                           SizedBox(height: 8),
-                          Text('No inspection records match the filter', style: TextStyle(color: AppTheme.textMuted)),
+                          Text('No inspection records match the filter',
+                              style: TextStyle(color: AppTheme.textMuted)),
                         ],
                       ),
                     )
@@ -109,7 +114,8 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
         decoration: BoxDecoration(
           color: isSelected ? AppTheme.primary : AppTheme.surfaceContainerLow,
           borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-          border: Border.all(color: isSelected ? AppTheme.primary : AppTheme.outline),
+          border: Border.all(
+              color: isSelected ? AppTheme.primary : AppTheme.outline),
         ),
         child: Text(
           label,
@@ -141,7 +147,11 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
             children: [
               Text(
                 item.id,
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, fontFamily: 'monospace', color: AppTheme.primary),
+                style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'monospace',
+                    color: AppTheme.primary),
               ),
               StatusPill(
                 label: item.isCompliant ? 'COMPLIANT' : 'VIOLATION',
@@ -164,7 +174,8 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
                   item.storeName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                  style:
+                      const TextStyle(fontSize: 11, color: AppTheme.textMuted),
                 ),
               ),
             ],
@@ -175,12 +186,19 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.qr_code, size: 13, color: AppTheme.textMuted),
+                  const Icon(Icons.qr_code,
+                      size: 13, color: AppTheme.textMuted),
                   const SizedBox(width: 4),
-                  Text('GTIN: ${item.barcode}', style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: AppTheme.textMuted)),
+                  Text('GTIN: ${item.barcode}',
+                      style: const TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                          color: AppTheme.textMuted)),
                 ],
               ),
-              Text(dateStr, style: const TextStyle(fontSize: 10, color: AppTheme.textMuted)),
+              Text(dateStr,
+                  style:
+                      const TextStyle(fontSize: 10, color: AppTheme.textMuted)),
             ],
           ),
           if (item.blockchainReceipt != null) ...[
@@ -198,7 +216,10 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
                   Expanded(
                     child: Text(
                       'Tx: ${item.blockchainReceipt!.txHash.substring(0, 28)}...',
-                      style: const TextStyle(fontSize: 9, fontFamily: 'monospace', color: AppTheme.primary),
+                      style: const TextStyle(
+                          fontSize: 9,
+                          fontFamily: 'monospace',
+                          color: AppTheme.primary),
                     ),
                   ),
                 ],

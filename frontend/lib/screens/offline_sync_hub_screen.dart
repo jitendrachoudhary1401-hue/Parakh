@@ -28,15 +28,21 @@ class OfflineSyncHubScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: sync.isOnline ? AppTheme.successContainer : AppTheme.warningContainer,
+                  color: sync.isOnline
+                      ? AppTheme.successContainer
+                      : AppTheme.warningContainer,
                   borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                  border: Border.all(color: sync.isOnline ? AppTheme.success.withOpacity(0.3) : AppTheme.warning.withOpacity(0.3)),
+                  border: Border.all(
+                      color: sync.isOnline
+                          ? AppTheme.success.withValues(alpha: 0.3)
+                          : AppTheme.warning.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
                     Icon(
                       sync.isOnline ? Icons.wifi : Icons.wifi_off,
-                      color: sync.isOnline ? AppTheme.success : AppTheme.warning,
+                      color:
+                          sync.isOnline ? AppTheme.success : AppTheme.warning,
                       size: 24,
                     ),
                     const SizedBox(width: 14),
@@ -45,11 +51,15 @@ class OfflineSyncHubScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            sync.isOnline ? 'ONLINE & SYNC READY' : 'OFFLINE MODE (LOCAL BUFFER)',
+                            sync.isOnline
+                                ? 'ONLINE & SYNC READY'
+                                : 'OFFLINE MODE (LOCAL BUFFER)',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w800,
-                              color: sync.isOnline ? AppTheme.success : AppTheme.warning,
+                              color: sync.isOnline
+                                  ? AppTheme.success
+                                  : AppTheme.warning,
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -58,7 +68,8 @@ class OfflineSyncHubScreen extends StatelessWidget {
                             sync.isOnline
                                 ? 'FastAPI Gateway reachable at ${sync.syncedCount} scans anchored'
                                 : 'Operating in low-connectivity retail basement. Scans buffered locally.',
-                            style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                            style: const TextStyle(
+                                fontSize: 11, color: AppTheme.textSecondary),
                           ),
                         ],
                       ),
@@ -72,11 +83,13 @@ class OfflineSyncHubScreen extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: _buildSummaryBox('Pending Uploads', '${sync.pendingCount}', AppTheme.warning),
+                    child: _buildSummaryBox('Pending Uploads',
+                        '${sync.pendingCount}', AppTheme.warning),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _buildSummaryBox('Synced Scans', '${sync.syncedCount}', AppTheme.success),
+                    child: _buildSummaryBox('Synced Scans',
+                        '${sync.syncedCount}', AppTheme.success),
                   ),
                 ],
               ),
@@ -93,7 +106,10 @@ class OfflineSyncHubScreen extends StatelessWidget {
                   if (sync.pendingCount > 0)
                     Text(
                       '${sync.pendingCount} Items',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textMuted),
+                      style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textMuted),
                     ),
                 ],
               ),
@@ -107,12 +123,15 @@ class OfflineSyncHubScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                     border: Border.all(color: AppTheme.outline),
                   ),
-                  child: Center(
+                  child: const Center(
                     child: Column(
-                      children: const [
-                        Icon(Icons.cloud_done_outlined, size: 36, color: AppTheme.success),
+                      children: [
+                        Icon(Icons.cloud_done_outlined,
+                            size: 36, color: AppTheme.success),
                         SizedBox(height: 8),
-                        Text('All field scans are completely synchronized', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                        Text('All field scans are completely synchronized',
+                            style: TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w600)),
                       ],
                     ),
                   ),
@@ -132,18 +151,32 @@ class OfflineSyncHubScreen extends StatelessWidget {
 
               // Action Trigger
               ElevatedButton.icon(
-                onPressed: (sync.isSyncing || sync.queue.isEmpty) ? null : () => sync.syncAllPending(),
+                onPressed: (sync.isSyncing || sync.queue.isEmpty)
+                    ? null
+                    : () => sync.syncAllPending(),
                 icon: sync.isSyncing
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
                     : const Icon(Icons.sync, size: 18),
-                label: Text(sync.isSyncing ? 'SYNCHRONIZING PENDING QUEUE...' : 'SYNC ALL PENDING SCANS NOW'),
+                label: Text(sync.isSyncing
+                    ? 'SYNCHRONIZING PENDING QUEUE...'
+                    : 'SYNC ALL PENDING SCANS NOW'),
               ),
               const SizedBox(height: 12),
 
               OutlinedButton.icon(
                 onPressed: () => sync.toggleNetworkConnectivity(!sync.isOnline),
-                icon: Icon(sync.isOnline ? Icons.signal_cellular_off : Icons.signal_cellular_alt, size: 18),
-                label: Text(sync.isOnline ? 'SIMULATE RETAIL BASEMENT (OFFLINE)' : 'SIMULATE NETWORK RESTORED (ONLINE)'),
+                icon: Icon(
+                    sync.isOnline
+                        ? Icons.signal_cellular_off
+                        : Icons.signal_cellular_alt,
+                    size: 18),
+                label: Text(sync.isOnline
+                    ? 'SIMULATE RETAIL BASEMENT (OFFLINE)'
+                    : 'SIMULATE NETWORK RESTORED (ONLINE)'),
               ),
               const SizedBox(height: 20),
             ],
@@ -164,15 +197,22 @@ class OfflineSyncHubScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label.toUpperCase(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textMuted)),
+          Text(label.toUpperCase(),
+              style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textMuted)),
           const SizedBox(height: 4),
-          Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: color)),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 22, fontWeight: FontWeight.w800, color: color)),
         ],
       ),
     );
   }
 
-  Widget _buildQueueItemCard(BuildContext context, SyncQueueItem item, SyncProvider sync) {
+  Widget _buildQueueItemCard(
+      BuildContext context, SyncQueueItem item, SyncProvider sync) {
     final dateStr = DateFormat('HH:mm, dd MMM').format(item.createdAt);
 
     return Container(
@@ -190,23 +230,33 @@ class OfflineSyncHubScreen extends StatelessWidget {
               color: AppTheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(AppTheme.radiusSm),
             ),
-            child: const Icon(Icons.image_outlined, size: 20, color: AppTheme.primary),
+            child: const Icon(Icons.image_outlined,
+                size: 20, color: AppTheme.primary),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.inspectionId, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                Text(item.inspectionId,
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 2),
-                Text(item.storeName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                Text(item.storeName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 11, color: AppTheme.textMuted)),
                 const SizedBox(height: 2),
-                Text('Queued: $dateStr • GTIN: ${item.barcode}', style: const TextStyle(fontSize: 10, color: AppTheme.textMuted)),
+                Text('Queued: $dateStr • GTIN: ${item.barcode}',
+                    style: const TextStyle(
+                        fontSize: 10, color: AppTheme.textMuted)),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline, size: 18, color: AppTheme.error),
+            icon: const Icon(Icons.delete_outline,
+                size: 18, color: AppTheme.error),
             onPressed: () => sync.removeQueueItem(item.id),
           ),
         ],

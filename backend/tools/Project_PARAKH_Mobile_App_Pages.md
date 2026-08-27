@@ -15,7 +15,7 @@
 
 ### **3. Core Scanning Engine**
 * **AR Live Camera Screen:** The primary workspace. Features a live camera feed with AR bounding boxes (green/red) projecting onto products, auto-focus, and flash toggles.
-* **Barcode/QR Scanner:** A quick-toggle screen to scan the GS1 barcode to fetch manufacturer registry data.
+* **Barcode/QR Scanner:** A quick-toggle screen to scan barcodes to fetch Open Food Facts manufacturer registry data.
 * **Manual Upload/Gallery:** Allows inspectors to select photos already taken on their device camera roll.
 
 ### **4. Analysis & Enforcement**

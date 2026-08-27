@@ -25,15 +25,15 @@ class StatusPill extends StatelessWidget {
     if (isPending) {
       bg = AppTheme.warningContainer;
       fg = AppTheme.warning;
-      border = AppTheme.warning.withOpacity(0.3);
+      border = AppTheme.warning.withValues(alpha: 0.3);
     } else if (isCompliant) {
       bg = AppTheme.successContainer;
       fg = AppTheme.success;
-      border = AppTheme.success.withOpacity(0.3);
+      border = AppTheme.success.withValues(alpha: 0.3);
     } else {
       bg = AppTheme.errorContainer;
       fg = AppTheme.error;
-      border = AppTheme.error.withOpacity(0.3);
+      border = AppTheme.error.withValues(alpha: 0.3);
     }
 
     return Container(

@@ -18,7 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController(text: 'Inspector@2026');
   final _otpController = TextEditingController(text: '492810');
   bool _obscurePassword = true;
-  bool _isOtpSent = true;
+  final bool _isOtpSent = true;
 
   @override
   void dispose() {
@@ -60,7 +60,8 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: AppTheme.marginMain),
+            padding:
+                const EdgeInsets.symmetric(horizontal: AppTheme.marginMain),
             child: Form(
               key: _formKey,
               child: Column(
@@ -96,16 +97,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: BoxDecoration(
                         color: AppTheme.errorContainer,
                         borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                        border: Border.all(color: AppTheme.error.withOpacity(0.3)),
+                        border: Border.all(
+                            color: AppTheme.error.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.error_outline, size: 18, color: AppTheme.error),
+                          const Icon(Icons.error_outline,
+                              size: 18, color: AppTheme.error),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               auth.errorMessage!,
-                              style: const TextStyle(fontSize: 12, color: AppTheme.error, fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.error,
+                                  fontWeight: FontWeight.w600),
                             ),
                           ),
                         ],
@@ -124,9 +130,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _officialIdController,
                     decoration: const InputDecoration(
                       hintText: 'e.g. DOCA-INSP-2026',
-                      prefixIcon: Icon(Icons.badge_outlined, size: 20, color: AppTheme.secondary),
+                      prefixIcon: Icon(Icons.badge_outlined,
+                          size: 20, color: AppTheme.secondary),
                     ),
-                    validator: (val) => val == null || val.isEmpty ? 'Please enter Official Badge ID' : null,
+                    validator: (val) => val == null || val.isEmpty
+                        ? 'Please enter Official Badge ID'
+                        : null,
                   ),
                   const SizedBox(height: 16),
 
@@ -141,17 +150,23 @@ class _LoginScreenState extends State<LoginScreen> {
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
                       hintText: 'Enter password',
-                      prefixIcon: const Icon(Icons.lock_outline, size: 20, color: AppTheme.secondary),
+                      prefixIcon: const Icon(Icons.lock_outline,
+                          size: 20, color: AppTheme.secondary),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                          _obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
                           size: 18,
                           color: AppTheme.textMuted,
                         ),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword),
                       ),
                     ),
-                    validator: (val) => val == null || val.length < 4 ? 'Password must be at least 4 chars' : null,
+                    validator: (val) => val == null || val.length < 4
+                        ? 'Password must be at least 4 chars'
+                        : null,
                   ),
                   const SizedBox(height: 16),
 
@@ -166,11 +181,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       hintText: '6-digit OTP code',
-                      prefixIcon: const Icon(Icons.security_outlined, size: 20, color: AppTheme.secondary),
+                      prefixIcon: const Icon(Icons.security_outlined,
+                          size: 20, color: AppTheme.secondary),
                       suffixText: _isOtpSent ? 'Resend (52s)' : 'Get OTP',
-                      suffixStyle: const TextStyle(fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.w600),
+                      suffixStyle: const TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.primary,
+                          fontWeight: FontWeight.w600),
                     ),
-                    validator: (val) => val == null || val.length < 4 ? 'Enter valid OTP' : null,
+                    validator: (val) => val == null || val.length < 4
+                        ? 'Enter valid OTP'
+                        : null,
                   ),
                   const SizedBox(height: 24),
 
@@ -181,7 +202,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
                           )
                         : const Text('AUTHENTICATE & ENTER FIELD PORTAL'),
                   ),
@@ -196,14 +218,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 28),
 
                   // Security Stamp
-                  Row(
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.verified_user, size: 14, color: AppTheme.success),
+                    children: [
+                      Icon(Icons.verified_user,
+                          size: 14, color: AppTheme.success),
                       SizedBox(width: 6),
                       Text(
                         'Secured via AES-256 & TLS 1.3 Encryption',
-                        style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                        style:
+                            TextStyle(fontSize: 11, color: AppTheme.textMuted),
                       ),
                     ],
                   ),

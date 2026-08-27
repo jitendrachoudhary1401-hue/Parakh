@@ -21,7 +21,7 @@ class ArOverlayBoxWidget extends StatelessWidget {
         decoration: BoxDecoration(
           border: Border.all(color: color, width: 2),
           borderRadius: BorderRadius.circular(2),
-          color: color.withOpacity(0.12),
+          color: color.withValues(alpha: 0.12),
         ),
         child: Align(
           alignment: Alignment.topLeft,
@@ -29,7 +29,8 @@ class ArOverlayBoxWidget extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             decoration: BoxDecoration(
               color: color,
-              borderRadius: const BorderRadius.only(bottomRight: Radius.circular(4)),
+              borderRadius:
+                  const BorderRadius.only(bottomRight: Radius.circular(4)),
             ),
             child: Text(
               '${box.label} (${(box.confidence * 100).toInt()}%)',

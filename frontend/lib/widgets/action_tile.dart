@@ -40,7 +40,7 @@ class ActionTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.08),
+                color: primaryColor.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               ),
               child: Icon(icon, color: primaryColor, size: 22),
@@ -63,10 +63,12 @@ class ActionTile extends StatelessWidget {
                       if (badgeText != null) ...[
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: badgeColor,
-                            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                            borderRadius:
+                                BorderRadius.circular(AppTheme.radiusPill),
                           ),
                           child: Text(
                             badgeText!,
@@ -91,7 +93,8 @@ class ActionTile extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, size: 14, color: AppTheme.textMuted),
+            const Icon(Icons.arrow_forward_ios,
+                size: 14, color: AppTheme.textMuted),
           ],
         ),
       ),

@@ -52,7 +52,9 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
 
   Future<void> _handleCapture() async {
     final scan = Provider.of<ScanProvider>(context, listen: false);
-    if (_isCameraInitialized && _cameraController != null && _cameraController!.value.isInitialized) {
+    if (_isCameraInitialized &&
+        _cameraController != null &&
+        _cameraController!.value.isInitialized) {
       try {
         final xFile = await _cameraController!.takePicture();
         await scan.processImageExtraction(imageFile: File(xFile.path));
@@ -102,7 +104,8 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
                           height: 440,
                           decoration: BoxDecoration(
                             color: const Color(0xFF1E293B),
-                            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                            borderRadius:
+                                BorderRadius.circular(AppTheme.radiusSm),
                             border: Border.all(color: Colors.white24, width: 1),
                           ),
                           child: Stack(
@@ -112,7 +115,10 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
                                   width: 260,
                                   height: 360,
                                   decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1),
+                                    border: Border.all(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.15),
+                                        width: 1),
                                   ),
                                 ),
                               ),
@@ -120,12 +126,16 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.inventory_2_outlined, size: 54, color: Colors.white.withValues(alpha: 0.2)),
+                                    Icon(Icons.inventory_2_outlined,
+                                        size: 54,
+                                        color: Colors.white
+                                            .withValues(alpha: 0.2)),
                                     const SizedBox(height: 8),
                                     Text(
                                       'ALIGN PACKAGED COMMODITY LABEL',
                                       style: TextStyle(
-                                        color: Colors.white.withValues(alpha: 0.4),
+                                        color:
+                                            Colors.white.withValues(alpha: 0.4),
                                         fontSize: 10,
                                         fontWeight: FontWeight.w700,
                                         letterSpacing: 1.0,
@@ -134,7 +144,8 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
                                   ],
                                 ),
                               ),
-                              ...scan.liveBoundingBoxes.map((box) => ArOverlayBoxWidget(box: box)),
+                              ...scan.liveBoundingBoxes
+                                  .map((box) => ArOverlayBoxWidget(box: box)),
                             ],
                           ),
                         ),
@@ -150,12 +161,14 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
                         width: 280,
                         height: 420,
                         decoration: BoxDecoration(
-                          border: Border.all(color: AppTheme.primaryLight, width: 2),
+                          border: Border.all(
+                              color: AppTheme.primaryLight, width: 2),
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
                     ),
-                    ...scan.liveBoundingBoxes.map((box) => ArOverlayBoxWidget(box: box)),
+                    ...scan.liveBoundingBoxes
+                        .map((box) => ArOverlayBoxWidget(box: box)),
                   ],
                 ),
               ),
@@ -171,12 +184,14 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
                   CircleAvatar(
                     backgroundColor: Colors.black54,
                     child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                      icon: const Icon(Icons.arrow_back,
+                          color: Colors.white, size: 20),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.black87,
                       borderRadius: BorderRadius.circular(AppTheme.radiusPill),
@@ -208,7 +223,8 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
                   Row(
                     children: [
                       CircleAvatar(
-                        backgroundColor: scan.isFlashOn ? Colors.amber : Colors.black54,
+                        backgroundColor:
+                            scan.isFlashOn ? Colors.amber : Colors.black54,
                         child: IconButton(
                           icon: Icon(
                             scan.isFlashOn ? Icons.flash_on : Icons.flash_off,
@@ -220,9 +236,12 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
                       ),
                       const SizedBox(width: 8),
                       CircleAvatar(
-                        backgroundColor: scan.isAutoFocusOn ? AppTheme.primaryContainer : Colors.black54,
+                        backgroundColor: scan.isAutoFocusOn
+                            ? AppTheme.primaryContainer
+                            : Colors.black54,
                         child: IconButton(
-                          icon: const Icon(Icons.center_focus_strong, color: Colors.white, size: 18),
+                          icon: const Icon(Icons.center_focus_strong,
+                              color: Colors.white, size: 18),
                           onPressed: () => scan.toggleAutoFocus(),
                         ),
                       ),
@@ -236,7 +255,7 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
             if (scan.isProcessing)
               Positioned.fill(
                 child: Container(
-                  color: Colors.black.withOpacity(0.75),
+                  color: Colors.black.withValues(alpha: 0.75),
                   child: Center(
                     child: Container(
                       padding: const EdgeInsets.all(24),
@@ -251,18 +270,24 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
                           const SizedBox(
                             width: 32,
                             height: 32,
-                            child: CircularProgressIndicator(strokeWidth: 3, color: AppTheme.primary),
+                            child: CircularProgressIndicator(
+                                strokeWidth: 3, color: AppTheme.primary),
                           ),
                           const SizedBox(height: 16),
                           const Text(
                             'AI PIPELINE EXECUTING',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5),
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5),
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            scan.statusMessage ?? '3D Surface Unwarping & Named Entity Recognition...',
+                            scan.statusMessage ??
+                                '3D Surface Unwarping & Named Entity Recognition...',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                            style: const TextStyle(
+                                fontSize: 11, color: AppTheme.textMuted),
                           ),
                         ],
                       ),
@@ -279,7 +304,8 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
               child: Column(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
                       color: Colors.black87,
                       borderRadius: BorderRadius.circular(AppTheme.radiusSm),
@@ -292,13 +318,20 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
                           children: [
                             Text(
                               'GS1 Barcode: ${scan.selectedBarcode}',
-                              style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600),
                             ),
                             InkWell(
-                              onTap: () => Navigator.pushNamed(context, '/barcode-scanner'),
+                              onTap: () => Navigator.pushNamed(
+                                  context, '/barcode-scanner'),
                               child: const Text(
                                 'Change GTIN',
-                                style: TextStyle(color: AppTheme.primaryLight, fontSize: 11, fontWeight: FontWeight.w700),
+                                style: TextStyle(
+                                    color: AppTheme.primaryLight,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700),
                               ),
                             ),
                           ],
@@ -306,13 +339,15 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Icon(Icons.location_on, color: AppTheme.secondary, size: 12),
+                            const Icon(Icons.location_on,
+                                color: AppTheme.secondary, size: 12),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
                                 scan.locationAddress,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(color: Colors.white54, fontSize: 10),
+                                style: const TextStyle(
+                                    color: Colors.white54, fontSize: 10),
                               ),
                             ),
                           ],
@@ -325,7 +360,8 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.photo_library_outlined, color: Colors.white, size: 28),
+                        icon: const Icon(Icons.photo_library_outlined,
+                            color: Colors.white, size: 28),
                         tooltip: 'Upload from Gallery',
                         onPressed: _handleGalleryPicker,
                       ),
@@ -346,15 +382,18 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
                               shape: BoxShape.circle,
                             ),
                             child: const Center(
-                              child: Icon(Icons.camera_alt, color: AppTheme.primary, size: 28),
+                              child: Icon(Icons.camera_alt,
+                                  color: AppTheme.primary, size: 28),
                             ),
                           ),
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 28),
+                        icon: const Icon(Icons.qr_code_scanner,
+                            color: Colors.white, size: 28),
                         tooltip: 'Barcode Scanner',
-                        onPressed: () => Navigator.pushNamed(context, '/barcode-scanner'),
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/barcode-scanner'),
                       ),
                     ],
                   ),
