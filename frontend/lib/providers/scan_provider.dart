@@ -4,6 +4,8 @@ import '../core/api_client.dart';
 import '../core/constants.dart';
 import '../models/models.dart';
 
+import 'package:geolocator/geolocator.dart';
+
 /// Scan Provider managing AR camera HUD, image capture, GS1 barcode lookup, and AI OCR extraction
 class ScanProvider extends ChangeNotifier {
   final ApiClient _apiClient;
@@ -18,10 +20,16 @@ class ScanProvider extends ChangeNotifier {
   List<BoundingBox> _liveBoundingBoxes = [];
   double _ocrConfidence = 0.96;
   String? _statusMessage;
+  Position? _currentLocation;
+  String _locationAddress = 'Connaught Place, New Delhi (GPS Active)';
 
   ScanProvider(this._apiClient) {
     _initDemoBoundingBoxes();
+    fetchCurrentLocation();
   }
+
+  Position? get currentLocation => _currentLocation;
+  String get locationAddress => _locationAddress;
 
   bool get isFlashOn => _isFlashOn;
   bool get isAutoFocusOn => _isAutoFocusOn;
@@ -50,9 +58,29 @@ class ScanProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setCapturedImage(File file) {
-    _capturedImage = file;
-    notifyListeners();
+  /// Fetch Real-Time GPS Location
+  Future<Position?> fetchCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return null;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return null;
+      }
+
+      if (permission == LocationPermission.deniedForever) return null;
+
+      _currentLocation = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      _locationAddress = 'Lat: ${_currentLocation!.latitude.toStringAsFixed(4)}, Long: ${_currentLocation!.longitude.toStringAsFixed(4)} (GPS Lock)';
+      notifyListeners();
+      return _currentLocation;
+    } catch (_) {
+      return null;
+    }
   }
 
   void _initDemoBoundingBoxes() {

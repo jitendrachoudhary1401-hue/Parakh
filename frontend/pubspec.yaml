@@ -20,11 +20,28 @@ dependencies:
   path_provider: ^2.1.3
   file_picker: ^8.0.3
   camera: ^0.12.0+2
+  geolocator: ^13.0.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.2
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo.png"
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: "assets/logo.png"
+    background_color: "#031631"
+    theme_color: "#031631"
+  windows:
+    generate: true
+    image_path: "assets/logo.png"
+    icon_size: 48
 
 flutter:
   uses-material-design: true

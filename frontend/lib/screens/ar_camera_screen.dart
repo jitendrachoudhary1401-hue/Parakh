@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:camera/camera.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -15,9 +16,52 @@ class ArCameraScreen extends StatefulWidget {
 }
 
 class _ArCameraScreenState extends State<ArCameraScreen> {
+  CameraController? _cameraController;
+  bool _isCameraInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initLiveCamera();
+  }
+
+  Future<void> _initLiveCamera() async {
+    try {
+      final cameras = await availableCameras();
+      if (cameras.isNotEmpty) {
+        _cameraController = CameraController(
+          cameras.first,
+          ResolutionPreset.high,
+          enableAudio: false,
+        );
+        await _cameraController!.initialize();
+        if (mounted) {
+          setState(() {
+            _isCameraInitialized = true;
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _cameraController?.dispose();
+    super.dispose();
+  }
+
   Future<void> _handleCapture() async {
     final scan = Provider.of<ScanProvider>(context, listen: false);
-    await scan.processImageExtraction();
+    if (_isCameraInitialized && _cameraController != null && _cameraController!.value.isInitialized) {
+      try {
+        final xFile = await _cameraController!.takePicture();
+        await scan.processImageExtraction(imageFile: File(xFile.path));
+      } catch (_) {
+        await scan.processImageExtraction();
+      }
+    } else {
+      await scan.processImageExtraction();
+    }
     if (mounted) {
       Navigator.pushNamed(context, '/ai-review');
     }
@@ -46,58 +90,75 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            // Camera Viewfinder Background Simulation
+            // Camera Viewfinder Background with Live Feed
             Positioned.fill(
-              child: Container(
-                color: const Color(0xFF0F172A),
-                child: Center(
-                  child: Container(
-                    width: 320,
-                    height: 440,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                      border: Border.all(color: Colors.white24, width: 1),
-                    ),
-                    child: Stack(
-                      children: [
-                        // Guide Reticle
-                        Center(
-                          child: Container(
-                            width: 260,
-                            height: 360,
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.white.withOpacity(0.15), width: 1),
-                            ),
+              child: _isCameraInitialized && _cameraController != null
+                  ? CameraPreview(_cameraController!)
+                  : Container(
+                      color: const Color(0xFF0F172A),
+                      child: Center(
+                        child: Container(
+                          width: 320,
+                          height: 440,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E293B),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                            border: Border.all(color: Colors.white24, width: 1),
                           ),
-                        ),
-                        // Packaging Simulation Art
-                        Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          child: Stack(
                             children: [
-                              Icon(Icons.inventory_2_outlined, size: 54, color: Colors.white.withOpacity(0.2)),
-                              const SizedBox(height: 8),
-                              Text(
-                                'ALIGN PACKAGED COMMODITY LABEL',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.4),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 1.0,
+                              Center(
+                                child: Container(
+                                  width: 260,
+                                  height: 360,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1),
+                                  ),
                                 ),
                               ),
+                              Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.inventory_2_outlined, size: 54, color: Colors.white.withValues(alpha: 0.2)),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'ALIGN PACKAGED COMMODITY LABEL',
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(alpha: 0.4),
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 1.0,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              ...scan.liveBoundingBoxes.map((box) => ArOverlayBoxWidget(box: box)),
                             ],
                           ),
                         ),
-                        // Project live AR bounding boxes
-                        ...scan.liveBoundingBoxes.map((box) => ArOverlayBoxWidget(box: box)),
-                      ],
+                      ),
                     ),
-                  ),
+            ),
+            if (_isCameraInitialized)
+              Positioned.fill(
+                child: Stack(
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 280,
+                        height: 420,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppTheme.primaryLight, width: 2),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                    ...scan.liveBoundingBoxes.map((box) => ArOverlayBoxWidget(box: box)),
+                  ],
                 ),
               ),
-            ),
 
             // Top HUD Overlay
             Positioned(
@@ -224,19 +285,37 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
                       borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                       border: Border.all(color: Colors.white12),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Column(
                       children: [
-                        const Text(
-                          'GS1 Barcode: 8901030382910',
-                          style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'GS1 Barcode: ${scan.selectedBarcode}',
+                              style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
+                            InkWell(
+                              onTap: () => Navigator.pushNamed(context, '/barcode-scanner'),
+                              child: const Text(
+                                'Change GTIN',
+                                style: TextStyle(color: AppTheme.primaryLight, fontSize: 11, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ],
                         ),
-                        InkWell(
-                          onTap: () => Navigator.pushNamed(context, '/barcode-scanner'),
-                          child: const Text(
-                            'Change GTIN',
-                            style: TextStyle(color: AppTheme.primaryLight, fontSize: 11, fontWeight: FontWeight.w700),
-                          ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on, color: AppTheme.secondary, size: 12),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                scan.locationAddress,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: Colors.white54, fontSize: 10),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
