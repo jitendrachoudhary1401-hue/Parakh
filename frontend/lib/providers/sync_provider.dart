@@ -13,7 +13,7 @@ class SyncProvider extends ChangeNotifier {
   List<SyncQueueItem> _queue = [];
   bool _isSyncing = false;
   bool _isOnline = true;
-  int _syncedCount = 14;
+  int _syncedCount = 0;
 
   SyncProvider(this._apiClient, this._storage) {
     _loadQueue();
@@ -27,30 +27,6 @@ class SyncProvider extends ChangeNotifier {
 
   void _loadQueue() {
     _queue = _storage.getSyncQueue();
-    if (_queue.isEmpty) {
-      _queue = [
-        SyncQueueItem(
-          id: 'sync_q_01',
-          inspectionId: 'INSP-2026-OFFLINE-01',
-          localImagePath: 'cache/scan_raw_8901.jpg',
-          barcode: '8901030382910',
-          storeName: 'Basement Grocery Mart, Connaught Place',
-          createdAt: DateTime.now().subtract(const Duration(minutes: 45)),
-          retryCount: 1,
-          status: 'pending',
-        ),
-        SyncQueueItem(
-          id: 'sync_q_02',
-          inspectionId: 'INSP-2026-OFFLINE-02',
-          localImagePath: 'cache/scan_raw_8902.jpg',
-          barcode: '8902049102938',
-          storeName: 'Rural Mandi Warehouse, Mehrauli',
-          createdAt: DateTime.now().subtract(const Duration(hours: 1, minutes: 10)),
-          retryCount: 0,
-          status: 'pending',
-        ),
-      ];
-    }
     notifyListeners();
   }
 

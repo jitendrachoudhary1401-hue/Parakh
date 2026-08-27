@@ -13,18 +13,17 @@ class ScanProvider extends ChangeNotifier {
   bool _isFlashOn = false;
   bool _isAutoFocusOn = true;
   bool _isProcessing = false;
-  String _selectedBarcode = '8901030382910';
+  String _selectedBarcode = '';
   File? _capturedImage;
   GS1Product? _gs1Product;
   OCRExtractedData? _extractedData;
-  List<BoundingBox> _liveBoundingBoxes = [];
-  double _ocrConfidence = 0.96;
+  final List<BoundingBox> _liveBoundingBoxes = [];
+  final double _ocrConfidence = 0.0;
   String? _statusMessage;
   Position? _currentLocation;
-  String _locationAddress = 'Connaught Place, New Delhi (GPS Active)';
+  String _locationAddress = 'Acquiring GPS location...';
 
   ScanProvider(this._apiClient) {
-    _initDemoBoundingBoxes();
     fetchCurrentLocation();
   }
 
@@ -83,15 +82,7 @@ class ScanProvider extends ChangeNotifier {
     }
   }
 
-  void _initDemoBoundingBoxes() {
-    _liveBoundingBoxes = [
-      BoundingBox(label: 'MRP ₹ 45.00', left: 40, top: 180, width: 140, height: 40, isCompliant: true, confidence: 0.98),
-      BoundingBox(label: 'Net Qty: 200g', left: 200, top: 180, width: 130, height: 40, isCompliant: true, confidence: 0.95),
-      BoundingBox(label: 'Mfg: 04/2026', left: 40, top: 240, width: 120, height: 35, isCompliant: true, confidence: 0.94),
-      BoundingBox(label: 'Missing Care Email', left: 180, top: 240, width: 150, height: 35, isCompliant: false, confidence: 0.91),
-      BoundingBox(label: 'GS1 Barcode 8901030', left: 90, top: 310, width: 200, height: 50, isCompliant: true, confidence: 0.99),
-    ];
-  }
+
 
   /// GS1 Barcode Lookup
   Future<GS1Product> lookupGS1Barcode(String barcode) async {
