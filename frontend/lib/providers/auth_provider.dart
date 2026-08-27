@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:local_auth/local_auth.dart';
 import '../core/api_client.dart';
 import '../core/constants.dart';
 import '../core/storage_service.dart';
@@ -8,11 +9,12 @@ import '../models/models.dart';
 class AuthProvider extends ChangeNotifier {
   final ApiClient _apiClient;
   final StorageService _storage;
+  final LocalAuthentication _localAuth = LocalAuthentication();
 
   UserModel? _currentUser;
   bool _isLoading = false;
   String? _errorMessage;
-  bool _biometricEnabled = true;
+  final bool _biometricEnabled = true;
 
   AuthProvider(this._apiClient, this._storage) {
     _loadPersistedUser();
@@ -99,32 +101,57 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Biometric Quick Unlock Simulation
+  /// Real Biometric Hardware Quick Unlock (Fingerprint / Face ID)
   Future<bool> unlockWithBiometrics() async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
-    await Future.delayed(const Duration(milliseconds: 700));
 
-    if (_currentUser != null) {
-      _isLoading = false;
-      notifyListeners();
-      return true;
+    try {
+      final bool canAuthenticateWithBiometrics = await _localAuth.canCheckBiometrics;
+      final bool canAuthenticate = canAuthenticateWithBiometrics || await _localAuth.isDeviceSupported();
+
+      if (!canAuthenticate) {
+        _errorMessage = 'Biometric hardware sensor unavailable on this device.';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      final bool didAuthenticate = await _localAuth.authenticate(
+        localizedReason: 'Scan fingerprint or Face ID to unlock Project PARAKH',
+        options: const AuthenticationOptions(
+          biometricOnly: true,
+          useErrorDialogs: true,
+          stickyAuth: true,
+        ),
+      );
+
+      if (didAuthenticate) {
+        if (_currentUser == null) {
+          _currentUser = UserModel(
+            id: 'insp_doca_2026',
+            email: 'officer.rajesh@doca.gov.in',
+            fullName: 'Inspector Rajesh Kumar (DoCA Field)',
+            officialId: 'DOCA-INSP-2026',
+            role: UserRole.inspector,
+            zone: 'North Zone (New Delhi Division)',
+            token: 'jwt_biometric_token',
+          );
+          await _storage.saveToken('jwt_biometric_token');
+          await _storage.saveUser(_currentUser!);
+        }
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
+    } catch (e) {
+      _errorMessage = 'Biometric authentication failed: ${e.toString()}';
     }
 
-    _currentUser = UserModel(
-      id: 'insp_doca_2026',
-      email: 'officer.rajesh@doca.gov.in',
-      fullName: 'Inspector Rajesh Kumar (DoCA Field)',
-      officialId: 'DOCA-INSP-2026',
-      role: UserRole.inspector,
-      zone: 'North Zone (New Delhi Division)',
-      token: 'jwt_biometric_token',
-    );
-    await _storage.saveToken('jwt_biometric_token');
-    await _storage.saveUser(_currentUser!);
     _isLoading = false;
     notifyListeners();
-    return true;
+    return false;
   }
 
   /// Logout
