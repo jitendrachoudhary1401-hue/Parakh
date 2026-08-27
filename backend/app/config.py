@@ -60,6 +60,7 @@ class Settings(BaseSettings):
     # --- Google Cloud Vision (OCR) ---
     google_cloud_vision_key: Optional[str] = None
     google_application_credentials: Optional[str] = None
+    google_cloud_vision_credentials_json: Optional[str] = None
 
     # --- GS1 India API ---
     gs1_api_url: str = "https://api.gs1india.org/v1"
