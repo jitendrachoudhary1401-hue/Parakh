@@ -1,240 +1,398 @@
-# Project PARAKH — Advanced Legal Metrology Compliance System
+# 🖥️ Project PARAKH — Backend
 
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110.0-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B.svg?logo=flutter&logoColor=white)](https://flutter.dev)
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB.svg?logo=python&logoColor=white)](https://www.python.org)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791.svg?logo=postgresql&logoColor=white)](https://www.postgresql.org)
-[![Hyperledger Fabric](https://img.shields.io/badge/Blockchain-Hyperledger%20Fabric-2F3134.svg?logo=hyperledger&logoColor=white)](https://www.hyperledger.org/projects/fabric)
-[![Stitch UI](https://img.shields.io/badge/Design%20System-Stitch%20Minimalism-1A2B47.svg)](https://stitch.design)
-
-**Problem Statement ID:** 26034  
-**Organization:** Ministry of Consumer Affairs, Food & Public Distribution (DoCA)  
-**Theme:** Agriculture, FoodTech & Rural Development  
-**System Status:** 100% Production Ready (Full-Stack: FastAPI Gateway + Stitch-Designed Flutter Mobile Frontend)
+### Python FastAPI Backend for AI-Powered Legal Metrology Enforcement
 
 ---
 
-## 1. Executive Summary
+## 📋 Overview
 
-**Project PARAKH** is an AI-powered compliance and evidentiary platform designed for the **Department of Consumer Affairs (DoCA)** to automate and enforce the **Legal Metrology (Packaged Commodities) Rules, 2011**.
+The PARAKH backend is a high-performance **Python FastAPI** application that orchestrates the complete AI compliance verification pipeline. It processes product label images through a multi-stage AI engine (OpenCV → Cloud Vision OCR → HuggingFace NLP → Rule Engine → ViT Anomaly Detector), generates cryptographic evidence hashes, and commits tamper-proof records to Hyperledger Fabric.
 
-The system bridges on-ground field enforcement officials using a **Flutter mobile app** with an asynchronous **FastAPI cloud processing engine** and an immutable **Hyperledger Fabric blockchain ledger** for legally admissible digital evidence.
+---
 
-```mermaid
-graph TD
-    subgraph "Edge / Field Enforcement Layer"
-        A[Flutter Mobile App - AR Viewfinder & HUD]
-        B[GS1 Barcode / QR Scanner]
-        C[Offline Sync Buffer - Local SQLite]
-    end
+## 🏗️ Architecture
 
-    subgraph "API Gateway & Security"
-        D[FastAPI Gateway / SlowAPI Rate Limiter / OAuth2 RBAC]
-    end
+```
+app/
+├── ai/                        # AI & Computer Vision Engines
+│   ├── ocr_engine.py          # Google Cloud Vision OCR integration
+│   ├── nlp_extractor.py       # HuggingFace Transformers NER pipeline
+│   ├── image_processor.py     # OpenCV preprocessing & 3D surface unwarping
+│   ├── anomaly_detector.py    # HuggingFace ViT anomaly/counterfeit detector
+│   ├── ai_triage.py           # AI citizen complaint triage classifier
+│   └── predictive.py          # scikit-learn predictive risk analytics
+│
+├── api/v1/                    # REST API Endpoints (14 routers)
+│   ├── router.py              # Master API v1 router aggregator
+│   ├── health.py              # /health (liveness) & /ready (readiness)
+│   ├── auth.py                # JWT login & registration
+│   ├── users.py               # User profile CRUD
+│   ├── scan.py                # Image upload & processing
+│   ├── analysis.py            # Full AI compliance pipeline trigger
+│   ├── inspections.py         # Inspection record management
+│   ├── compliance.py          # Rule engine evaluation results
+│   ├── evidence.py            # SHA-256 evidence hash & blockchain commit
+│   ├── citizen.py             # Public citizen complaint & WhatsApp webhook
+│   ├── analytics.py           # Dashboard summary analytics
+│   ├── heatmaps.py            # Geographic violation cluster heatmaps
+│   ├── legal_notices.py       # PDF legal notice generation
+│   ├── audit.py               # System audit trail logs
+│   └── sync.py                # Offline mobile data synchronization
+│
+├── blockchain/                # Hyperledger Fabric Integration
+│   ├── fabric_client.py       # gRPC client for NIC MeghRaj Cloud
+│   ├── evidence_chain.py      # SHA-256 payload hashing & ledger commit
+│   └── verifier.py            # Evidence integrity verification
+│
+├── core/                      # Core Infrastructure
+│   ├── security.py            # OAuth2 JWT, Argon2/BCrypt password hashing
+│   ├── rbac.py                # Role-Based Access Control (inspector/admin/citizen)
+│   ├── rate_limiter.py        # Per-endpoint SlowAPI rate limiting
+│   ├── pg_cache.py            # PostgreSQL-native key-value cache (replaces Redis)
+│   ├── pg_queue.py            # PostgreSQL-native task queue (SKIP LOCKED)
+│   ├── middleware.py          # Request logging & error handling middleware
+│   ├── exceptions.py          # Custom exception hierarchy
+│   └── responses.py           # Standardized API response wrappers
+│
+├── db/                        # Database Connectors
+│   ├── postgres.py            # SQLAlchemy async engine & session factory
+│   └── mongodb.py             # Motor async MongoDB client
+│
+├── integrations/              # External API Clients
+│   ├── openfoodfacts_client.py # Open Food Facts barcode lookup
+│   ├── whatsapp_client.py     # WhatsApp Business API messaging
+│   └── gs1_client.py          # GS1 lookup interface (bridges to OFF)
+│
+├── models/                    # SQLAlchemy ORM Models
+│   ├── user.py                # User account with role & hashed password
+│   ├── inspection.py          # Inspection record with GPS & image path
+│   ├── evidence.py            # Blockchain evidence with SHA-256 hash
+│   ├── gs1_product.py         # Open Food Facts cached product data
+│   ├── audit_log.py           # System audit trail entries
+│   ├── cache_entry.py         # PostgreSQL cache table (TTL key-value)
+│   └── task_queue.py          # PostgreSQL task queue (job lifecycle)
+│
+├── repositories/              # Data Access Layer (Repository Pattern)
+│   ├── inspection_repo.py
+│   ├── evidence_repo.py
+│   ├── gs1_repo.py
+│   └── user_repo.py
+│
+├── rules/                     # Legal Metrology Compliance Rule Engine
+│   ├── engine.py              # Rule orchestrator
+│   ├── mrp_rule.py            # MRP declaration validation
+│   ├── date_rule.py           # Manufacturing/Expiry date validation
+│   ├── quantity_rule.py       # Net quantity declaration validation
+│   ├── gs1_rule.py            # Manufacturer cross-reference vs. Open Food Facts
+│   └── consumer_care_rule.py  # Consumer care contact validation
+│
+├── schemas/                   # Pydantic Request/Response Schemas
+├── services/                  # Business Logic Layer
+│   ├── analysis_service.py    # End-to-end AI pipeline orchestrator
+│   ├── evidence_service.py    # Evidence packaging & blockchain commitment
+│   ├── auth_service.py        # Authentication business logic
+│   ├── scan_service.py        # Image upload & processing
+│   ├── inspection_service.py  # Inspection lifecycle management
+│   ├── citizen_service.py     # Citizen complaint handling
+│   ├── legal_notice_service.py # PDF legal notice generation
+│   ├── heatmap_service.py     # Geographic risk zone computation
+│   ├── analytics_service.py   # Dashboard metric aggregation
+│   ├── sync_service.py        # Offline data sync management
+│   └── user_service.py        # User account management
+│
+├── storage/                   # Object Storage Abstraction
+│   └── __init__.py            # MinIO (S3) & Local filesystem backends
+│
+├── config.py                  # Centralized pydantic-settings configuration
+└── main.py                    # FastAPI application entry point
 
-    subgraph "AI & Computer Vision Processing Pipeline"
-        E[OpenCV 3D Cylindrical Surface Unwarping]
-        F[Google Cloud Vision - Multi-Region OCR]
-        G[HuggingFace Transformers - Legal Metrology NER]
-        H[HuggingFace ViT - Anomaly & Tamper Detection]
-        I[Scikit-learn - Predictive Violation Heatmaps]
-    end
-
-    subgraph "Rule Engine & Ledger Layer"
-        J[Legal Metrology 2011 Compliance Rule Engine]
-        K[(PostgreSQL - Structured Inspections & Users)]
-        L[(MongoDB - AI OCR Raw Logs & Bounding Boxes)]
-        M[MinIO / S3 - Encrypted Images & PDF Notices]
-        N{Hyperledger Fabric - SHA-256 Tamper-Proof Ledger}
-    end
-
-    A --> D
-    B --> D
-    C -. "Network Restored" .-> D
-    
-    D --> J
-    J --> E
-    E --> F
-    F --> G
-    G --> H
-    
-    J --> K
-    J --> L
-    J --> M
-    J -- "If Violation Flagged" --> N
+tests/                         # Test Suite (37 tests)
+├── conftest.py                # Shared fixtures (async DB session, auth headers)
+├── test_auth.py               # Authentication & JWT tests (5 tests)
+├── test_citizen.py            # Citizen complaint tests (2 tests)
+├── test_compliance.py         # Rule engine evaluation tests (3 tests)
+├── test_evidence.py           # SHA-256 hash & evidence tests (2 tests)
+├── test_gs1.py                # Open Food Facts integration tests (4 tests)
+├── test_ocr.py                # OCR engine tests (4 tests)
+├── test_pg_cache_queue.py     # PostgreSQL cache & queue tests (4 tests)
+├── test_rules.py              # Legal Metrology rule tests (10 tests)
+└── test_security.py           # File validation & security tests (3 tests)
 ```
 
 ---
 
-## 2. Full-Stack Architecture
+## 🚀 Getting Started
 
-### 2.1. Mobile Frontend (`mobile_app/`)
-* **Framework:** Flutter 3.x (Cross-Platform iOS & Android)
-* **Design Language:** **Stitch Institutional Minimalism**
-  * Primary Palette: Deep Navy (`#031631`), Slate Gray (`#505F76`), Emerald Green (`#00A673`), Crimson Alert (`#BA1A1A`)
-  * Typography: Work Sans (high legibility, wide apertures for metrology numerical data)
-  * Outlines & Surfaces: 1px Slate-200 (`#E2E8F0`) borders, 4px structured radius (`rounded-sm`), 20px safe margins
-* **Branding:** Native vector SVG logo (`mobile_app/assets/logo.svg`)
-* **11 Core Workflow Screens:**
-  1. `SplashScreen` — Vector SVG animation & Ministry branding
-  2. `LoginScreen` — Official ID, Password, 2FA OTP, and instant Biometric unlock
-  3. `DashboardScreen` — Daily progress counters, quick actions, recent inspection stream
-  4. `ArCameraScreen` — Real-time AR camera viewfinder with green/red bounding boxes overlay & live OCR confidence HUD (97%)
-  5. `BarcodeScannerScreen` — GS1 EAN/UPC barcode scanner with registered manufacturer lookup
-  6. `AiReviewScreen` — 3D unwarped image sanity check + structured extracted fields review
-  7. `ComplianceVerdictScreen` — Legal Metrology 2011 rule-by-rule pass/fail assessment
-  8. `EvidenceReportScreen` — Immutable SHA-256 blockchain receipt preview and in-app legal notice PDF generator
-  9. `InspectionHistoryScreen` — Searchable and filterable ledger by date, status, and violation category
-  10. `OfflineSyncHubScreen` — Queued offline inspections for retail basement fieldwork with auto-retry
-  11. `ProfileSettingsScreen` — Jurisdiction zone, Hindi/English localization, and gateway config
+### Prerequisites
 
-### 2.2. Backend & AI Pipeline (`app/`)
-* **Framework:** Python 3.11, FastAPI (Asynchronous ASGI)
-* **Relational Storage:** PostgreSQL (Async SQLAlchemy 2.0 + Alembic migrations)
-* **Unstructured AI Logs:** MongoDB (Motor Async Client)
-* **Computer Vision:** OpenCV (Contour detection, CLAHE, 3D cylindrical surface unwarping)
-* **OCR:** Google Cloud Vision API
-* **NLP & Entity Extraction:** HuggingFace Transformers (NER)
-* **Anomaly Detection:** HuggingFace Vision Transformers (ViT)
-* **Blockchain Evidentiary Ledger:** Hyperledger Fabric (SHA-256 evidence anchoring on NIC MeghRaj cloud)
-* **Security & Auth:** OAuth2 + JWT (Bearer), Bcrypt, Role-Based Access Control (RBAC), AES-256, SlowAPI Rate Limiting
+| Requirement | Version |
+|---|---|
+| Python | 3.11+ |
+| PostgreSQL | 15+ |
+| MongoDB | 6+ |
+| MinIO (optional) | Latest |
+| Google Cloud Vision API key (optional) | For live OCR |
 
----
+### Installation
 
-## 3. Directory Layout
-
-```
-Project-PARAKH/
-├── app/                          # FastAPI Backend Application
-│   ├── main.py                   # App entrypoint & lifespan
-│   ├── config.py                 # Pydantic v2 settings
-│   ├── api/v1/                   # 12 versioned REST API routers
-│   ├── core/                     # Security, RBAC, responses, exceptions
-│   ├── models/                   # SQLAlchemy ORM models (7 tables)
-│   ├── schemas/                  # Pydantic request/response validation
-│   ├── repositories/             # Async data access layer
-│   ├── services/                 # Business logic orchestration
-│   ├── ai/                       # OpenCV, Vision OCR, HuggingFace NER, ViT
-│   ├── rules/                    # Legal Metrology 2011 rule engine
-│   ├── blockchain/               # Hyperledger Fabric client & SHA-256 hasher
-│   ├── storage/                  # S3, MinIO, Azure Blob storage
-│   ├── integrations/             # GS1 India API & WhatsApp Cloud API
-│   └── db/                       # PostgreSQL & MongoDB connection pools
-├── mobile_app/                   # Flutter Mobile Frontend
-│   ├── assets/                   # Vector SVG logo & images
-│   ├── lib/
-│   │   ├── core/                 # Stitch theme, ApiClient, storage, constants
-│   │   ├── models/               # Data entities & contracts
-│   │   ├── providers/            # Auth, Scan, Compliance, and Sync providers
-│   │   ├── screens/              # 11 Workflow screens
-│   │   └── widgets/              # Reusable Stitch UI components
-│   └── pubspec.yaml              # Flutter dependencies & assets config
-├── alembic/                      # Database schema migrations
-├── infrastructure/               # Dockerfile, docker-compose, Kubernetes manifests
-├── tests/                        # 8 automated test suites
-├── requirements.txt              # Python dependencies
-├── INSTRUCTIONS.md               # Master AI status report & instructions
-└── README.md                     # Full-Stack Documentation
-```
-
----
-
-## 4. Quickstart Guide
-
-### 4.1. Backend Setup
-
-1. **Clone repository and setup Python virtual environment:**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
-
-2. **Configure environment:**
-   ```bash
-   cp .env.example .env
-   ```
-
-3. **Start PostgreSQL, MongoDB & MinIO via Docker Compose:**
-   ```bash
-   docker-compose -f infrastructure/docker/docker-compose.yml up -d
-   ```
-
-4. **Run database migrations:**
-   ```bash
-   alembic upgrade head
-   ```
-
-5. **Start FastAPI application server:**
-   ```bash
-   uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-   ```
-
-6. **Interactive API Documentation:**
-   * Swagger UI: `http://localhost:8000/docs`
-   * ReDoc: `http://localhost:8000/redoc`
-
----
-
-### 4.2. Mobile App Setup (Flutter)
-
-1. **Navigate to the mobile directory:**
-   ```bash
-   cd mobile_app
-   ```
-
-2. **Install Flutter dependencies:**
-   ```bash
-   flutter pub get
-   ```
-
-3. **Run on connected Android/iOS device or emulator:**
-   ```bash
-   flutter run
-   ```
-
----
-
-## 5. Automated Test Suites
-
-Run the backend automated test suites:
 ```bash
-pytest tests/ -v --tb=short
+# 1. Navigate to backend directory
+cd backend
+
+# 2. Create and activate virtual environment
+python -m venv venv
+# Linux/macOS:
+source venv/bin/activate
+# Windows:
+venv\Scripts\activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Configure environment
+cp .env.example .env
+# Edit .env with your database credentials, API keys, etc.
+```
+
+### Database Setup
+
+```bash
+# Create PostgreSQL database
+psql -U postgres -c "CREATE USER parakh_user WITH PASSWORD 'your_password';"
+psql -U postgres -c "CREATE DATABASE parakh_db OWNER parakh_user;"
+
+# Run Alembic migrations
+alembic upgrade head
+```
+
+### Run Development Server
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+The API will be available at:
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+- **Health Check**: http://localhost:8000/api/v1/health
+- **Readiness Probe**: http://localhost:8000/api/v1/ready
+
+### Run Tests
+
+```bash
+# Run all 37 tests
+python -m pytest
+
+# Run with verbose output
+python -m pytest -v
+
+# Run with coverage report
+python -m pytest --cov=app --cov-report=term-missing
 ```
 
 ---
 
-## 6. Core REST API Catalog
+## 🔧 Environment Variables
 
-| Method | Endpoint | Description |
+All configuration is managed via environment variables (`.env` file). Key variables:
+
+### Core Application
+| Variable | Default | Description |
 |---|---|---|
-| `POST` | `/api/v1/auth/login` | Official ID & Password OAuth2 JWT token grant |
-| `POST` | `/api/v1/scan/upload` | Secure packaging image reception & validation |
-| `GET`  | `/api/v1/scan/barcode/{gtin}` | GS1 India barcode registry lookup |
-| `POST` | `/api/v1/analysis/verify-compliance` | Full AI Vision & Legal Metrology Rule Engine pipeline |
-| `POST` | `/api/v1/evidence/commit` | SHA-256 evidence hashing & Hyperledger Fabric commitment |
-| `POST` | `/api/v1/evidence/{id}/verify` | Cryptographic mathematical proof verification |
-| `GET`  | `/api/v1/inspections` | Filtered & paginated inspection history |
-| `POST` | `/api/v1/legal-notices/generate` | Automated PDF statutory legal notice generation |
-| `GET`  | `/api/v1/dashboard/heatmaps` | Geospatial observations & predicted violation risks |
-| `POST` | `/api/v1/citizen/reports` | Citizen crowd-sourced packaging reports with AI triage |
-| `GET`  | `/api/v1/sync/status` | Mobile offline queue synchronization endpoint |
+| `APP_ENV` | `development` | `development`, `staging`, or `production` |
+| `DEBUG` | `true` | Enable debug mode |
+| `PORT` | `8000` | Server port |
+
+### Databases
+| Variable | Default | Description |
+|---|---|---|
+| `DATABASE_URL` | `postgresql+asyncpg://...` | PostgreSQL async connection string |
+| `MONGODB_URL` | `mongodb://localhost:27017` | MongoDB connection string |
+| `USE_POSTGRES_CACHE` | `true` | Enable PostgreSQL-native caching |
+| `USE_POSTGRES_QUEUE` | `true` | Enable PostgreSQL-native task queue |
+
+### Authentication
+| Variable | Default | Description |
+|---|---|---|
+| `JWT_SECRET_KEY` | — | **Required.** Random 64+ char secret |
+| `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | JWT access token expiry |
+
+### AI / ML
+| Variable | Default | Description |
+|---|---|---|
+| `GOOGLE_CLOUD_VISION_KEY` | — | Google Cloud Vision API key |
+| `NER_MODEL_NAME` | `dslim/bert-base-NER` | HuggingFace NER model |
+| `VIT_MODEL_NAME` | `google/vit-base-patch16-224` | HuggingFace ViT model |
+| `ANOMALY_DETECTION_ENABLED` | `true` | Enable ViT anomaly detection |
+
+### Integrations
+| Variable | Default | Description |
+|---|---|---|
+| `OPENFOODFACTS_API_URL` | `https://world.openfoodfacts.org/api/v2` | Open Food Facts API |
+| `WHATSAPP_ENABLED` | `false` | Enable WhatsApp Business API |
+| `BLOCKCHAIN_ENABLED` | `false` | Enable Hyperledger Fabric |
+
+See [`.env.example`](.env.example) for the complete list of all 50+ configurable variables.
 
 ---
 
-## 7. Legal Metrology Rules (Packaged Commodities Rules, 2011)
+## 🧠 AI Pipeline
 
-| Rule Reference | Rule Name | Requirement |
-|---|---|---|
-| **Rule 6(1)(a)** | Manufacturer & Packer | Name and complete geographical address of manufacturer/packer |
-| **Rule 6(1)(d)** | Manufacturing Date | Month and Year of manufacture or packaging |
-| **Rule 6(1)(e)** | MRP Declaration | Maximum Retail Price with "inclusive of all taxes" declaration |
-| **Rule 6(1)(f)** | Net Quantity | Net quantity in standard units (g, kg, ml, l) with compliant font size |
-| **Rule 6(1)(h)** | Consumer Care | Mandatory Consumer Care grievance telephone number and email address |
-| **GS1 Registry** | Barcode Cross-Check | GTIN verification against registered brand and company database |
+The compliance verification pipeline runs through these stages:
+
+```
+1. OpenCV Preprocessing
+   ├── Fast Non-Local Means Denoising
+   ├── CLAHE Contrast Enhancement
+   ├── Canny Edge Contour Detection & ROI Cropping
+   ├── Hough Line Curved Surface Detection
+   └── Perspective Transform 3D Unwarping
+
+2. Google Cloud Vision OCR
+   └── Raw text, word confidence, bounding box vertices, language detection
+
+3. HuggingFace NLP Entity Extraction
+   └── MRP, Net Quantity, Mfg Date, Expiry Date, Consumer Care, Manufacturer
+
+4. Open Food Facts Cross-Reference
+   └── Barcode lookup for registered manufacturer & product verification
+
+5. Compliance Rule Engine
+   ├── MRP Declaration Rule
+   ├── Date Declaration Rule (Mfg + Expiry)
+   ├── Net Quantity Rule
+   ├── Consumer Care Contact Rule
+   └── GS1 Manufacturer Cross-Reference Rule
+
+6. ViT Anomaly Detection
+   ├── HSV Color Consistency Analysis
+   ├── MSER Typography Check
+   ├── Laplacian Logo Quality Check
+   └── ViT Feature Embedding Entropy Analysis
+
+7. Evidence Hash (on violation)
+   └── SHA-256(Image + GPS + Timestamp + OCR + Violations)
+       → Stored in PostgreSQL + MongoDB + Hyperledger Fabric
+```
 
 ---
 
-## 8. License & Sovereign Ownership
+## 🗄️ Database Schema
 
-Developed for the **Ministry of Consumer Affairs, Food & Public Distribution (DoCA)**, Government of India. All rights reserved under Problem Statement ID: 26034.
+### PostgreSQL Tables
+| Table | Purpose |
+|---|---|
+| `users` | User accounts with roles and hashed passwords |
+| `inspections` | Inspection records with GPS, image paths, and results |
+| `evidence` | Blockchain evidence with SHA-256 hashes and tx receipts |
+| `openfoodfacts_products` | Cached barcode lookup results |
+| `audit_logs` | System audit trail entries |
+| `cache_entries` | PostgreSQL-native TTL key-value cache |
+| `task_queue` | PostgreSQL-native background job queue |
+
+### MongoDB Collections
+| Collection | Purpose |
+|---|---|
+| `ai_extraction_logs` | Raw OCR dumps, NLP entities, bounding boxes, ViT findings |
+
+---
+
+## 🧪 Test Coverage
+
+| Test File | Tests | Coverage Area |
+|---|---|---|
+| `test_auth.py` | 5 | JWT login, registration, token refresh, password hashing |
+| `test_compliance.py` | 3 | Rule engine overall status evaluation |
+| `test_rules.py` | 10 | Individual rule validations (MRP, dates, quantity, etc.) |
+| `test_ocr.py` | 4 | OCR engine initialization and text extraction |
+| `test_gs1.py` | 4 | Open Food Facts barcode lookup & caching |
+| `test_evidence.py` | 2 | SHA-256 hash computation & evidence packaging |
+| `test_citizen.py` | 2 | Citizen complaint submission & WhatsApp webhook |
+| `test_pg_cache_queue.py` | 4 | PostgreSQL cache CRUD/expiration & task queue lifecycle |
+| `test_security.py` | 3 | File validation, MIME checking, embedded script rejection |
+| **Total** | **37** | **All passing** |
+
+---
+
+## 🔌 API Reference
+
+### Authentication
+```bash
+# Register a new user
+curl -X POST http://localhost:8000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "inspector@parakh.gov.in", "password": "SecurePass123!", "role": "inspector"}'
+
+# Login and get JWT token
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "inspector@parakh.gov.in", "password": "SecurePass123!"}'
+```
+
+### Scan & Analysis
+```bash
+# Upload product image
+curl -X POST http://localhost:8000/api/v1/scan/upload \
+  -H "Authorization: Bearer <token>" \
+  -F "file=@product_label.jpg" \
+  -F "latitude=28.6139" \
+  -F "longitude=77.2090"
+
+# Run full AI compliance check
+curl -X POST http://localhost:8000/api/v1/analysis/<inspection_id>/verify \
+  -H "Authorization: Bearer <token>" \
+  -d '{"product_barcode": "8901234567890"}'
+```
+
+### Evidence
+```bash
+# Commit evidence to blockchain
+curl -X POST http://localhost:8000/api/v1/evidence/commit \
+  -H "Authorization: Bearer <token>" \
+  -d '{"inspection_id": "<uuid>", "ocr_text_snapshot": "...", "violation_data": {...}}'
+
+# Verify evidence integrity
+curl -X GET http://localhost:8000/api/v1/evidence/<evidence_id>/verify \
+  -H "Authorization: Bearer <token>"
+```
+
+---
+
+## 🚢 Deployment
+
+### Production (Render / Railway / VPS)
+
+```bash
+# Procfile
+web: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 4
+```
+
+### Docker
+
+```dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+---
+
+## 📝 Development
+
+```bash
+# Code formatting
+black app/ tests/
+
+# Linting
+ruff check app/ tests/
+
+# Type checking
+mypy app/
+
+# Database migration
+alembic revision --autogenerate -m "description"
+alembic upgrade head
+```
