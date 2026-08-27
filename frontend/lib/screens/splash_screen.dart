@@ -52,7 +52,8 @@ class _SplashScreenState extends State<SplashScreen> {
         permission = await Geolocator.requestPermission();
       }
 
-      if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
+      if (permission == LocationPermission.always ||
+          permission == LocationPermission.whileInUse) {
         setState(() {
           _isLocationPermissionGranted = true;
           _isCheckingPermission = false;
@@ -150,7 +151,9 @@ class _SplashScreenState extends State<SplashScreen> {
         fit: StackFit.expand,
         children: [
           // Video background player if initialized and permission is granted or checking
-          if (_isVideoInitialized && _videoController != null && (_isLocationPermissionGranted || _isCheckingPermission))
+          if (_isVideoInitialized &&
+              _videoController != null &&
+              (_isLocationPermissionGranted || _isCheckingPermission))
             SizedBox.expand(
               child: FittedBox(
                 fit: BoxFit.cover,
@@ -163,10 +166,10 @@ class _SplashScreenState extends State<SplashScreen> {
             )
           else if (_isLocationPermissionGranted || _isCheckingPermission)
             // Fallback UI while loading video
-            Center(
+            const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
+                children: [
                   ParakhLogo(width: 180, height: 98, showText: true),
                   SizedBox(height: 24),
                   SizedBox(
@@ -174,7 +177,8 @@ class _SplashScreenState extends State<SplashScreen> {
                     height: 24,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(AppTheme.primary),
                     ),
                   ),
                 ],
@@ -185,7 +189,8 @@ class _SplashScreenState extends State<SplashScreen> {
           if (!_isCheckingPermission && !_isLocationPermissionGranted)
             Container(
               color: Colors.black.withValues(alpha: 0.85),
-              padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
               child: Center(
                 child: Card(
                   color: AppTheme.surfaceContainerLow,
@@ -231,9 +236,11 @@ class _SplashScreenState extends State<SplashScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.primary,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14.0),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14.0),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                                borderRadius:
+                                    BorderRadius.circular(AppTheme.radiusSm),
                               ),
                             ),
                           ),
