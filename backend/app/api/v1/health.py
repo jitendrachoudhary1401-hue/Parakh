@@ -29,15 +29,19 @@ async def liveness_probe():
 
 @router.get("/ready")
 async def readiness_probe(db: AsyncSession = Depends(get_db)):
-    """Readiness probe testing core database connectivity."""
-    checks = {"postgres": False, "mongodb": False}
+    """Readiness probe testing core database connectivity, cache, and queue."""
+    checks = {"postgres": False, "postgres_cache": False, "postgres_queue": False, "mongodb": False}
 
-    # Check PostgreSQL
+    # Check PostgreSQL Core DB, Cache, and Queue tables
     try:
         await db.execute(text("SELECT 1"))
         checks["postgres"] = True
+        await db.execute(text("SELECT 1 FROM cache_entries LIMIT 1"))
+        checks["postgres_cache"] = True
+        await db.execute(text("SELECT 1 FROM task_queue LIMIT 1"))
+        checks["postgres_queue"] = True
     except Exception:
-        checks["postgres"] = False
+        pass
 
     # Check MongoDB
     try:
@@ -47,7 +51,7 @@ async def readiness_probe(db: AsyncSession = Depends(get_db)):
     except Exception:
         checks["mongodb"] = False
 
-    all_ready = all(checks.values())
+    all_ready = checks["postgres"] and checks["postgres_cache"] and checks["postgres_queue"]
     return {
         "ready": all_ready,
         "checks": checks,

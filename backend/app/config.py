@@ -45,8 +45,10 @@ class Settings(BaseSettings):
     mongodb_url: str = "mongodb://localhost:27017"
     mongodb_database: str = "parakh_db"
 
-    # --- Redis ---
-    redis_url: str = "redis://localhost:6379/0"
+    # --- PostgreSQL Cache & Queue ---
+    use_postgres_cache: bool = True
+    use_postgres_queue: bool = True
+    cache_ttl_default: int = 3600
 
     # --- API Key Authentication ---
     api_key: str = "parakh_sec_api_key_2026"

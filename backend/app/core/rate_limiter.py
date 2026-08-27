@@ -17,7 +17,7 @@ try:
         return get_remote_address(request)
 
     settings = get_settings()
-    storage_uri = "memory://" if settings.app_env == "testing" or not settings.redis_url or settings.redis_url == "memory://" else settings.redis_url
+    storage_uri = "memory://"
 
     limiter = Limiter(
         key_func=_key_func,

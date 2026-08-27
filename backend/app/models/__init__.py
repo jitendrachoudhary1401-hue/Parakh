@@ -12,6 +12,8 @@ from app.models.citizen_report import CitizenReport
 from app.models.evidence import Evidence
 from app.models.legal_notice import LegalNotice
 from app.models.audit_log import AuditLog
+from app.models.cache_entry import CacheEntry
+from app.models.task_queue import TaskQueue
 
 __all__ = [
     "User",
@@ -21,4 +23,6 @@ __all__ = [
     "Evidence",
     "LegalNotice",
     "AuditLog",
+    "CacheEntry",
+    "TaskQueue",
 ]

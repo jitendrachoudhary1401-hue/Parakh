@@ -17,7 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 # Set test environment flags
 os.environ["APP_ENV"] = "testing"
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
-os.environ["REDIS_URL"] = "memory://"
+os.environ["USE_POSTGRES_CACHE"] = "true"
+os.environ["USE_POSTGRES_QUEUE"] = "true"
 os.environ["JWT_SECRET_KEY"] = "test-secret-key-for-unit-testing-32-chars-long"
 
 from app.core.security import create_access_token, hash_password
