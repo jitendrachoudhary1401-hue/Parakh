@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 /// User Role definition
 enum UserRole { inspector, admin, citizen }
 
@@ -28,7 +26,8 @@ class UserModel {
       id: json['id'] ?? '',
       email: json['email'] ?? '',
       fullName: json['full_name'] ?? json['name'] ?? 'Enforcement Officer',
-      officialId: json['official_id'] ?? json['badge_number'] ?? 'DOCA-INSP-2026',
+      officialId:
+          json['official_id'] ?? json['badge_number'] ?? 'DOCA-INSP-2026',
       role: (json['role'] == 'admin')
           ? UserRole.admin
           : (json['role'] == 'citizen')
@@ -225,8 +224,11 @@ class GS1Product {
   factory GS1Product.fromJson(Map<String, dynamic> json) {
     return GS1Product(
       gtin: json['gtin'] ?? json['barcode'] ?? '',
-      productName: json['product_name'] ?? json['item_name'] ?? 'Packaged Commodity',
-      registeredCompany: json['registered_company'] ?? json['company'] ?? 'Registered Manufacturer Ltd',
+      productName:
+          json['product_name'] ?? json['item_name'] ?? 'Packaged Commodity',
+      registeredCompany: json['registered_company'] ??
+          json['company'] ??
+          'Registered Manufacturer Ltd',
       companyAddress: json['company_address'] ?? 'Industrial Area, Phase II',
       brand: json['brand'] ?? 'Standard Brand',
       isVerified: json['is_verified'] ?? true,
@@ -314,7 +316,8 @@ class InspectionRecord {
       timestamp: json['timestamp'] != null
           ? DateTime.parse(json['timestamp'])
           : DateTime.now(),
-      isCompliant: json['is_compliant'] ?? (json['violations'] == null || (json['violations'] as List).isEmpty),
+      isCompliant: json['is_compliant'] ??
+          (json['violations'] == null || (json['violations'] as List).isEmpty),
       imagePath: json['image_path'] ?? json['image_url'] ?? '',
       unwarpedImagePath: json['unwarped_image_path'] ?? '',
       extractedData: json['extracted_data'] != null
