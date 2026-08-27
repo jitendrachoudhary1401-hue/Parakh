@@ -1,0 +1,10 @@
+analyzer:
+  exclude:
+    - "backend/**"
+    - "tools/**"
+    - "**/*.md"
+    - "frontend/build/**"
+    - "frontend/android/**"
+    - "frontend/ios/**"
+    - "frontend/web/**"
+    - "frontend/windows/**"

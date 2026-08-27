@@ -9,3 +9,6 @@ analyzer:
     - windows/**
     - macos/**
     - linux/**
+    - backend/**
+    - tools/**
+    - "**/*.md"

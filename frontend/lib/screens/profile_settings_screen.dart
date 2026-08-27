@@ -129,8 +129,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                                     style: TextStyle(fontSize: 13))),
                           ],
                           onChanged: (val) {
-                            if (val != null)
+                            if (val != null) {
                               setState(() => _selectedLanguage = val);
+                            }
                           },
                         ),
                       ],
@@ -209,9 +210,11 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                 style:
                     OutlinedButton.styleFrom(foregroundColor: AppTheme.error),
                 onPressed: () async {
+                  final nav = Navigator.of(context);
                   await auth.logout();
-                  if (mounted)
-                    Navigator.pushReplacementNamed(context, '/login');
+                  if (mounted) {
+                    nav.pushReplacementNamed('/login');
+                  }
                 },
                 icon: const Icon(Icons.logout, size: 18, color: AppTheme.error),
                 label: const Text('LOGOUT OF ENFORCEMENT PORTAL'),

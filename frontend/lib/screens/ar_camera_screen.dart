@@ -73,6 +73,7 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
     final result = await FilePicker.platform.pickFiles(type: FileType.image);
     if (result != null && result.files.single.path != null) {
       final file = File(result.files.single.path!);
+      // ignore: use_build_context_synchronously
       final scan = Provider.of<ScanProvider>(context, listen: false);
       await scan.processImageExtraction(imageFile: file);
       if (mounted) {

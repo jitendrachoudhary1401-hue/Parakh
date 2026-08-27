@@ -72,7 +72,7 @@ class ScanProvider extends ChangeNotifier {
       if (permission == LocationPermission.deniedForever) return null;
 
       _currentLocation = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
       _locationAddress = 'Lat: ${_currentLocation!.latitude.toStringAsFixed(4)}, Long: ${_currentLocation!.longitude.toStringAsFixed(4)} (GPS Lock)';
       notifyListeners();
