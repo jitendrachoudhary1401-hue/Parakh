@@ -55,11 +55,24 @@ class OCREngine:
         self._client = None
 
     def _get_client(self):
-        """Lazy-initialize the Vision API client."""
+        """Lazy-initialize the Vision API client using configured credentials or API key."""
         if self._client is None:
             try:
+                import os
                 from google.cloud import vision
-                self._client = vision.ImageAnnotatorClient()
+                from google.api_core.client_options import ClientOptions
+                from app.config import get_settings
+
+                settings = get_settings()
+
+                if settings.google_application_credentials and os.path.exists(settings.google_application_credentials):
+                    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = settings.google_application_credentials
+
+                if settings.google_cloud_vision_key:
+                    client_options = ClientOptions(api_key=settings.google_cloud_vision_key)
+                    self._client = vision.ImageAnnotatorClient(client_options=client_options)
+                else:
+                    self._client = vision.ImageAnnotatorClient()
             except Exception as exc:
                 logger.error("Failed to initialize Cloud Vision client: %s", exc)
                 raise
