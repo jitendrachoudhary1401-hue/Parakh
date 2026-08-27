@@ -62,8 +62,12 @@ class Settings(BaseSettings):
     google_application_credentials: Optional[str] = None
     google_cloud_vision_credentials_json: Optional[str] = None
 
-    # --- GS1 India API ---
-    gs1_api_url: str = "https://api.gs1india.org/v1"
+    # --- Open Food Facts API ---
+    openfoodfacts_api_url: str = "https://world.openfoodfacts.org/api/v2"
+    openfoodfacts_user_agent: str = "ParakhApp/1.0 (compliance-scanner)"
+
+    # Backwards compatibility settings
+    gs1_api_url: str = "https://world.openfoodfacts.org/api/v2"
     gs1_api_key: Optional[str] = None
 
     # --- Object Storage (Self-Hosted MinIO / Local) ---

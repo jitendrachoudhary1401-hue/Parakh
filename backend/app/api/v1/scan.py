@@ -3,7 +3,7 @@ Project PARAKH — Scan, OCR & Barcode Router
 
 Implements §8 & §18:
 - POST /api/v1/scan/upload — Receive product inspection images securely.
-- GET /api/v1/scan/barcode/{gtin} — Query GS1 India registry for product/manufacturer lookup.
+- GET /api/v1/scan/barcode/{gtin} — Query Open Food Facts registry for product/manufacturer lookup.
 - POST /api/v1/scan/ocr — Execute Google Cloud Vision API on uploaded product label image.
 """
 
@@ -19,7 +19,7 @@ from app.audit.logger import AuditService
 from app.core.rate_limiter import limiter
 from app.core.responses import success_response
 from app.db.postgres import get_db
-from app.integrations.gs1_client import GS1Client
+from app.integrations.openfoodfacts_client import OpenFoodFactsClient
 from app.services.scan_service import ScanService
 
 router = APIRouter(prefix="/scan", tags=["Scan & Upload"])
@@ -84,16 +84,16 @@ async def upload_inspection_image(
 
 @router.get("/barcode/{gtin}")
 @limiter.limit("30/minute")
-async def lookup_gs1_barcode(
+async def lookup_barcode_info(
     request: Request,
     gtin: str,
     user_payload: dict = Depends(get_current_inspector),
 ):
     """
-    Query GS1 India registry for GTIN barcode information.
+    Query Open Food Facts database for GTIN/EAN barcode product information.
     """
-    gs1_client = GS1Client()
-    lookup = await gs1_client.lookup_barcode(gtin)
+    off_client = OpenFoodFactsClient()
+    lookup = await off_client.lookup_barcode(gtin)
 
     return success_response(
         data={
@@ -104,11 +104,13 @@ async def lookup_gs1_barcode(
             "product_name": lookup.product_name,
             "product_category": lookup.product_category,
             "brand": lookup.brand,
+            "quantity": lookup.quantity,
+            "ingredients_text": lookup.ingredients_text,
+            "image_url": lookup.image_url,
             "country_of_origin": lookup.country_of_origin,
-            "is_gs1_india": lookup.is_gs1_india,
             "error_message": lookup.error_message,
         },
-        message="GS1 barcode lookup completed",
+        message="Open Food Facts barcode lookup completed",
     )
 
 
