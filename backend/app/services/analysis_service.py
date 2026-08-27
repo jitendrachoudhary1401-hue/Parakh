@@ -27,6 +27,7 @@ from app.models.inspection import Inspection
 from app.repositories.gs1_repo import GS1Repository
 from app.repositories.inspection_repo import InspectionRepository
 from app.rules.engine import ComplianceEngine
+from app.blockchain.evidence_chain import EvidenceChainService
 from app.storage import get_storage_backend
 
 logger = logging.getLogger("parakh.services.analysis")
