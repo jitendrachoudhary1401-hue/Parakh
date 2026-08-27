@@ -10,7 +10,7 @@
     <application
         android:label="project_parakh_mobile"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="assets/logo.png">
         <activity
             android:name=".MainActivity"
             android:exported="true"
