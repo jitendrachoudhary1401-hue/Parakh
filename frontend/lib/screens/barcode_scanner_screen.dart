@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/theme.dart';
 import '../providers/scan_provider.dart';
-import '../widgets/custom_button.dart';
 
 /// GS1 Barcode & Registry Scanner Screen
 class BarcodeScannerScreen extends StatefulWidget {

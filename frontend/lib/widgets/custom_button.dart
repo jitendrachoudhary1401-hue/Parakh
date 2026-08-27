@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../core/theme.dart';
 
 /// Minimalist Custom Button
 class CustomButton extends StatelessWidget {

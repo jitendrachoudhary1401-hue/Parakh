@@ -8,11 +8,12 @@ class SyncProvider extends ChangeNotifier {
   final ApiClient _apiClient;
   final StorageService _storage;
 
+  ApiClient get apiClient => _apiClient;
+
   List<SyncQueueItem> _queue = [];
   bool _isSyncing = false;
   bool _isOnline = true;
   int _syncedCount = 14;
-  int _pendingCount = 2;
 
   SyncProvider(this._apiClient, this._storage) {
     _loadQueue();
