@@ -140,20 +140,35 @@ class AnalysisService:
 
         elapsed_ms = (time.time() - start_time) * 1000
 
-        # 8. Update PostgreSQL Inspection Record
+        # 8. Compute SHA-256 Evidence Hash (Image + GPS + Timestamp + OCR Text + Violations)
+        evidence_hash = None
+        if rule_eval["overall_status"].lower() == "violation":
+            evidence_hash = EvidenceChainService.calculate_payload_hash(
+                image_storage_path=inspection.image_storage_path,
+                gps_latitude=inspection.latitude,
+                gps_longitude=inspection.longitude,
+                capture_timestamp=inspection.created_at or datetime.now(timezone.utc),
+                ocr_text_snapshot=raw_ocr_text,
+                inspector_id=str(inspection.inspector_id),
+                violation_data=rule_eval["rule_results"],
+            )
+            inspection.blockchain_hash = evidence_hash
+
+        # 9. Update PostgreSQL Inspection Record
         inspection.status = "completed"
         inspection.overall_result = rule_eval["overall_status"].lower()
         if barcode:
             inspection.product_barcode = barcode
         await self.inspection_repo.update(inspection)
 
-        # 9. Store unstructured extraction dump in MongoDB ai_extraction_logs (§13)
+        # 10. Store unstructured extraction dump in MongoDB ai_extraction_logs (§13)
         try:
             mongo_logs = MongoDB.ai_extraction_logs()
             await mongo_logs.insert_one({
                 "inspection_id": str(inspection_id),
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "raw_ocr_text": raw_ocr_text,
+                "evidence_hash": evidence_hash,
                 "parsed_entities": [
                     {
                         "entity": e.entity_type,
@@ -183,10 +198,11 @@ class AnalysisService:
         except Exception as mongo_exc:
             logger.warning("Failed to write to MongoDB: %s", mongo_exc)
 
-        # 10. Assemble structured API response
+        # 11. Assemble structured API response
         return {
             "inspection_id": inspection_id,
             "overall_status": rule_eval["overall_status"],
+            "evidence_hash": evidence_hash,
             "extracted_entities": [
                 {
                     "entity": e.entity_type,

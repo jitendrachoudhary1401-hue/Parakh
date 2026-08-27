@@ -1,10 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:video_player/video_player.dart';
 import '../core/theme.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/parakh_logo.dart';
 
-/// Minimalist Splash Screen with PARAKH SVG Branding & Ministry details
+/// Video Splash Screen using Create_mobile_splash_screen_vi.mp4
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -12,35 +14,52 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _animController;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
+class _SplashScreenState extends State<SplashScreen> {
+  VideoPlayerController? _videoController;
+  bool _isVideoInitialized = false;
+  bool _hasNavigated = false;
 
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    );
-
-    _fadeAnimation = CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeIn,
-    );
-
-    _scaleAnimation = Tween<double>(begin: 0.92, end: 1.0).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
-    );
-
-    _animController.forward();
-    _checkNavigation();
+    _initVideoSplash();
   }
 
-  Future<void> _checkNavigation() async {
-    await Future.delayed(const Duration(milliseconds: 2200));
-    if (!mounted) return;
+  Future<void> _initVideoSplash() async {
+    try {
+      _videoController = VideoPlayerController.asset('assets/splash_video.mp4');
+      await _videoController!.initialize();
+      if (mounted) {
+        setState(() {
+          _isVideoInitialized = true;
+        });
+        _videoController!.play();
+        _videoController!.addListener(_videoListener);
+      }
+    } catch (e) {
+      // Fallback timer if video playback fails or asset is missing
+      _scheduleFallbackNavigation();
+    }
+  }
+
+  void _videoListener() {
+    if (_videoController != null &&
+        _videoController!.value.isInitialized &&
+        !_videoController!.value.isPlaying &&
+        _videoController!.value.position >= _videoController!.value.duration) {
+      _navigateToNextScreen();
+    }
+  }
+
+  void _scheduleFallbackNavigation() {
+    Timer(const Duration(milliseconds: 3000), () {
+      _navigateToNextScreen();
+    });
+  }
+
+  void _navigateToNextScreen() {
+    if (_hasNavigated || !mounted) return;
+    _hasNavigated = true;
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (auth.isAuthenticated) {
@@ -52,7 +71,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   @override
   void dispose() {
-    _animController.dispose();
+    _videoController?.removeListener(_videoListener);
+    _videoController?.dispose();
     super.dispose();
   }
 
@@ -60,41 +80,26 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.surface,
-      body: SafeArea(
-        child: Center(
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: ScaleTransition(
-              scale: _scaleAnimation,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Video background player if initialized
+          if (_isVideoInitialized && _videoController != null)
+            Center(
+              child: AspectRatio(
+                aspectRatio: _videoController!.value.aspectRatio,
+                child: VideoPlayer(_videoController!),
+              ),
+            )
+          else
+            // Fallback UI while loading or if video fails
+            Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Spacer(),
-                  const ParakhLogo(
-                    width: 180,
-                    height: 98,
-                    showText: true,
-                  ),
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                      border: Border.all(color: AppTheme.outline, width: 1),
-                    ),
-                    child: const Text(
-                      'LEGAL METROLOGY ENFORCEMENT PORTAL',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
-                        color: AppTheme.primary,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  const SizedBox(
+                children: const [
+                  ParakhLogo(width: 180, height: 98, showText: true),
+                  SizedBox(height: 24),
+                  SizedBox(
                     width: 24,
                     height: 24,
                     child: CircularProgressIndicator(
@@ -102,21 +107,27 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Government of India • Problem Statement ID 26034',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.textMuted,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
                 ],
               ),
             ),
+
+          // Skip button overlay
+          Positioned(
+            top: 48,
+            right: 20,
+            child: TextButton(
+              onPressed: _navigateToNextScreen,
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.black.withAlpha(100),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                ),
+              ),
+              child: const Text('Skip >', style: TextStyle(fontSize: 12)),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
