@@ -37,15 +37,6 @@ class _SplashScreenState extends State<SplashScreen> {
         _isCheckingPermission = true;
       });
 
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        setState(() {
-          _isLocationPermissionGranted = false;
-          _isCheckingPermission = false;
-        });
-        return;
-      }
-
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -69,10 +60,17 @@ class _SplashScreenState extends State<SplashScreen> {
         _isLocationPermissionGranted = false;
         _isCheckingPermission = false;
       });
+      // Always allow navigation if exception occurs during permission check
+      _navigateToNextScreen();
     }
   }
 
   Future<void> _handlePermissionRequest() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      await Geolocator.openLocationSettings();
+    }
+
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.deniedForever) {
       await Geolocator.openAppSettings();
@@ -231,11 +229,30 @@ class _SplashScreenState extends State<SplashScreen> {
                           width: double.infinity,
                           child: ElevatedButton.icon(
                             onPressed: _handlePermissionRequest,
-                            icon: const Icon(Icons.settings),
-                            label: const Text('Grant Location Access'),
+                            icon: const Icon(Icons.location_on),
+                            label: const Text('Grant Access / Enable GPS'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.primary,
                               foregroundColor: Colors.white,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14.0),
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(AppTheme.radiusSm),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _navigateToNextScreen,
+                            icon: const Icon(Icons.arrow_forward),
+                            label: const Text('Continue to Enforcement Portal'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTheme.primary,
+                              side: const BorderSide(color: AppTheme.primary),
                               padding:
                                   const EdgeInsets.symmetric(vertical: 14.0),
                               shape: RoundedRectangleBorder(
