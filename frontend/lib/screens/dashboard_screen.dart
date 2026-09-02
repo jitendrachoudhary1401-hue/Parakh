@@ -181,7 +181,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 10),
               ActionTile(
-                title: 'GS1 Barcode & Registry Lookup',
+                title: 'Open Food Facts Barcode Lookup',
                 description: 'Quick barcode reader to verify registered manufacturer',
                 icon: Icons.qr_code_scanner,
                 primaryColor: AppTheme.secondary,

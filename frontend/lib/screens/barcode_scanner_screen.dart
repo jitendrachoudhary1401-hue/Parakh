@@ -44,7 +44,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('GS1 Barcode Verification'),
+        title: const Text('Open Food Facts Barcode Verification'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -98,7 +98,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                           Icon(Icons.bolt, size: 14, color: AppTheme.warning),
                           SizedBox(width: 4),
                           Text(
-                            'Real-Time GS1 National Registry Cross-Check',
+                            'Real-Time Open Food Facts Database Cross-Check',
                             style:
                                 TextStyle(color: Colors.white70, fontSize: 10),
                           ),
@@ -121,12 +121,11 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                   Expanded(
                     child: TextField(
                       controller: _barcodeController,
-                      keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
                         hintText: 'e.g. 8901030382910',
-                        prefixIcon: Icon(Icons.qr_code,
-                            size: 20, color: AppTheme.secondary),
+                        prefixIcon: Icon(Icons.qr_code),
                       ),
+                      keyboardType: TextInputType.number,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -142,10 +141,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
               ),
               const SizedBox(height: 24),
 
-              // GS1 Registry Result Card
-              if (scan.gs1Product != null) ...[
+              // Open Food Facts Registry Result Card
+              if (scan.product != null) ...[
                 Text(
-                  'GS1 INDIA REGISTRY RECORD',
+                  'OPEN FOOD FACTS REGISTRY RECORD',
                   style: Theme.of(context).textTheme.labelSmall,
                 ),
                 const SizedBox(height: 8),
@@ -168,7 +167,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                                   size: 16, color: AppTheme.success),
                               SizedBox(width: 6),
                               Text(
-                                'Verified GTIN Registry',
+                                'Verified Product Registry',
                                 style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
@@ -185,7 +184,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                                   BorderRadius.circular(AppTheme.radiusPill),
                             ),
                             child: Text(
-                              scan.gs1Product!.gtin,
+                              scan.product!.gtin,
                               style: const TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
@@ -196,15 +195,15 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                       ),
                       const Divider(height: 20),
                       _buildInfoRow(
-                          'Product Name', scan.gs1Product!.productName),
+                          'Product Name', scan.product!.productName),
                       const SizedBox(height: 8),
                       _buildInfoRow('Registered Company',
-                          scan.gs1Product!.registeredCompany),
+                          scan.product!.registeredCompany),
                       const SizedBox(height: 8),
-                      _buildInfoRow('Brand', scan.gs1Product!.brand),
+                      _buildInfoRow('Brand', scan.product!.brand),
                       const SizedBox(height: 8),
                       _buildInfoRow('Registered Address',
-                          scan.gs1Product!.companyAddress),
+                          scan.product!.companyAddress),
                     ],
                   ),
                 ),
