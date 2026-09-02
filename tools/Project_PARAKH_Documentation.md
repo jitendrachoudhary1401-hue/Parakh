@@ -35,9 +35,10 @@ The Legal Metrology Rules, 2011 mandate strict declarations on pre-packaged good
 
 ### **2.2. Database Schema Design**
 
-**Unified Sovereign Database (PostgreSQL)** - *Manages access, users, core ledger, cache, and background queue.*
+**Unified Sovereign Database (PostgreSQL)** - *Manages access, users, core ledger, statutory versions, cache, and background queue.*
 *   **`users`**: `user_id` (UUID), `full_name`, `role` (Inspector/Admin/Citizen), `zone_id`.
-*   **`inspections`**: `inspection_id` (UUID), `timestamp`, `geo_location` (Lat/Long), `status` (Compliant/Violation), `blockchain_hash`.
+*   **`inspections`**: `inspection_id` (UUID), `law_id` (FK), `timestamp`, `geo_location` (Lat/Long), `status` (Compliant/Violation), `blockchain_hash`.
+*   **`legal_documents`**: `law_id` (UUID PK), `title`, `version_hash` (SHA-256), `effective_date`, `document_url`, `gazette_notification`, `is_active`.
 *   **`openfoodfacts_products`**: `barcode_upc`, `registered_manufacturer`, `product_category`.
 *   **`cache_entries`**: `key`, `value`, `counter`, `expires_at`, `created_at`, `updated_at`.
 *   **`task_queue`**: `task_id`, `task_type`, `status`, `payload`, `result`, `priority`, `scheduled_at`.

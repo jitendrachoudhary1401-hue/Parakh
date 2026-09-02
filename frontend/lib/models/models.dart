@@ -236,13 +236,66 @@ class BoundingBox {
   }
 }
 
-/// Rule Violation
+/// Statutory Legal Document / Rule Version Entity
+class LegalDocument {
+  final String lawId;
+  final String title;
+  final String versionHash;
+  final String effectiveDate;
+  final String documentUrl;
+  final String? gazetteNotification;
+
+  LegalDocument({
+    required this.lawId,
+    required this.title,
+    required this.versionHash,
+    required this.effectiveDate,
+    required this.documentUrl,
+    this.gazetteNotification,
+  });
+
+  factory LegalDocument.fromJson(Map<String, dynamic> json) {
+    return LegalDocument(
+      lawId: json['law_id'] ?? json['id'] ?? 'lm-doc-2011',
+      title: json['title'] ?? 'The Legal Metrology (Packaged Commodities) Rules, 2011',
+      versionHash: json['version_hash'] ?? '48cd6acdb5475709631b741d71b2948d45713e7e8758ce531c19948a7e31f890',
+      effectiveDate: json['effective_date'] ?? '2011-04-01',
+      documentUrl: json['document_url'] ?? 'https://consumeraffairs.nic.in/acts-and-rules/legal-metrology',
+      gazetteNotification: json['gazette_notification'] ?? 'G.S.R. 202(E)',
+    );
+  }
+
+  factory LegalDocument.defaultActive() {
+    return LegalDocument(
+      lawId: 'lm-doca-2011-gsr202',
+      title: 'The Legal Metrology (Packaged Commodities) Rules, 2011',
+      versionHash: '48cd6acdb5475709631b741d71b2948d45713e7e8758ce531c19948a7e31f890',
+      effectiveDate: '2011-04-01',
+      documentUrl: 'https://consumeraffairs.nic.in/sites/default/files/8_1732871406.pdf',
+      gazetteNotification: 'G.S.R. 202(E) (as amended)',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'law_id': lawId,
+        'title': title,
+        'version_hash': versionHash,
+        'effective_date': effectiveDate,
+        'document_url': documentUrl,
+        'gazette_notification': gazetteNotification,
+      };
+}
+
+/// Rule Violation with Statutory Metrology References
 class RuleViolation {
   final String ruleCode;
   final String ruleName;
   final String description;
-  final String severity; // High, Medium, Low
+  final String severity; // Critical, High, Medium, Low
   final bool isPassed;
+  final String? clauseId;
+  final String? actSection;
+  final String? noticeClause;
 
   RuleViolation({
     required this.ruleCode,
@@ -250,15 +303,21 @@ class RuleViolation {
     required this.description,
     required this.severity,
     required this.isPassed,
+    this.clauseId,
+    this.actSection,
+    this.noticeClause,
   });
 
   factory RuleViolation.fromJson(Map<String, dynamic> json) {
     return RuleViolation(
-      ruleCode: json['rule_code'] ?? '',
-      ruleName: json['rule_name'] ?? '',
-      description: json['description'] ?? '',
+      ruleCode: json['rule_code'] ?? json['rule_id'] ?? json['rule_number'] ?? '',
+      ruleName: json['rule_name'] ?? json['rule_title'] ?? '',
+      description: json['description'] ?? json['explanation'] ?? '',
       severity: json['severity'] ?? 'High',
-      isPassed: json['is_passed'] ?? false,
+      isPassed: json['is_passed'] ?? (json['status'] == 'PASS'),
+      clauseId: json['clause_id'],
+      actSection: json['act_section'],
+      noticeClause: json['notice_clause'] ?? json['default_notice_clause'],
     );
   }
 
@@ -268,6 +327,9 @@ class RuleViolation {
         'description': description,
         'severity': severity,
         'is_passed': isPassed,
+        'clause_id': clauseId,
+        'act_section': actSection,
+        'notice_clause': noticeClause,
       };
 }
 
