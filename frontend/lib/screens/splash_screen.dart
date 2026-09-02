@@ -23,7 +23,6 @@ class _SplashScreenState extends State<SplashScreen> {
   // Location permission state
   bool _isLocationPermissionGranted = false;
   bool _isCheckingPermission = true;
-  bool _isVideoFinished = false;
 
   @override
   void initState() {
@@ -58,9 +57,7 @@ class _SplashScreenState extends State<SplashScreen> {
           _isLocationPermissionGranted = true;
           _isCheckingPermission = false;
         });
-        if (_isVideoFinished) {
-          _navigateToNextScreen();
-        }
+        _navigateToNextScreen();
       } else {
         setState(() {
           _isLocationPermissionGranted = false;
@@ -82,8 +79,8 @@ class _SplashScreenState extends State<SplashScreen> {
     } else {
       await Geolocator.requestPermission();
     }
-    // Re-check after returning
-    _checkLocationPermission();
+    // Re-check after returning and proceed
+    await _checkLocationPermission();
   }
 
   Future<void> _initVideoSplash() async {
@@ -109,7 +106,6 @@ class _SplashScreenState extends State<SplashScreen> {
         _videoController!.value.isInitialized &&
         !_videoController!.value.isPlaying &&
         _videoController!.value.position >= _videoController!.value.duration) {
-      _isVideoFinished = true;
       if (_isLocationPermissionGranted && !_isCheckingPermission) {
         _navigateToNextScreen();
       }
@@ -118,7 +114,6 @@ class _SplashScreenState extends State<SplashScreen> {
 
   void _scheduleFallbackNavigation() {
     Timer(const Duration(milliseconds: 3000), () {
-      _isVideoFinished = true;
       if (_isLocationPermissionGranted && !_isCheckingPermission) {
         _navigateToNextScreen();
       }
