@@ -36,12 +36,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 color: AppTheme.primaryContainer,
                 borderRadius: BorderRadius.circular(AppTheme.radiusSm),
               ),
-              child: const Icon(Icons.shield_outlined, size: 16, color: Colors.white),
+              child: Image.asset(
+                'assets/logo.png',
+                width: 20,
+                height: 20,
+                fit: BoxFit.contain,
+              ),
             ),
             const SizedBox(width: 10),
             Column(

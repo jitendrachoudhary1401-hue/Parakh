@@ -190,7 +190,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                       style: const TextStyle(
                           fontSize: 12, fontFamily: 'monospace'),
                       decoration: const InputDecoration(
-                        hintText: 'http://10.0.2.2:8000/api/v1',
+                        hintText: 'http://192.168.43.59:8000/api/v1',
                         prefixIcon: Icon(Icons.dns_outlined,
                             size: 18, color: AppTheme.secondary),
                       ),

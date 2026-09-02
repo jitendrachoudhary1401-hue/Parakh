@@ -90,6 +90,7 @@ class _SplashScreenState extends State<SplashScreen> {
     try {
       _videoController = VideoPlayerController.asset('assets/splash_video.mp4');
       await _videoController!.initialize();
+      await _videoController!.setLooping(false);
       if (mounted) {
         setState(() {
           _isVideoInitialized = true;
@@ -127,6 +128,10 @@ class _SplashScreenState extends State<SplashScreen> {
   void _navigateToNextScreen() {
     if (_hasNavigated || !mounted) return;
     _hasNavigated = true;
+
+    try {
+      _videoController?.pause();
+    } catch (_) {}
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (auth.isAuthenticated) {

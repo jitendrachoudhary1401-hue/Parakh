@@ -24,7 +24,7 @@ class ScanProvider extends ChangeNotifier {
   String _locationAddress = 'Acquiring GPS location...';
 
   ScanProvider(this._apiClient) {
-    fetchCurrentLocation();
+    fetchCurrentLocation(requestIfDenied: false);
   }
 
   Position? get currentLocation => _currentLocation;
@@ -59,13 +59,14 @@ class ScanProvider extends ChangeNotifier {
   }
 
   /// Fetch Real-Time GPS Location
-  Future<Position?> fetchCurrentLocation() async {
+  Future<Position?> fetchCurrentLocation({bool requestIfDenied = false}) async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) return null;
 
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
+        if (!requestIfDenied) return null;
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) return null;
       }
