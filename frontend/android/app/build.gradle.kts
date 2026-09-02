@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "in.gov.doca.parakh"
+    namespace = "gov.doca.parakh"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -15,7 +15,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "in.gov.doca.parakh"
+        applicationId = "gov.doca.parakh"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
