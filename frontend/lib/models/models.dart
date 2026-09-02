@@ -271,8 +271,8 @@ class RuleViolation {
       };
 }
 
-/// GS1 Product Lookup Entity
-class GS1Product {
+/// Open Food Facts Product Lookup Entity
+class OpenFoodFactsProduct {
   final String gtin;
   final String productName;
   final String registeredCompany;
@@ -280,7 +280,7 @@ class GS1Product {
   final String brand;
   final bool isVerified;
 
-  GS1Product({
+  OpenFoodFactsProduct({
     required this.gtin,
     required this.productName,
     required this.registeredCompany,
@@ -289,8 +289,8 @@ class GS1Product {
     required this.isVerified,
   });
 
-  factory GS1Product.fromJson(Map<String, dynamic> json) {
-    return GS1Product(
+  factory OpenFoodFactsProduct.fromJson(Map<String, dynamic> json) {
+    return OpenFoodFactsProduct(
       gtin: json['gtin'] ?? json['barcode'] ?? '',
       productName:
           json['product_name'] ?? json['item_name'] ?? 'Product Information',
@@ -304,6 +304,8 @@ class GS1Product {
     );
   }
 }
+
+typedef GS1Product = OpenFoodFactsProduct;
 
 /// Blockchain Receipt
 class BlockchainReceipt {

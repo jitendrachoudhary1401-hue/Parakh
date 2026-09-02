@@ -21,10 +21,10 @@ from app.ai.nlp_extractor import NLPExtractor
 from app.ai.ocr_engine import OCREngine
 from app.core.exceptions import NotFoundError, ServiceUnavailableError
 from app.db.mongodb import MongoDB
-from app.integrations.gs1_client import GS1Client
-from app.models.gs1_product import GS1Product
+from app.integrations.openfoodfacts_client import OpenFoodFactsClient
+from app.models.openfoodfacts_product import OpenFoodFactsProduct
 from app.models.inspection import Inspection
-from app.repositories.gs1_repo import GS1Repository
+from app.repositories.openfoodfacts_repo import OpenFoodFactsRepository
 from app.repositories.inspection_repo import InspectionRepository
 from app.rules.engine import ComplianceEngine
 from app.blockchain.evidence_chain import EvidenceChainService
@@ -37,7 +37,7 @@ class AnalysisService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.inspection_repo = InspectionRepository(db)
-        self.gs1_repo = GS1Repository(db)
+        self.product_repo = OpenFoodFactsRepository(db)
         self.storage = get_storage_backend()
         
         # AI components
@@ -46,7 +46,7 @@ class AnalysisService:
         self.nlp_extractor = NLPExtractor()
         self.anomaly_detector = AnomalyDetector()
         self.rule_engine = ComplianceEngine()
-        self.gs1_client = GS1Client()
+        self.off_client = OpenFoodFactsClient()
 
     async def verify_compliance(
         self,
@@ -84,42 +84,42 @@ class AnalysisService:
         nlp_result = await self.nlp_extractor.extract_entities(raw_ocr_text)
         entities = nlp_result.entities if nlp_result.success else []
 
-        # 5. GS1 Barcode Lookup & Cross-referencing
+        # 5. Open Food Facts Barcode Lookup & Cross-referencing
         barcode = product_barcode or inspection.product_barcode
-        gs1_info = None
+        product_info = None
         if barcode:
-            gs1_lookup = await self.gs1_client.lookup_barcode(barcode)
-            if gs1_lookup.status == "FOUND":
-                gs1_info = {
+            lookup = await self.off_client.lookup_barcode(barcode)
+            if lookup.status == "FOUND":
+                product_info = {
                     "status": "FOUND",
-                    "registered_manufacturer": gs1_lookup.registered_manufacturer,
-                    "manufacturer_address": gs1_lookup.manufacturer_address,
-                    "product_name": gs1_lookup.product_name,
+                    "registered_manufacturer": lookup.registered_manufacturer,
+                    "manufacturer_address": lookup.manufacturer_address,
+                    "product_name": lookup.product_name,
                     "barcode": barcode,
                 }
-                # Cache GS1 product in PostgreSQL
-                gs1_entity = GS1Product(
+                # Cache Open Food Facts product in PostgreSQL
+                off_entity = OpenFoodFactsProduct(
                     barcode=barcode,
-                    registered_manufacturer=gs1_lookup.registered_manufacturer,
-                    manufacturer_address=gs1_lookup.manufacturer_address,
-                    product_name=gs1_lookup.product_name,
-                    product_category=gs1_lookup.product_category,
-                    brand=gs1_lookup.brand,
+                    registered_manufacturer=lookup.registered_manufacturer,
+                    manufacturer_address=lookup.manufacturer_address,
+                    product_name=lookup.product_name,
+                    product_category=lookup.product_category,
+                    brand=lookup.brand,
                     last_verified_at=datetime.now(timezone.utc),
                 )
-                await self.gs1_repo.upsert(gs1_entity)
+                await self.product_repo.upsert(off_entity)
             else:
-                gs1_info = {
-                    "status": gs1_lookup.status,
+                product_info = {
+                    "status": lookup.status,
                     "registered_manufacturer": None,
                     "barcode": barcode,
-                    "error": gs1_lookup.error_message,
+                    "error": lookup.error_message,
                 }
 
         # 6. Compliance Rule Engine Evaluation
         rule_eval = self.rule_engine.evaluate(
             entities=entities,
-            gs1_data=gs1_info,
+            gs1_data=product_info,
             ocr_text=raw_ocr_text,
         )
 

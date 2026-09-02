@@ -15,7 +15,7 @@ class ScanProvider extends ChangeNotifier {
   bool _isProcessing = false;
   String _selectedBarcode = '';
   File? _capturedImage;
-  GS1Product? _gs1Product;
+  OpenFoodFactsProduct? _product;
   OCRExtractedData? _extractedData;
   final List<BoundingBox> _liveBoundingBoxes = [];
   final double _ocrConfidence = 0.0;
@@ -35,7 +35,8 @@ class ScanProvider extends ChangeNotifier {
   bool get isProcessing => _isProcessing;
   String get selectedBarcode => _selectedBarcode;
   File? get capturedImage => _capturedImage;
-  GS1Product? get gs1Product => _gs1Product;
+  OpenFoodFactsProduct? get product => _product;
+  OpenFoodFactsProduct? get gs1Product => _product;
   OCRExtractedData? get extractedData => _extractedData;
   List<BoundingBox> get liveBoundingBoxes => _liveBoundingBoxes;
   double get ocrConfidence => _ocrConfidence;
@@ -53,7 +54,7 @@ class ScanProvider extends ChangeNotifier {
 
   void setBarcode(String barcode) {
     _selectedBarcode = barcode;
-    lookupGS1Barcode(barcode);
+    lookupBarcode(barcode);
     notifyListeners();
   }
 
@@ -82,28 +83,26 @@ class ScanProvider extends ChangeNotifier {
     }
   }
 
-
-
-  /// GS1 Barcode Lookup
-  Future<GS1Product> lookupGS1Barcode(String barcode) async {
+  /// Open Food Facts Barcode Lookup
+  Future<OpenFoodFactsProduct> lookupBarcode(String barcode) async {
     _selectedBarcode = barcode;
     _isProcessing = true;
-    _statusMessage = 'Cross-referencing GS1 India database...';
+    _statusMessage = 'Cross-referencing Open Food Facts database...';
     notifyListeners();
 
     try {
       final response = await _apiClient.get('/scan/barcode/$barcode');
       if (response.success && response.data != null) {
-        _gs1Product = GS1Product.fromJson(response.data!);
+        _product = OpenFoodFactsProduct.fromJson(response.data!);
         _statusMessage = null;
       } else {
-        _gs1Product = null;
-        _statusMessage = response.message ?? 'Barcode $barcode not found in registry.';
+        _product = null;
+        _statusMessage = response.message ?? 'Barcode $barcode not found in Open Food Facts registry.';
         throw Exception(response.message ?? 'Barcode not found');
       }
     } catch (e) {
-      _gs1Product = null;
-      _statusMessage = 'GS1 lookup failed: ${e.toString()}';
+      _product = null;
+      _statusMessage = 'Open Food Facts lookup failed: ${e.toString()}';
       _isProcessing = false;
       notifyListeners();
       rethrow;
@@ -112,8 +111,10 @@ class ScanProvider extends ChangeNotifier {
     _isProcessing = false;
     _statusMessage = null;
     notifyListeners();
-    return _gs1Product!;
+    return _product!;
   }
+
+  Future<OpenFoodFactsProduct> lookupGS1Barcode(String barcode) => lookupBarcode(barcode);
 
   /// Trigger AI Vision & OCR Extraction
   Future<OCRExtractedData> processImageExtraction({File? imageFile}) async {
