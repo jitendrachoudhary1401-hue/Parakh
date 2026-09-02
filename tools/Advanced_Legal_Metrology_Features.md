@@ -1,4 +1,4 @@
-# Advanced Feature Blueprint: Legal Metrology Compliance System (v2.0)
+# Advanced Feature Blueprint: Legal Metrology Compliance System (v1.0)
 **Problem Statement ID:** 26034
 **Organization:** Ministry of Consumer Affairs, Food & Public Distribution (DoCA)
 **Project Team:** Nikhil Pandey, Tanushree, Sudha, Akshay Paswan, Jitendra Choudhary, Aaryan Kasaudhan
