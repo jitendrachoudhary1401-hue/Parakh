@@ -27,9 +27,9 @@ The Legal Metrology Rules, 2011 mandate strict declarations on pre-packaged good
 *   **Web Dashboard:** Next.js with Tailwind CSS for DoCA officials.
 *   **Backend Server:** Python (FastAPI) for high-performance AI routing and asynchronous processing.
 *   **AI/ML Pipeline:** 
-    *   *OCR:* Google Cloud Vision / AWS Textract.
-    *   *NLP:* SpaCy or HuggingFace Transformers (Entity parsing).
-    *   *Computer Vision:* OpenCV (Image unwarping and bounding box generation).
+    *   *OCR:* Google Cloud Vision API.
+    *   *NLP & NER:* HuggingFace Transformers (`dslim/bert-base-NER`).
+    *   *Computer Vision & Anomaly Detection:* OpenCV (Image unwarping) & HuggingFace ViT (`google/vit-base-patch16-224`).
 *   **Databases:** PostgreSQL (Relational Data, Key-Value Cache & Task Queue) & MongoDB (Unstructured Logs).
 *   **Blockchain Ledger:** Hyperledger Fabric (for immutable evidence trails).
 

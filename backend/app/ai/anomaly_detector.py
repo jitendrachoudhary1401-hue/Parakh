@@ -52,27 +52,30 @@ class AnomalyDetector:
         self._feature_extractor = None
 
     def _load_model(self):
-        """Lazy-load the ViT model."""
+        """Load the HuggingFace ViT model. Raises RuntimeError on failure, no mock fallback."""
         if self._model is None:
-            try:
-                from transformers import ViTForImageClassification, ViTFeatureExtractor
-                from app.config import get_settings
+            from transformers import AutoImageProcessor, ViTForImageClassification
+            from app.config import get_settings
 
-                settings = get_settings()
-                model_name = settings.vit_model_name
-                self._feature_extractor = ViTFeatureExtractor.from_pretrained(model_name)
+            settings = get_settings()
+            model_name = settings.vit_model_name
+            try:
+                self._feature_extractor = AutoImageProcessor.from_pretrained(model_name)
                 self._model = ViTForImageClassification.from_pretrained(model_name)
                 logger.info("ViT model loaded: %s", model_name)
             except Exception as exc:
-                logger.error("Failed to load ViT model: %s", exc)
-                self._model = "unavailable"
+                logger.error("Failed to load HuggingFace ViT model (%s): %s", model_name, exc)
+                raise RuntimeError(
+                    f"HuggingFace ViT model '{model_name}' failed to load: {exc}"
+                ) from exc
 
     async def detect_anomalies(self, image: np.ndarray) -> AnomalyDetectionResult:
         """
         Analyze product packaging for potential anomalies.
 
-        This is a supplementary analysis tool that flags anomalies
-        for human review. It does NOT make legal determinations.
+        Uses:
+        1. HuggingFace Vision Transformer (ViT) for deep visual feature anomaly detection.
+        2. Visual consistency analysis (color gradient, typography, logo quality).
 
         Args:
             image: Preprocessed product image (OpenCV ndarray).
@@ -90,26 +93,25 @@ class AnomalyDetector:
 
             findings: List[AnomalyFinding] = []
 
-            # 1. Color consistency analysis
+            # 1. HuggingFace ViT Feature Analysis (No mock fallback)
+            self._load_model()
+            vit_findings = await self._vit_analysis(image)
+            findings.extend(vit_findings)
+
+            # 2. Color consistency analysis
             color_finding = self._analyze_color_consistency(image)
             if color_finding:
                 findings.append(color_finding)
 
-            # 2. Typography consistency analysis
+            # 3. Typography consistency analysis
             typo_finding = self._analyze_typography(image)
             if typo_finding:
                 findings.append(typo_finding)
 
-            # 3. Logo region analysis
+            # 4. Logo region analysis
             logo_finding = self._analyze_logo_region(image)
             if logo_finding:
                 findings.append(logo_finding)
-
-            # 4. ViT-based feature analysis (if model available)
-            self._load_model()
-            if self._model and self._model != "unavailable":
-                vit_findings = await self._vit_analysis(image)
-                findings.extend(vit_findings)
 
             overall_score = (
                 max(f.confidence for f in findings)
@@ -254,6 +256,7 @@ class AnomalyDetector:
                     ))
 
         except Exception as exc:
-            logger.warning("ViT analysis error: %s", exc)
+            logger.error("ViT analysis failed: %s", exc)
+            raise RuntimeError(f"ViT model inference failed: {exc}") from exc
 
         return findings

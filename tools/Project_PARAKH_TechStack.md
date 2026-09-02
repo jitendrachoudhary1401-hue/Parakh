@@ -38,9 +38,9 @@
 | Capability | Technology |
 |---|---|
 | Optical Character Recognition (OCR) | **Google Cloud Vision API** |
-| Natural Language Processing (entity parsing — MRP, dates, consumer care) | **HuggingFace Transformers** |
+| Natural Language Processing (entity parsing — MRP, dates, consumer care) | **HuggingFace Transformers (`dslim/bert-base-NER`)** |
 | Computer Vision — 3D surface unwarping & bounding boxes | **OpenCV** |
-| Counterfeit / anomaly detection | **HuggingFace Vision Transformers (ViT)** — logo, typography & color-gradient anomaly detection |
+| Counterfeit / anomaly detection | **HuggingFace Vision Transformers (`google/vit-base-patch16-224`)** — logo, typography & color-gradient anomaly detection |
 | Predictive analytics | Scikit-learn / gradient-boosted models for geo-spatial & seasonal risk heatmaps |
 
 ## 5. Data Layer

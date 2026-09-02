@@ -41,7 +41,7 @@ The AI stack processes mobile package scans, unwarps curved bottle/can surfaces,
 
 ### 2.3 HuggingFace Transformers NLP Engine
 * **File Location:** `backend/app/ai/nlp_extractor.py`
-* **Core Technology:** HuggingFace `transformers` pipeline (`bert-large-cased` / NER fine-tuned) + Legal Metrology Regex
+* **Core Technology:** HuggingFace `transformers` pipeline (`dslim/bert-base-NER`) + Legal Metrology Regex
 * **Capabilities:**
   * Extracts structured entity key-value pairs from raw OCR text.
   * Extracted Legal Metrology Declarations:
@@ -51,6 +51,7 @@ The AI stack processes mobile package scans, unwarps curved bottle/can surfaces,
     * `EXPIRY_DATE` / `BEST_BEFORE` (Expiry date or shelf life duration)
     * `CONSUMER_CARE` (Helpline phone, email, toll-free number, consumer care address)
     * `MANUFACTURER_NAME` and `MANUFACTURER_ADDRESS`
+  * **Strict Error Handling:** No mock fallback or silent suppression. If model loading or inference fails, an explicit failure is returned.
 
 ---
 
@@ -62,6 +63,7 @@ The AI stack processes mobile package scans, unwarps curved bottle/can surfaces,
   * **Typography Check:** MSER (Maximally Stable Extremal Regions) text contour size distribution checking.
   * **Logo Integrity:** Laplacian top-region variance checking for blurred or low-quality logo prints.
   * **ViT Embedding Analysis:** Visual feature out-of-distribution detection to flag potential counterfeit packaging.
+  * **Strict Error Handling:** Direct model execution without mock fallbacks; surfaces errors immediately if ViT fails.
 
 ---
 

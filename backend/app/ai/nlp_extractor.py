@@ -89,43 +89,39 @@ class NLPExtractor:
         self._ner_pipeline = None
 
     def _load_ner_pipeline(self):
-        """Lazy-load the HuggingFace NER pipeline."""
+        """Load the HuggingFace NER pipeline. Raises RuntimeError on failure, no mock fallback."""
         if self._ner_pipeline is None:
-            import os
-            if os.getenv("APP_ENV") == "testing":
-                self._ner_pipeline = "unavailable"
-                return
+            from transformers import pipeline
+            from app.config import get_settings
 
+            settings = get_settings()
             try:
-                from transformers import pipeline
-                from app.config import get_settings
-
-                settings = get_settings()
                 self._ner_pipeline = pipeline(
                     "ner",
                     model=settings.ner_model_name,
                     aggregation_strategy="simple",
                 )
                 logger.info("NER model loaded: %s", settings.ner_model_name)
-            except BaseException as exc:
-                logger.warning("Failed to load NER model (falling back to regex): %s", exc)
-                # Continue with regex-only extraction
-                self._ner_pipeline = "unavailable"
+            except Exception as exc:
+                logger.error("Failed to load HuggingFace NER model (%s): %s", settings.ner_model_name, exc)
+                raise RuntimeError(
+                    f"HuggingFace NER model '{settings.ner_model_name}' failed to load: {exc}"
+                ) from exc
 
     async def extract_entities(self, text: str) -> NLPExtractionResult:
         """
         Extract product label entities from OCR text.
 
-        Uses a combination of:
-        1. Regex patterns for domain-specific fields
-        2. HuggingFace NER for general named entities
+        Uses:
+        1. HuggingFace NER for general named entities (Manufacturer, Location/Address)
+        2. Domain-specific regex patterns for legal metrology entities (MRP, Net Qty, Dates, Contact)
 
         Args:
             text: Raw OCR text from the product label.
 
         Returns:
-            NLPExtractionResult with extracted entities.
-            Never invents confidence values.
+            NLPExtractionResult with extracted entities or error details.
+            Never uses mock fallbacks.
         """
         if not text or not text.strip():
             return NLPExtractionResult(
@@ -137,14 +133,13 @@ class NLPExtractor:
         try:
             entities: List[ExtractedEntity] = []
 
-            # 1. Regex-based extraction (primary for Indian product labels)
+            # 1. Regex-based extraction (for Indian product label numeric/date fields)
             for entity_type, patterns in self.PATTERNS.items():
                 for pattern in patterns:
                     matches = pattern.finditer(text)
                     for match in matches:
                         value = match.group(1).strip() if match.groups() else match.group(0).strip()
                         if value:
-                            # Confidence based on pattern specificity
                             confidence = 0.85 if len(patterns) == 1 else 0.75
                             entities.append(ExtractedEntity(
                                 entity_type=entity_type,
@@ -152,29 +147,24 @@ class NLPExtractor:
                                 confidence=confidence,
                                 source_text=match.group(0).strip(),
                             ))
-                            break  # Take first match per entity type
+                            break
 
-            # 2. HuggingFace NER for supplementary entities
+            # 2. HuggingFace NER for entity extraction (No mock fallback)
             self._load_ner_pipeline()
-            if self._ner_pipeline and self._ner_pipeline != "unavailable":
-                try:
-                    ner_results = self._ner_pipeline(text[:512])  # Truncate for model limit
-                    for ner_entity in ner_results:
-                        entity_label = ner_entity.get("entity_group", "")
-                        word = ner_entity.get("word", "")
-                        score = ner_entity.get("score", 0.0)
+            ner_results = self._ner_pipeline(text[:512])  # Truncate for model limit
+            for ner_entity in ner_results:
+                entity_label = ner_entity.get("entity_group", "")
+                word = ner_entity.get("word", "")
+                score = float(ner_entity.get("score", 0.0))
 
-                        # Map NER labels to our entity types
-                        mapped = self._map_ner_label(entity_label, word)
-                        if mapped and not self._entity_type_exists(entities, mapped):
-                            entities.append(ExtractedEntity(
-                                entity_type=mapped,
-                                value=word,
-                                confidence=round(score, 4),
-                                source_text=word,
-                            ))
-                except Exception as exc:
-                    logger.warning("NER pipeline error (falling back to regex): %s", exc)
+                mapped = self._map_ner_label(entity_label, word)
+                if mapped and not self._entity_type_exists(entities, mapped):
+                    entities.append(ExtractedEntity(
+                        entity_type=mapped,
+                        value=word,
+                        confidence=round(score, 4),
+                        source_text=word,
+                    ))
 
             # Deduplicate
             entities = self._deduplicate(entities)
