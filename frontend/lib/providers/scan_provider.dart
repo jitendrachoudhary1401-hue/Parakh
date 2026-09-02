@@ -95,26 +95,18 @@ class ScanProvider extends ChangeNotifier {
       final response = await _apiClient.get('/scan/barcode/$barcode');
       if (response.success && response.data != null) {
         _gs1Product = GS1Product.fromJson(response.data!);
+        _statusMessage = null;
       } else {
-        // High-fidelity standard metrology product fallback
-        _gs1Product = GS1Product(
-          gtin: barcode,
-          productName: 'Nutri-Crisp Multi-Grain Flakes (200g)',
-          registeredCompany: 'Hindustan Consumer Foods Private Limited',
-          companyAddress: 'Plot 42, Okhla Industrial Area, Phase-III, New Delhi 110020',
-          brand: 'Nutri-Crisp',
-          isVerified: true,
-        );
+        _gs1Product = null;
+        _statusMessage = response.message ?? 'Barcode $barcode not found in registry.';
+        throw Exception(response.message ?? 'Barcode not found');
       }
-    } catch (_) {
-      _gs1Product = GS1Product(
-        gtin: barcode,
-        productName: 'Nutri-Crisp Multi-Grain Flakes (200g)',
-        registeredCompany: 'Hindustan Consumer Foods Private Limited',
-        companyAddress: 'Plot 42, Okhla Industrial Area, Phase-III, New Delhi 110020',
-        brand: 'Nutri-Crisp',
-        isVerified: true,
-      );
+    } catch (e) {
+      _gs1Product = null;
+      _statusMessage = 'GS1 lookup failed: ${e.toString()}';
+      _isProcessing = false;
+      notifyListeners();
+      rethrow;
     }
 
     _isProcessing = false;
@@ -126,53 +118,77 @@ class ScanProvider extends ChangeNotifier {
   /// Trigger AI Vision & OCR Extraction
   Future<OCRExtractedData> processImageExtraction({File? imageFile}) async {
     _isProcessing = true;
-    _statusMessage = 'Executing AI Pipeline (OpenCV Unwarping → Vision OCR → NER NLP)...';
+    _statusMessage = 'Uploading scan to backend for AI Compliance Processing (OCR + ViT + NER)...';
     notifyListeners();
 
     if (imageFile != null) {
       _capturedImage = imageFile;
     }
 
+    if (_capturedImage == null) {
+      _isProcessing = false;
+      _statusMessage = 'No image provided for processing';
+      notifyListeners();
+      throw Exception('No packaging image captured or selected.');
+    }
+
     try {
-      if (_capturedImage != null) {
-        final response = await _apiClient.uploadFile(
-          AppConstants.verifyCompliance,
-          file: _capturedImage!,
-          fieldName: 'image',
-          extraFields: {'barcode': _selectedBarcode},
-        );
+      // 1. Upload inspection image to backend /scan/upload
+      final uploadResponse = await _apiClient.uploadFile(
+        AppConstants.scanUpload,
+        file: _capturedImage!,
+        fieldName: 'file',
+        extraFields: {
+          if (_selectedBarcode.isNotEmpty) 'product_barcode': _selectedBarcode,
+          if (_currentLocation != null) 'latitude': _currentLocation!.latitude.toString(),
+          if (_currentLocation != null) 'longitude': _currentLocation!.longitude.toString(),
+          'location_name': _locationAddress,
+        },
+      );
 
-        if (response.success && response.data != null) {
-          _extractedData = OCRExtractedData.fromJson(response.data!['extracted_data'] ?? response.data!);
-          _isProcessing = false;
-          _statusMessage = null;
-          notifyListeners();
-          return _extractedData!;
-        }
+      if (!uploadResponse.success || uploadResponse.data == null) {
+        final errorMsg = uploadResponse.message ?? 'Failed to upload packaging image';
+        _isProcessing = false;
+        _statusMessage = errorMsg;
+        notifyListeners();
+        throw Exception(errorMsg);
       }
-    } catch (_) {}
 
-    // Verified standard field extraction matching Legal Metrology (Packaged Commodities) Rules 2011
-    await Future.delayed(const Duration(milliseconds: 1200));
-    _extractedData = OCRExtractedData(
-      rawText: 'M.R.P. Rs. 45.00 (INCL. OF ALL TAXES) NET WEIGHT: 200g MFG. DATE: 04/2026 EXPIRY: 10/2026 MFD BY: HINDUSTAN CONSUMER FOODS PVT LTD CONSUMER CARE TOLL FREE: 1800-11-2026 EMAIL: CARE@HINDUSTANFOODS.IN',
-      mrp: '₹ 45.00',
-      mrpValue: 45.00,
-      netQuantity: '200 g',
-      mfgDate: '04/2026',
-      expiryDate: '10/2026',
-      consumerCarePhone: '1800-11-2026',
-      consumerCareEmail: 'care@hindustanfoods.in',
-      manufacturerName: 'Hindustan Consumer Foods Pvt Ltd',
-      manufacturerAddress: 'Plot 42, Okhla Ind. Area Phase III, New Delhi 110020',
-      barcode: _selectedBarcode,
-      confidenceScore: 0.97,
-      boundingBoxes: _liveBoundingBoxes,
-    );
+      final inspectionId = uploadResponse.data!['inspection_id'];
+      if (inspectionId == null) {
+        throw Exception('Backend did not return inspection ID.');
+      }
 
-    _isProcessing = false;
-    _statusMessage = null;
-    notifyListeners();
-    return _extractedData!;
+      // 2. Trigger Full AI Pipeline (OpenCV Unwarp -> Cloud Vision OCR -> HuggingFace NER -> Rule Engine -> ViT Anomaly)
+      _statusMessage = 'Running HuggingFace NER & ViT Anomaly Analysis...';
+      notifyListeners();
+
+      final analysisResponse = await _apiClient.post(
+        AppConstants.verifyCompliance,
+        body: {
+          'inspection_id': inspectionId,
+          if (_selectedBarcode.isNotEmpty) 'product_barcode': _selectedBarcode,
+        },
+      );
+
+      if (!analysisResponse.success || analysisResponse.data == null) {
+        final errorMsg = analysisResponse.message ?? 'AI Compliance Analysis failed on backend';
+        _isProcessing = false;
+        _statusMessage = errorMsg;
+        notifyListeners();
+        throw Exception(errorMsg);
+      }
+
+      _extractedData = OCRExtractedData.fromJson(analysisResponse.data!);
+      _isProcessing = false;
+      _statusMessage = null;
+      notifyListeners();
+      return _extractedData!;
+    } catch (e) {
+      _isProcessing = false;
+      _statusMessage = 'AI Processing Error: ${e.toString()}';
+      notifyListeners();
+      rethrow;
+    }
   }
 }

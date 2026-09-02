@@ -45,54 +45,36 @@ class AuthProvider extends ChangeNotifier {
       final response = await _apiClient.post(
         AppConstants.authLogin,
         body: {
-          'official_id': officialId,
+          'email': officialId.contains('@') ? officialId : '$officialId@doca.gov.in',
           'password': password,
-          'otp': otp,
         },
       );
 
       if (response.success && response.data != null) {
-        final token = response.data!['access_token'] ?? response.data!['token'] ?? 'jwt_token_${DateTime.now().millisecondsSinceEpoch}';
+        final token = response.data!['access_token'] ?? response.data!['token'];
         final userData = response.data!['user'] ?? {
           'id': 'insp_01',
           'official_id': officialId,
-          'email': '$officialId@doca.gov.in',
+          'email': officialId.contains('@') ? officialId : '$officialId@doca.gov.in',
           'full_name': 'Inspector Rajesh Kumar (Legal Metrology)',
           'role': 'inspector',
           'zone': 'North Zone (New Delhi Division)',
         };
 
-        _currentUser = UserModel.fromJson(userData, token: token);
-        await _storage.saveToken(token);
-        await _storage.saveUser(_currentUser!);
-        _isLoading = false;
-        notifyListeners();
-        return true;
-      } else {
-        // Fallback demo for field inspectors when offline/local testing
-        if (officialId.isNotEmpty && password.isNotEmpty) {
-          final fallbackToken = 'jwt_field_session_${DateTime.now().millisecondsSinceEpoch}';
-          _currentUser = UserModel(
-            id: 'insp_doca_2026',
-            email: '$officialId@doca.gov.in',
-            fullName: 'Inspector R. Kumar (DoCA Field)',
-            officialId: officialId,
-            role: UserRole.inspector,
-            zone: 'North Zone (New Delhi Division)',
-            token: fallbackToken,
-          );
-          await _storage.saveToken(fallbackToken);
+        if (token != null) {
+          _currentUser = UserModel.fromJson(userData, token: token);
+          await _storage.saveToken(token);
           await _storage.saveUser(_currentUser!);
           _isLoading = false;
           notifyListeners();
           return true;
         }
-
-        _errorMessage = response.message ?? 'Invalid credentials or OTP';
-        _isLoading = false;
-        notifyListeners();
-        return false;
       }
+
+      _errorMessage = response.message ?? 'Invalid credentials or authentication error.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
     } catch (e) {
       _errorMessage = 'Authentication error: ${e.toString()}';
       _isLoading = false;

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import 'constants.dart';
 import 'storage_service.dart';
 
@@ -22,13 +23,23 @@ class ApiResponse<T> {
 }
 
 /// Project PARAKH API Client
-/// Connects to FastAPI Backend (/api/v1/...) with JWT authentication and §39 response envelop handling.
+/// Connects to FastAPI Backend (/api/v1/...) with JWT authentication and response envelope handling.
 class ApiClient {
   final StorageService _storage;
   String _baseUrl;
 
   ApiClient(this._storage, {String? baseUrl})
-      : _baseUrl = baseUrl ?? AppConstants.defaultApiBaseUrl;
+      : _baseUrl = baseUrl ?? _resolveDefaultBaseUrl();
+
+  static String _resolveDefaultBaseUrl() {
+    if (kIsWeb) return AppConstants.localhostApiUrl;
+    try {
+      if (Platform.isAndroid) {
+        return AppConstants.defaultApiBaseUrl; // 10.0.2.2 for Android emulator
+      }
+    } catch (_) {}
+    return AppConstants.localhostApiUrl; // 127.0.0.1 for Desktop/LAN
+  }
 
   void updateBaseUrl(String url) {
     _baseUrl = url;
@@ -40,6 +51,7 @@ class ApiClient {
     final token = _storage.getToken();
     final map = <String, String>{
       'Accept': 'application/json',
+      AppConstants.apiKeyHeaderName: AppConstants.apiKey,
     };
     if (!isMultipart) {
       map['Content-Type'] = 'application/json';

@@ -195,25 +195,19 @@ class ComplianceProvider extends ChangeNotifier {
         _statusMessage = null;
         notifyListeners();
         return receipt;
+      } else {
+        final errorMsg = response.message ?? 'Failed to anchor evidence to blockchain';
+        _isCommittingBlockchain = false;
+        _statusMessage = errorMsg;
+        notifyListeners();
+        throw Exception(errorMsg);
       }
-    } catch (_) {}
-
-    await Future.delayed(const Duration(milliseconds: 1000));
-    final receipt = BlockchainReceipt(
-      txHash:
-          '0x${sha256.convert(utf8.encode(DateTime.now().toIso8601String())).toString()}',
-      evidenceHash: sha256Hash,
-      blockNumber: '${10480 + _inspectionHistory.length}',
-      timestamp: DateTime.now().toIso8601String(),
-      channel: 'doca-evidentiary-channel',
-      isAnchored: true,
-    );
-
-    _updateRecordWithReceipt(record.id, receipt);
-    _isCommittingBlockchain = false;
-    _statusMessage = null;
-    notifyListeners();
-    return receipt;
+    } catch (e) {
+      _isCommittingBlockchain = false;
+      _statusMessage = 'Blockchain Anchor Error: ${e.toString()}';
+      notifyListeners();
+      rethrow;
+    }
   }
 
   void _updateRecordWithReceipt(String id, BlockchainReceipt receipt) {

@@ -99,8 +99,11 @@ class OCRExtractedData {
   }
 
   factory OCRExtractedData.fromJson(Map<String, dynamic> json) {
+    if (json.containsKey('extracted_entities')) {
+      return OCRExtractedData.fromAnalysisResponse(json);
+    }
     return OCRExtractedData(
-      rawText: json['raw_text'] ?? '',
+      rawText: json['raw_text'] ?? json['raw_ocr_text'] ?? '',
       mrp: json['mrp'] ?? '',
       mrpValue: (json['mrp_value'] as num?)?.toDouble() ?? 0.0,
       netQuantity: json['net_quantity'] ?? json['net_weight'] ?? '',
@@ -110,12 +113,77 @@ class OCRExtractedData {
       consumerCareEmail: json['consumer_care_email'] ?? '',
       manufacturerName: json['manufacturer_name'] ?? '',
       manufacturerAddress: json['manufacturer_address'] ?? '',
-      barcode: json['barcode'] ?? '',
+      barcode: json['barcode'] ?? json['product_barcode'] ?? '',
       confidenceScore: (json['confidence_score'] as num?)?.toDouble() ?? 0.94,
       boundingBoxes: (json['bounding_boxes'] as List<dynamic>?)
               ?.map((e) => BoundingBox.fromJson(e))
               .toList() ??
           [],
+    );
+  }
+
+  factory OCRExtractedData.fromAnalysisResponse(Map<String, dynamic> json) {
+    final entities = (json['extracted_entities'] as List<dynamic>?) ?? [];
+    String mrp = '';
+    double mrpValue = 0.0;
+    String netQuantity = '';
+    String mfgDate = '';
+    String expiryDate = '';
+    String consumerCarePhone = '';
+    String consumerCareEmail = '';
+    String manufacturerName = '';
+    String manufacturerAddress = '';
+
+    for (final item in entities) {
+      if (item is Map<String, dynamic>) {
+        final type = (item['entity'] ?? '').toString().toUpperCase();
+        final value = (item['value'] ?? '').toString();
+        switch (type) {
+          case 'MRP':
+            mrp = value.startsWith('₹') || value.startsWith('Rs') ? value : '₹ $value';
+            mrpValue = double.tryParse(value.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
+            break;
+          case 'NET_QUANTITY':
+            netQuantity = value;
+            break;
+          case 'MFG_DATE':
+          case 'PKG_DATE':
+            mfgDate = value;
+            break;
+          case 'EXPIRY_DATE':
+          case 'BEST_BEFORE':
+            expiryDate = value;
+            break;
+          case 'CONSUMER_CARE_PHONE':
+            consumerCarePhone = value;
+            break;
+          case 'CONSUMER_CARE_EMAIL':
+            consumerCareEmail = value;
+            break;
+          case 'MANUFACTURER_NAME':
+            manufacturerName = value;
+            break;
+          case 'MANUFACTURER_ADDRESS':
+            manufacturerAddress = value;
+            break;
+        }
+      }
+    }
+
+    return OCRExtractedData(
+      rawText: json['raw_ocr_text'] ?? json['raw_text'] ?? '',
+      mrp: mrp.isNotEmpty ? mrp : (json['mrp'] ?? ''),
+      mrpValue: mrpValue != 0.0 ? mrpValue : ((json['mrp_value'] as num?)?.toDouble() ?? 0.0),
+      netQuantity: netQuantity.isNotEmpty ? netQuantity : (json['net_quantity'] ?? ''),
+      mfgDate: mfgDate.isNotEmpty ? mfgDate : (json['mfg_date'] ?? ''),
+      expiryDate: expiryDate.isNotEmpty ? expiryDate : (json['expiry_date'] ?? ''),
+      consumerCarePhone: consumerCarePhone.isNotEmpty ? consumerCarePhone : (json['consumer_care_phone'] ?? ''),
+      consumerCareEmail: consumerCareEmail.isNotEmpty ? consumerCareEmail : (json['consumer_care_email'] ?? ''),
+      manufacturerName: manufacturerName.isNotEmpty ? manufacturerName : (json['manufacturer_name'] ?? ''),
+      manufacturerAddress: manufacturerAddress.isNotEmpty ? manufacturerAddress : (json['manufacturer_address'] ?? ''),
+      barcode: json['product_barcode'] ?? json['barcode'] ?? '',
+      confidenceScore: (json['confidence_score'] as num?)?.toDouble() ?? 0.92,
+      boundingBoxes: [],
     );
   }
 
@@ -225,13 +293,14 @@ class GS1Product {
     return GS1Product(
       gtin: json['gtin'] ?? json['barcode'] ?? '',
       productName:
-          json['product_name'] ?? json['item_name'] ?? 'Packaged Commodity',
-      registeredCompany: json['registered_company'] ??
+          json['product_name'] ?? json['item_name'] ?? 'Product Information',
+      registeredCompany: json['registered_manufacturer'] ??
+          json['registered_company'] ??
           json['company'] ??
-          'Registered Manufacturer Ltd',
-      companyAddress: json['company_address'] ?? 'Industrial Area, Phase II',
-      brand: json['brand'] ?? 'Standard Brand',
-      isVerified: json['is_verified'] ?? true,
+          'Unknown Manufacturer',
+      companyAddress: json['manufacturer_address'] ?? json['company_address'] ?? '',
+      brand: json['brand'] ?? '',
+      isVerified: json['status'] == 'FOUND' || json['is_verified'] == true,
     );
   }
 }
