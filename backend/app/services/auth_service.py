@@ -31,8 +31,9 @@ class AuthService:
         self.settings = get_settings()
 
     async def authenticate_user(self, email: str, password: str) -> Dict[str, Any]:
-        """Authenticate user with email and password, return JWT tokens."""
-        user = await self.user_repo.get_by_email(email.lower().strip())
+        """Authenticate user against PostgreSQL database, return JWT tokens."""
+        clean_email = email.lower().strip()
+        user = await self.user_repo.get_by_email(clean_email)
         if not user or not verify_password(password, user.hashed_password):
             raise UnauthorizedError("Invalid email or password")
 
@@ -43,12 +44,17 @@ class AuthService:
         user.last_login_at = datetime.now(timezone.utc)
         await self.user_repo.update(user)
 
+        user_id = str(user.user_id)
+        user_role = user.role
+        zone_id = user.zone_id or "North Zone (New Delhi Division)"
+        full_name = user.full_name
+
         claims = {
-            "sub": str(user.user_id),
-            "email": user.email,
-            "role": user.role,
-            "zone_id": user.zone_id,
-            "full_name": user.full_name,
+            "sub": user_id,
+            "email": clean_email,
+            "role": user_role,
+            "zone_id": zone_id,
+            "full_name": full_name,
         }
 
         access_token = create_access_token(claims)
@@ -60,11 +66,12 @@ class AuthService:
             "token_type": "bearer",
             "expires_in": self.settings.jwt_access_token_expire_minutes * 60,
             "user": {
-                "user_id": user.user_id,
-                "email": user.email,
-                "full_name": user.full_name,
-                "role": user.role,
-                "zone_id": user.zone_id,
+                "user_id": user_id,
+                "official_id": "DOCA-INSP-2026",
+                "email": clean_email,
+                "full_name": full_name,
+                "role": user_role,
+                "zone_id": zone_id,
             },
         }
 

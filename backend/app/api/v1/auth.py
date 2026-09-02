@@ -30,15 +30,18 @@ async def login(
     token_data = await auth_service.authenticate_user(payload.email, payload.password)
 
     # Audit log
-    audit = AuditService(db)
-    await audit.log_event(
-        action="AUTH_LOGIN_SUCCESS",
-        user_email=payload.email,
-        user_role=token_data["user"]["role"],
-        resource_type="auth",
-        ip_address=request.client.host if request.client else None,
-        user_agent=request.headers.get("user-agent"),
-    )
+    try:
+        audit = AuditService(db)
+        await audit.log_event(
+            action="AUTH_LOGIN_SUCCESS",
+            user_email=payload.email,
+            user_role=token_data["user"]["role"],
+            resource_type="auth",
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+        )
+    except Exception:
+        pass
 
     return success_response(data=token_data, message="Authentication successful")
 

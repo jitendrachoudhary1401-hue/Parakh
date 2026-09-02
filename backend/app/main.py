@@ -46,6 +46,11 @@ async def lifespan(app: FastAPI):
     MongoDB.connect()
     logger.info("MongoDB client connected to %s", settings.mongodb_database)
 
+    # Initialize PostgreSQL DB tables & seed data
+    from app.db.postgres import init_db
+    await init_db()
+    logger.info("PostgreSQL tables initialized and seeded successfully.")
+
     yield
 
     # Teardown

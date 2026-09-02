@@ -64,13 +64,13 @@ class User(Base):
 
     # Relationships
     inspections = relationship(
-        "Inspection", back_populates="inspector", lazy="selectin",
+        "Inspection", back_populates="inspector", lazy="noload",
     )
     citizen_reports = relationship(
         "CitizenReport",
         back_populates="citizen",
         foreign_keys="[CitizenReport.citizen_id]",
-        lazy="selectin",
+        lazy="noload",
     )
 
     def __repr__(self) -> str:

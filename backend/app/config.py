@@ -36,8 +36,8 @@ class Settings(BaseSettings):
     workers: int = 4
 
     # --- PostgreSQL ---
-    database_url: str = "postgresql+asyncpg://parakh_user:password@localhost:5432/parakh_db"
-    database_url_sync: str = "postgresql://parakh_user:password@localhost:5432/parakh_db"
+    database_url: str = "postgresql+asyncpg://parakh_user:Mario%40123@127.0.0.1:5432/parakh_db"
+    database_url_sync: str = "postgresql://parakh_user:Mario%40123@127.0.0.1:5432/parakh_db"
     db_pool_size: int = 20
     db_max_overflow: int = 10
 

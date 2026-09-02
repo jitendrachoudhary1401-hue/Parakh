@@ -57,9 +57,11 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with async_session_factory() as session:
         try:
             yield session
-            await session.commit()
+            if session.is_active:
+                await session.commit()
         except Exception:
-            await session.rollback()
+            if session.is_active:
+                await session.rollback()
             raise
         finally:
             await session.close()
@@ -67,12 +69,35 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     """
-    Initialise database tables (development only).
-
-    In production, use Alembic migrations instead.
+    Initialise database tables and seed default admin/inspector accounts.
     """
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+        async with async_session_factory() as session:
+            from app.models.user import User
+            from app.core.security import hash_password
+            from sqlalchemy import select
+
+            result = await session.execute(
+                select(User).where(User.email == "officer.rajesh@doca.gov.in")
+            )
+            user = result.scalar_one_or_none()
+            if not user:
+                default_user = User(
+                    full_name="Inspector Rajesh Kumar (Legal Metrology)",
+                    email="officer.rajesh@doca.gov.in",
+                    hashed_password=hash_password("password123"),
+                    role="inspector",
+                    zone_id="North Zone (New Delhi Division)",
+                    is_active=True,
+                )
+                session.add(default_user)
+                await session.commit()
+    except Exception as e:
+        import logging
+        logging.getLogger("parakh.db").warning("Database setup note: %s", str(e))
 
 
 async def close_db() -> None:

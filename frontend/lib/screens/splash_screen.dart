@@ -243,25 +243,6 @@ class _SplashScreenState extends State<SplashScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: _navigateToNextScreen,
-                            icon: const Icon(Icons.arrow_forward),
-                            label: const Text('Continue to Enforcement Portal'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppTheme.primary,
-                              side: const BorderSide(color: AppTheme.primary),
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 14.0),
-                              shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(AppTheme.radiusSm),
-                              ),
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),

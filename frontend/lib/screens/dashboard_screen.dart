@@ -4,6 +4,7 @@ import '../core/theme.dart';
 import '../models/models.dart';
 import '../providers/auth_provider.dart';
 import '../providers/compliance_provider.dart';
+import '../providers/scan_provider.dart';
 import '../providers/sync_provider.dart';
 import '../widgets/action_tile.dart';
 import '../widgets/metric_card.dart';
@@ -21,10 +22,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _currentNavIndex = 0;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<ScanProvider>(context, listen: false)
+          .fetchCurrentLocation(requestIfDenied: true);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
     final compliance = Provider.of<ComplianceProvider>(context);
     final sync = Provider.of<SyncProvider>(context);
+    final scan = Provider.of<ScanProvider>(context);
 
     final history = compliance.inspectionHistory;
     final compliantCount = history.where((e) => e.isCompliant).length + 12;
@@ -66,6 +77,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.my_location, size: 20, color: AppTheme.primary),
+            tooltip: 'Refresh Location',
+            onPressed: () => scan.fetchCurrentLocation(requestIfDenied: true),
+          ),
+          IconButton(
             icon: const Icon(Icons.sync, size: 20, color: AppTheme.secondary),
             tooltip: 'Sync Hub',
             onPressed: () => Navigator.pushNamed(context, '/sync-hub'),
@@ -82,7 +98,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Welcome Banner
+              // Welcome Banner with Real-Time Location
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -95,16 +111,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Active Field Jurisdiction',
-                            style: TextStyle(fontSize: 11, color: Colors.white70, fontWeight: FontWeight.w500),
+                          const Row(
+                            children: [
+                              Icon(Icons.my_location, size: 12, color: Colors.white70),
+                              SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  'REAL-TIME GPS JURISDICTION',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.white70,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 4),
                           Text(
-                            auth.currentUser?.zone ?? 'North Zone (New Delhi Division)',
-                            style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w700),
+                            scan.locationAddress.isNotEmpty &&
+                                    scan.locationAddress != 'Acquiring GPS location...'
+                                ? scan.locationAddress
+                                : (auth.currentUser?.zone ?? 'North Zone (New Delhi Division)'),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 13, color: Colors.white, fontWeight: FontWeight.w700),
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 4),
                           Row(
                             children: [
                               Container(
@@ -125,11 +159,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ],
                       ),
                     ),
+                    const SizedBox(width: 10),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: AppTheme.primary,
-                        minimumSize: const Size(90, 36),
+                        minimumSize: const Size(80, 36),
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                       ),
                       onPressed: () => Navigator.pushNamed(context, '/ar-camera'),
