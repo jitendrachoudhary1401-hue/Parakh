@@ -1,0 +1,492 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "metadata": {
+    "act_name": "The Legal Metrology Act, 2009 (Act No. 1 of 2010)",
+    "rules_name": "The Legal Metrology (Packaged Commodities) Rules, 2011",
+    "gazette_notification": "G.S.R. 202(E) dated 7th March, 2011 (as amended)",
+    "source_document": "8_1732871406.pdf",
+    "enforcing_authority": "Department of Consumer Affairs (DoCA), Ministry of Consumer Affairs, Food and Public Distribution, Government of India",
+    "version": "2026.1",
+    "total_rules_extracted": 12
+  },
+  "rules": [
+    {
+      "rule_id": "LM-001",
+      "clause_id": "CHAPTER_II_RULE_6_1_A",
+      "chapter": "Chapter II — Provisions Applicable to Packages Intended for Retail Sale",
+      "rule_number": "6(1)(a)",
+      "rule_title": "Declaration of Name and Address of Manufacturer, Packer, or Importer",
+      "statutory_text": "Every package shall bear thereon the name and complete address of the manufacturer, or where the manufacturer is not the packer, the name and complete address of the manufacturer and the packer, or in case of an imported package, the name and complete address of the importer.",
+      "mandatory": true,
+      "severity": "CRITICAL",
+      "target_entities": [
+        "MANUFACTURER_NAME",
+        "MANUFACTURER_ADDRESS"
+      ],
+      "evaluation_type": "DECLARATION_PRESENCE_AND_COMPLETENESS",
+      "validation_criteria": {
+        "entity_presence": {
+          "required": ["MANUFACTURER_NAME"],
+          "recommended": ["MANUFACTURER_ADDRESS"]
+        },
+        "name_minimum_length": 3,
+        "address_minimum_keywords": [
+          "road", "street", "lane", "nagar", "plot", "sector", "phase", "ind.", "industrial", "area", "village", "dist", "district", "city", "state", "pin", "pincode", "india", "pvt", "ltd", "mfg", "manufactured", "packed", "by"
+        ],
+        "prefix_patterns": [
+          "(?i)(?:mfd\\.?\\s*(?:by)?|manufactured\\s+by|packed\\s+by|marketed\\s+by|imported\\s+by|pkd\\.?\\s*(?:by)?)\\s*[:\\-]?\\s*(.+)"
+        ],
+        "pincode_regex": "\\b[1-9][0-9]{5}\\b"
+      },
+      "legal_consequences": {
+        "violation_type": "MISSING_OR_INCOMPLETE_MANUFACTURER_DECLARATION",
+        "act_section": "Section 36(1) of Legal Metrology Act, 2009",
+        "penalty_structure": {
+          "first_offence": "Fine up to ₹25,000",
+          "second_offence": "Fine up to ₹50,000",
+          "subsequent_offences": "Fine up to ₹1,00,000 or imprisonment up to 1 year, or both"
+        },
+        "default_notice_clause": "Failure to declare the complete name and geographical address of the manufacturer/packer/importer on the principal display panel in violation of Rule 6(1)(a)."
+      }
+    },
+    {
+      "rule_id": "LM-002",
+      "clause_id": "CHAPTER_II_RULE_6_1_B",
+      "chapter": "Chapter II — Provisions Applicable to Packages Intended for Retail Sale",
+      "rule_number": "6(1)(b)",
+      "rule_title": "Declaration of Common or Generic Name of the Commodity",
+      "statutory_text": "Every package shall bear thereon the common or generic names of the commodity contained in the package and in case of packages with more than one product, the name and number or quantity of each product.",
+      "mandatory": true,
+      "severity": "HIGH",
+      "target_entities": [
+        "GENERIC_NAME",
+        "PRODUCT_NAME"
+      ],
+      "evaluation_type": "GENERIC_NAME_DECLARATION",
+      "validation_criteria": {
+        "entity_presence": {
+          "required": ["GENERIC_NAME"]
+        },
+        "prohibited_generic_terms": [
+          "item", "goods", "food", "product", "pack", "sample"
+        ],
+        "min_characters": 2
+      },
+      "legal_consequences": {
+        "violation_type": "OMISSION_OF_GENERIC_COMMODITY_NAME",
+        "act_section": "Section 36(1) of Legal Metrology Act, 2009",
+        "penalty_structure": {
+          "first_offence": "Fine up to ₹25,000",
+          "second_offence": "Fine up to ₹50,000",
+          "subsequent_offences": "Fine up to ₹1,00,000 or imprisonment up to 1 year, or both"
+        },
+        "default_notice_clause": "Absence of clear common or generic name of the pre-packaged commodity as required under Rule 6(1)(b)."
+      }
+    },
+    {
+      "rule_id": "LM-003",
+      "clause_id": "CHAPTER_II_RULE_6_1_C",
+      "chapter": "Chapter II — Provisions Applicable to Packages Intended for Retail Sale",
+      "rule_number": "6(1)(c)",
+      "rule_title": "Declaration of Net Quantity in Standard Units of Weight, Measure or Number",
+      "statutory_text": "Every package shall bear thereon the net quantity, in terms of the standard unit of weight or measure, of the commodity contained in the package or where the commodity is packed or sold by number, the number of the commodity contained in the package shall be mentioned.",
+      "mandatory": true,
+      "severity": "CRITICAL",
+      "target_entities": [
+        "NET_QUANTITY"
+      ],
+      "evaluation_type": "QUANTITY_STANDARDIZATION_AND_FORMAT",
+      "validation_criteria": {
+        "allowed_standard_units": {
+          "mass": ["g", "kg", "mg"],
+          "volume": ["ml", "l", "L", "kL"],
+          "length": ["m", "cm", "mm"],
+          "area": ["sq m", "sq cm", "sq mm"],
+          "count": ["N", "U", "pieces", "units", "count"]
+        },
+        "prohibited_non_standard_units": [
+          "gms", "gm", "grm", "gms.", "kilo", "kilos", "kgs", "kgs.", "ltr", "ltrs", "ml.", "nos", "nos."
+        ],
+        "format_regex": "(?i)(?:net\\s*(?:wt\\.?|weight|qty\\.?|quantity)?|contents)\\s*[:\\-]?\\s*([0-9]+(?:\\.[0-9]+)?)\\s*(g|kg|ml|l|mg|m|cm|mm|sq\\s*m|sq\\s*cm|N|U|pieces|units)\\b",
+        "minimum_value_exclusive": 0
+      },
+      "legal_consequences": {
+        "violation_type": "NON_STANDARD_NET_QUANTITY_DECLARATION",
+        "act_section": "Section 36(1) read with Rule 11 & Rule 12",
+        "penalty_structure": {
+          "first_offence": "Fine up to ₹25,000",
+          "second_offence": "Fine up to ₹50,000",
+          "subsequent_offences": "Fine up to ₹1,00,000 or imprisonment up to 1 year, or both"
+        },
+        "default_notice_clause": "Net quantity not expressed in correct standard legal metrology SI units or symbols pursuant to Rule 6(1)(c) and Rule 11."
+      }
+    },
+    {
+      "rule_id": "LM-004",
+      "clause_id": "CHAPTER_II_RULE_6_1_D",
+      "chapter": "Chapter II — Provisions Applicable to Packages Intended for Retail Sale",
+      "rule_number": "6(1)(d)",
+      "rule_title": "Declaration of Month and Year of Manufacture / Packaging / Pre-packing",
+      "statutory_text": "Every package shall bear thereon the month and year in which the commodity is manufactured or pre-packed or imported.",
+      "mandatory": true,
+      "severity": "HIGH",
+      "target_entities": [
+        "MFG_DATE",
+        "EXPIRY_DATE",
+        "USE_BY_DATE"
+      ],
+      "evaluation_type": "DATE_VALIDATION_AND_FORMAT",
+      "validation_criteria": {
+        "allowed_formats": [
+          "MM/YYYY",
+          "MM/YY",
+          "MMM YYYY",
+          "MMM-YYYY",
+          "DD/MM/YYYY",
+          "DD.MM.YYYY",
+          "DD-MM-YYYY"
+        ],
+        "keywords_prefixes": [
+          "(?i)(?:mfd|mfg|manufactured|packed|pkd|prepacked|imported)\\s*(?:on|date|month)?\\s*[:\\-]?\\s*([0-9]{1,2}[/\\-\\.\\s][0-9]{2,4}|[A-Za-z]{3}[/\\-\\s][0-9]{2,4})",
+          "(?i)(?:use\\s*by|best\\s*before|expiry|exp\\.?\\s*date)\\s*[:\\-]?\\s*([0-9]{1,2}[/\\-\\.\\s][0-9]{2,4}|[A-Za-z]{3}[/\\-\\s][0-9]{2,4}|[0-9]+\\s*months?)"
+        ],
+        "future_date_tolerance_days": 0,
+        "prohibit_post_dated_manufacturing": true
+      },
+      "legal_consequences": {
+        "violation_type": "ABSENT_OR_IMPROPER_MANUFACTURING_PACKAGING_DATE",
+        "act_section": "Section 36(1) of Legal Metrology Act, 2009",
+        "penalty_structure": {
+          "first_offence": "Fine up to ₹25,000",
+          "second_offence": "Fine up to ₹50,000",
+          "subsequent_offences": "Fine up to ₹1,00,000 or imprisonment up to 1 year, or both"
+        },
+        "default_notice_clause": "Missing or ambiguous date of manufacture/packing or use-by duration on the package in contravention of Rule 6(1)(d)."
+      }
+    },
+    {
+      "rule_id": "LM-005",
+      "clause_id": "CHAPTER_II_RULE_6_1_E",
+      "chapter": "Chapter II — Provisions Applicable to Packages Intended for Retail Sale",
+      "rule_number": "6(1)(e)",
+      "rule_title": "Declaration of Maximum Retail Price (MRP) Inclusive of All Taxes and Unit Sale Price",
+      "statutory_text": "Every package shall bear thereon the retail sale price of the package in the form 'Maximum or Max. Retail Price Rs. ...... or ₹ ...... inclusive of all taxes' or 'MRP Rs. / ₹ ...... incl. of all taxes', with the unit sale price declared where applicable.",
+      "mandatory": true,
+      "severity": "CRITICAL",
+      "target_entities": [
+        "MRP",
+        "UNIT_SALE_PRICE"
+      ],
+      "evaluation_type": "MRP_DECLARATION_AND_TAX_INCLUSION",
+      "validation_criteria": {
+        "currency_symbols": ["₹", "Rs.", "Rs", "INR"],
+        "mandatory_tax_inclusion_keywords": [
+          "incl. of all taxes",
+          "inclusive of all taxes",
+          "incl of all taxes",
+          "incl. all taxes",
+          "inclusive of taxes"
+        ],
+        "prohibited_pricing_expressions": [
+          "MRP + Taxes Extra",
+          "Local Taxes Extra",
+          "Taxes as applicable",
+          "Excluding Taxes",
+          "VAT Extra",
+          "GST Extra"
+        ],
+        "mrp_regex": "(?i)(?:m\\.?r\\.?p\\.?|maximum\\s*retail\\s*price)\\s*[:\\-]?\\s*(?:rs\\.?|₹|inr)?\\s*([0-9]+(?:\\.[0-9]{1,2})?)\\s*(?:(?:\\(|\\/|\\-)?\\s*(?:incl(?:usive)?\\.?\\s*(?:of)?\\s*all\\s*taxes|all\\s*taxes\\s*incl(?:usive)?))?",
+        "unit_sale_price_regex": "(?i)(?:unit\\s*sale\\s*price|usp)\\s*[:\\-]?\\s*(?:rs\\.?|₹)?\\s*([0-9]+(?:\\.[0-9]{1,2})?)\\s*(?:per|\\/)\\s*(g|kg|ml|l|N|piece|unit|cm|m)"
+      },
+      "legal_consequences": {
+        "violation_type": "IMPROPER_MRP_FORMAT_OR_NON_INCLUSIVE_TAXES",
+        "act_section": "Section 36(1) read with Section 18(1) of Legal Metrology Act, 2009",
+        "penalty_structure": {
+          "first_offence": "Fine up to ₹25,000",
+          "second_offence": "Fine up to ₹50,000",
+          "subsequent_offences": "Fine up to ₹1,00,000 or imprisonment up to 1 year, or both"
+        },
+        "default_notice_clause": "Maximum Retail Price (MRP) not declared with the statutory mandatory 'inclusive of all taxes' expression or declared in misleading format under Rule 6(1)(e)."
+      }
+    },
+    {
+      "rule_id": "LM-006",
+      "clause_id": "CHAPTER_II_RULE_6_1_H",
+      "chapter": "Chapter II — Provisions Applicable to Packages Intended for Retail Sale",
+      "rule_number": "6(1)(h)",
+      "rule_title": "Consumer Care Details for Grievance Redressal",
+      "statutory_text": "Every package shall bear thereon the name, address, telephone number, and e-mail address of the person who can be or the office which can be contacted, in case of consumer complaints.",
+      "mandatory": true,
+      "severity": "CRITICAL",
+      "target_entities": [
+        "CONSUMER_CARE_PHONE",
+        "CONSUMER_CARE_EMAIL",
+        "CONSUMER_CARE_ADDRESS"
+      ],
+      "evaluation_type": "CONSUMER_GRIEVANCE_CONTACT_COMPLETENESS",
+      "validation_criteria": {
+        "mandatory_channels": {
+          "telephone_or_tollfree": true,
+          "email_address": true
+        },
+        "phone_regex": "(?:\\+91[\\-\\s]?)?(?:1800[\\-\\s]?[0-9]{3}[\\-\\s]?[0-9]{3,4}|[6-9][0-9]{9}|0[0-9]{2,4}[\\-\\s]?[0-9]{6,8})",
+        "email_regex": "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}",
+        "keywords": [
+          "consumer care",
+          "customer care",
+          "customer support",
+          "toll free",
+          "helpline",
+          "feedback",
+          "grievance",
+          "executive",
+          "manager",
+          "care@"
+        ]
+      },
+      "legal_consequences": {
+        "violation_type": "MISSING_MANDATORY_CONSUMER_CARE_DETAILS",
+        "act_section": "Section 36(1) of Legal Metrology Act, 2009",
+        "penalty_structure": {
+          "first_offence": "Fine up to ₹25,000",
+          "second_offence": "Fine up to ₹50,000",
+          "subsequent_offences": "Fine up to ₹1,00,000 or imprisonment up to 1 year, or both"
+        },
+        "default_notice_clause": "Failure to provide mandatory consumer grievance redressal contact details (valid telephone/toll-free number and email address) on package under Rule 6(1)(h)."
+      }
+    },
+    {
+      "rule_id": "LM-007",
+      "clause_id": "CHAPTER_II_RULE_6_1_AA",
+      "chapter": "Chapter II — Provisions Applicable to Packages Intended for Retail Sale",
+      "rule_number": "6(1)(aa)",
+      "rule_title": "Declaration of Country of Origin on Imported Packages",
+      "statutory_text": "The name of the country of origin or manufacture or assembly in case of imported products shall be mentioned on the package.",
+      "mandatory": true,
+      "conditional": "REQUIRED_IF_IMPORTED_OR_GLOBAL_COMMODITY",
+      "severity": "HIGH",
+      "target_entities": [
+        "COUNTRY_OF_ORIGIN"
+      ],
+      "evaluation_type": "COUNTRY_OF_ORIGIN_DECLARATION",
+      "validation_criteria": {
+        "trigger_keywords": ["imported by", "imported and distributed by", "country of origin", "made in", "product of"],
+        "regex": "(?i)(?:country\\s*of\\s*origin|made\\s*in|product\\s*of|origin)\\s*[:\\-]?\\s*([A-Za-z\\s]+)"
+      },
+      "legal_consequences": {
+        "violation_type": "OMISSION_OF_COUNTRY_OF_ORIGIN",
+        "act_section": "Section 36(1) of Legal Metrology Act, 2009",
+        "penalty_structure": {
+          "first_offence": "Fine up to ₹25,000",
+          "second_offence": "Fine up to ₹50,000",
+          "subsequent_offences": "Fine up to ₹1,00,000 or imprisonment up to 1 year, or both"
+        },
+        "default_notice_clause": "Absence of clear Declaration of Country of Origin on imported packaged commodity under Rule 6(1)(aa)."
+      }
+    },
+    {
+      "rule_id": "LM-008",
+      "clause_id": "CHAPTER_II_RULE_7_AND_9",
+      "chapter": "Chapter II — Provisions Applicable to Packages Intended for Retail Sale",
+      "rule_number": "7 & 9 / Schedule I",
+      "rule_title": "Principal Display Panel (PDP) and Minimum Font Height Specifications",
+      "statutory_text": "Every declaration shall be prominent, legible and unambiguous. The minimum height of numerals and letters based on net quantity or area of Principal Display Panel shall conform to Table I and Table II.",
+      "mandatory": true,
+      "severity": "MEDIUM",
+      "target_entities": [
+        "NUMERAL_HEIGHT_MM",
+        "PDP_AREA_SQ_CM"
+      ],
+      "evaluation_type": "FONT_SIZE_AND_PROPORTION_CHECK",
+      "validation_criteria": {
+        "minimum_font_height_table_by_net_quantity": [
+          {
+            "max_net_qty_g_ml": 50,
+            "min_numeral_height_normal_mm": 1.0,
+            "min_numeral_height_blown_embossed_mm": 2.0
+          },
+          {
+            "min_net_qty_g_ml": 50,
+            "max_net_qty_g_ml": 200,
+            "min_numeral_height_normal_mm": 2.0,
+            "min_numeral_height_blown_embossed_mm": 4.0
+          },
+          {
+            "min_net_qty_g_ml": 200,
+            "max_net_qty_g_ml": 1000,
+            "min_numeral_height_normal_mm": 4.0,
+            "min_numeral_height_blown_embossed_mm": 6.0
+          },
+          {
+            "min_net_qty_g_ml": 1000,
+            "min_numeral_height_normal_mm": 6.0,
+            "min_numeral_height_blown_embossed_mm": 8.0
+          }
+        ],
+        "contrast_requirement": "Letters and numerals must be in distinct contrast with the background"
+      },
+      "legal_consequences": {
+        "violation_type": "SUB_STANDARD_FONT_SIZE_OR_ILLEGIBLE_DECLARATIONS",
+        "act_section": "Section 36(1) read with Rule 7, 8, 9",
+        "penalty_structure": {
+          "first_offence": "Fine up to ₹25,000",
+          "second_offence": "Fine up to ₹50,000",
+          "subsequent_offences": "Fine up to ₹1,00,000 or imprisonment up to 1 year, or both"
+        },
+        "default_notice_clause": "Mandatory declarations printed below the statutory minimum font size or lacking required background contrast under Rule 7 and Rule 9."
+      }
+    },
+    {
+      "rule_id": "LM-009",
+      "clause_id": "CHAPTER_II_RULE_18_1",
+      "chapter": "Chapter II — Provisions Applicable to Packages Intended for Retail Sale",
+      "rule_number": "18(1)",
+      "rule_title": "Prohibition of Sale Above Maximum Retail Price (Dual MRP / Overcharging)",
+      "statutory_text": "No person shall sell or deliver to any person, or permit sale of any pre-packaged commodity at a price higher than the retail sale price declared on the package, or display dual Maximum Retail Prices on identical commodities.",
+      "mandatory": true,
+      "severity": "CRITICAL",
+      "target_entities": [
+        "DECLARED_MRP",
+        "ACTUAL_CHARGED_PRICE"
+      ],
+      "evaluation_type": "PRICE_OVERCHARGING_OR_DUAL_MRP_DETECTION",
+      "validation_criteria": {
+        "max_price_differential_allowed": 0.0,
+        "prohibit_dual_mrp_stickers": true,
+        "prohibit_tampered_or_altered_mrp_smudges": true
+      },
+      "legal_consequences": {
+        "violation_type": "OVERCHARGING_BEYOND_MRP_OR_DUAL_PRICING",
+        "act_section": "Section 36(2) and Section 18(1) of Legal Metrology Act, 2009",
+        "penalty_structure": {
+          "first_offence": "Fine up to ₹25,000",
+          "second_offence": "Fine up to ₹50,000",
+          "subsequent_offences": "Fine up to ₹1,00,000 or imprisonment up to 1 year, or both"
+        },
+        "default_notice_clause": "Charging above Maximum Retail Price (MRP) or pasting altered price stickers on pre-packaged goods in violation of Rule 18(1)."
+      }
+    },
+    {
+      "rule_id": "LM-010",
+      "clause_id": "CHAPTER_II_RULE_24_SCHEDULE_II",
+      "chapter": "Chapter II — Provisions Applicable to Packages Intended for Retail Sale",
+      "rule_number": "Rule 24 / Schedule II",
+      "rule_title": "Maximum Permissible Error (MPE) in Net Quantity Determination",
+      "statutory_text": "The maximum permissible error, in excess or in deficiency, in the net quantity by weight or by volume of any commodity shall be as specified in the Second Schedule.",
+      "mandatory": true,
+      "severity": "HIGH",
+      "target_entities": [
+        "DECLARED_QUANTITY",
+        "MEASURED_PHYSICAL_WEIGHT"
+      ],
+      "evaluation_type": "MAXIMUM_PERMISSIBLE_ERROR_TOLERANCE",
+      "validation_criteria": {
+        "tolerances_by_declared_weight_volume": [
+          {
+            "min_qty": 50,
+            "max_qty": 100,
+            "max_error_percentage": 4.5,
+            "max_error_g_ml": null
+          },
+          {
+            "min_qty": 100,
+            "max_qty": 200,
+            "max_error_percentage": null,
+            "max_error_g_ml": 4.5
+          },
+          {
+            "min_qty": 200,
+            "max_qty": 300,
+            "max_error_percentage": 3.0,
+            "max_error_g_ml": null
+          },
+          {
+            "min_qty": 300,
+            "max_qty": 500,
+            "max_error_percentage": null,
+            "max_error_g_ml": 9.0
+          },
+          {
+            "min_qty": 500,
+            "max_qty": 1000,
+            "max_error_percentage": 1.5,
+            "max_error_g_ml": null
+          },
+          {
+            "min_qty": 1000,
+            "max_qty": 10000,
+            "max_error_percentage": null,
+            "max_error_g_ml": 15.0
+          }
+        ]
+      },
+      "legal_consequences": {
+        "violation_type": "SHORT_MEASURE_EXCEEDING_MAXIMUM_PERMISSIBLE_ERROR",
+        "act_section": "Section 30 read with Section 36 of Legal Metrology Act, 2009",
+        "penalty_structure": {
+          "first_offence": "Fine up to ₹25,000",
+          "second_offence": "Fine up to ₹50,000",
+          "subsequent_offences": "Fine up to ₹1,00,000 or imprisonment up to 1 year, or both"
+        },
+        "default_notice_clause": "Net commodity contents found deficient beyond Maximum Permissible Error (MPE) thresholds specified in Schedule II."
+      }
+    },
+    {
+      "rule_id": "LM-011",
+      "clause_id": "OPEN_FOOD_FACTS_REGISTRY_CROSS_CHECK",
+      "chapter": "Ecosystem & Anti-Counterfeit Verification Protocol",
+      "rule_number": "National Barcode Registry Verification",
+      "rule_title": "EAN/UPC Barcode Cross-Verification with Open Food Facts Database",
+      "statutory_text": "Validation of declared manufacturer identity against official GS1/Open Food Facts global and national barcode registry records to eliminate ghost manufacturers and counterfeit packaging.",
+      "mandatory": true,
+      "severity": "CRITICAL",
+      "target_entities": [
+        "BARCODE",
+        "MANUFACTURER_NAME",
+        "OPENFOODFACTS_REGISTERED_COMPANY"
+      ],
+      "evaluation_type": "OPENFOODFACTS_DATABASE_CROSS_CHECK",
+      "validation_criteria": {
+        "fuzzy_similarity_threshold": 0.3,
+        "token_overlap_check": true,
+        "flag_ghost_manufacturer_if_mismatch": true
+      },
+      "legal_consequences": {
+        "violation_type": "UNREGISTERED_OR_MISMATCHED_BARCODE_ENTITY",
+        "act_section": "Section 36(1) of Legal Metrology Act, 2009",
+        "penalty_structure": {
+          "first_offence": "Immediate seizure of counterfeit/unregistered batch + Legal Notice"
+        },
+        "default_notice_clause": "Discrepancy detected between scanned GTIN barcode registration and declared manufacturer on physical packaging."
+      }
+    },
+    {
+      "rule_id": "LM-012",
+      "clause_id": "VISION_TRANSFORMER_LABEL_TAMPERING",
+      "chapter": "Forensic Packaging Verification Protocol",
+      "rule_number": "Packaging Forensic Integrity",
+      "rule_title": "Visual Feature Anomaly and Tampered Declaration Detection",
+      "statutory_text": "Forensic validation of label typography, overprinting, erased markings, price smudges, or re-stickered retail packaging.",
+      "mandatory": true,
+      "severity": "HIGH",
+      "target_entities": [
+        "VIT_ANOMALY_ENTROPY_SCORE",
+        "LABEL_INTEGRITY"
+      ],
+      "evaluation_type": "VIT_SOFTMAX_ENTROPY_ANALYSIS",
+      "validation_criteria": {
+        "anomaly_entropy_threshold": 4.5,
+        "sharpness_laplacian_threshold": 50.0,
+        "flag_smudged_or_overprinted_labels": true
+      },
+      "legal_consequences": {
+        "violation_type": "TAMPERED_OR_SMUDGED_MANDATORY_DECLARATIONS",
+        "act_section": "Section 36(1) of Legal Metrology Act, 2009",
+        "penalty_structure": {
+          "first_offence": "Fine up to ₹25,000 + confiscation of tampered packages"
+        },
+        "default_notice_clause": "Mandatory declarations appear physically tampered, smudged, or re-labeled in violation of Legal Metrology packaging integrity standards."
+      }
+    }
+  ]
+}

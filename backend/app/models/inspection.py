@@ -55,6 +55,14 @@ class Inspection(Base):
     image_storage_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     processed_image_path: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Statutory Legal Version Reference
+    law_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("legal_documents.law_id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     # Blockchain reference
     blockchain_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
     blockchain_tx_id: Mapped[str | None] = mapped_column(String(256), nullable=True)
@@ -81,6 +89,7 @@ class Inspection(Base):
 
     # Relationships
     inspector = relationship("User", back_populates="inspections")
+    legal_document = relationship("LegalDocument", back_populates="inspections", lazy="selectin")
     evidence_records = relationship(
         "Evidence", back_populates="inspection", lazy="selectin",
     )

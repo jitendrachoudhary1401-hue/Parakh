@@ -21,6 +21,11 @@ class RuleResult:
         explanation: str = "",
         confidence: Optional[float] = None,
         evidence_reference: Optional[str] = None,
+        clause_id: Optional[str] = None,
+        rule_number: Optional[str] = None,
+        severity: Optional[str] = None,
+        act_section: Optional[str] = None,
+        default_notice_clause: Optional[str] = None,
     ):
         self.rule_id = rule_id
         self.rule_name = rule_name
@@ -29,6 +34,11 @@ class RuleResult:
         self.explanation = explanation
         self.confidence = confidence
         self.evidence_reference = evidence_reference
+        self.clause_id = clause_id
+        self.rule_number = rule_number
+        self.severity = severity
+        self.act_section = act_section
+        self.default_notice_clause = default_notice_clause
 
     def to_dict(self) -> dict:
         return {
@@ -39,4 +49,9 @@ class RuleResult:
             "explanation": self.explanation,
             "confidence": self.confidence,
             "evidence_reference": self.evidence_reference,
+            "clause_id": self.clause_id,
+            "rule_number": self.rule_number,
+            "severity": self.severity,
+            "act_section": self.act_section,
+            "default_notice_clause": self.default_notice_clause,
         }
