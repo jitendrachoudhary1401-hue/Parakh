@@ -96,13 +96,13 @@ class ComplianceProvider extends ChangeNotifier {
       ));
     }
 
-    // Rule 5: GS1 Cross-check
+    // Rule 5: Open Food Facts Product Registry Cross-check
     if (gs1.gtin.isEmpty) {
       violations.add(RuleViolation(
-        ruleCode: 'RULE_GS1',
-        ruleName: 'GS1 Verification Check',
+        ruleCode: 'RULE_OPENFOODFACTS',
+        ruleName: 'Open Food Facts Registry Check',
         description:
-            'Manufacturer barcode mismatch with official national registry.',
+            'Manufacturer barcode mismatch or missing in official Open Food Facts registry.',
         severity: 'High',
         isPassed: false,
       ));

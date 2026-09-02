@@ -159,10 +159,10 @@ class ComplianceVerdictScreen extends StatelessWidget {
               const SizedBox(height: 8),
 
               _buildRuleCheckCard(
-                title: 'Rule 6(1)(a): Manufacturer Registry & GS1',
+                title: 'Rule 6(1)(a): Open Food Facts Manufacturer Registry',
                 isPassed: true,
                 note:
-                    'GTIN 8901030382910 matches registered manufacturer record',
+                    'Product barcode matches registered manufacturer in Open Food Facts database',
               ),
               const SizedBox(height: 24),
 

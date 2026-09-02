@@ -40,6 +40,6 @@ class AppConstants {
     'RULE_DATE': 'Rule 6(1)(d): Month & Year of manufacture / packaging declaration',
     'RULE_CONSUMER_CARE': 'Rule 6(1)(h): Mandatory Consumer Care phone number & email/address',
     'RULE_MANUFACTURER': 'Rule 6(1)(a): Complete Manufacturer / Packer name and geographical address',
-    'RULE_GS1': 'Rule GS1: Barcode cross-verification against registered manufacturer database',
+    'RULE_OPENFOODFACTS': 'Rule Open Food Facts: Barcode cross-verification against Open Food Facts registered database',
   };
 }
