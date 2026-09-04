@@ -49,29 +49,28 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
 
   Future<void> _checkLocationPermission() async {
     try {
-      setState(() {
-        _isCheckingPermission = true;
-      });
-
       LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
 
+      // If already granted, allow user to use device immediately
       if (permission == LocationPermission.always ||
           permission == LocationPermission.whileInUse) {
+        if (!mounted) return;
         setState(() {
           _isLocationPermissionGranted = true;
           _isCheckingPermission = false;
         });
         _navigateToNextScreen();
-      } else {
-        setState(() {
-          _isLocationPermissionGranted = false;
-          _isCheckingPermission = false;
-        });
+        return;
       }
+
+      // If not granted, set state to show permission request UI
+      if (!mounted) return;
+      setState(() {
+        _isLocationPermissionGranted = false;
+        _isCheckingPermission = false;
+      });
     } catch (_) {
+      if (!mounted) return;
       setState(() {
         _isLocationPermissionGranted = false;
         _isCheckingPermission = false;
@@ -91,11 +90,30 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
         permission = await Geolocator.requestPermission();
       } else if (permission == LocationPermission.deniedForever) {
         await Geolocator.openAppSettings();
+        return;
       }
 
-      await _checkLocationPermission();
+      if (permission == LocationPermission.always ||
+          permission == LocationPermission.whileInUse) {
+        if (!mounted) return;
+        setState(() {
+          _isLocationPermissionGranted = true;
+          _isCheckingPermission = false;
+        });
+        _navigateToNextScreen();
+      } else {
+        if (!mounted) return;
+        setState(() {
+          _isLocationPermissionGranted = false;
+          _isCheckingPermission = false;
+        });
+      }
     } catch (_) {
-      await _checkLocationPermission();
+      if (!mounted) return;
+      setState(() {
+        _isLocationPermissionGranted = false;
+        _isCheckingPermission = false;
+      });
     }
   }
 
