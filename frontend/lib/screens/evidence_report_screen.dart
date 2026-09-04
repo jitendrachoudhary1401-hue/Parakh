@@ -214,19 +214,6 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
     }
   }
 
-  void _verifyByNodalOfficer() {
-    setState(() {
-      _isNodalVerified = true;
-      _nodalVerifiedTime = DateTime.now().toString().split('.')[0];
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Report verified by Nodal Officer S. K. Sharma & forwarded to Food Commissioner.'),
-        backgroundColor: AppTheme.success,
-      ),
-    );
-  }
-
   void _signByFoodCommissioner() {
     final signature = 'RSA2048-DOCA-${DateTime.now().millisecondsSinceEpoch}-FC-8902A';
     setState(() {
@@ -1268,6 +1255,13 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
                                 'Dossier transmitted to Nodal Verifier queue. Awaiting official verification & statutory scrutiny by Nodal Officer S. K. Sharma.',
                                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
                               ),
+                              if (_nodalSubmissionTxId != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Tracking Ref: $_nodalSubmissionTxId',
+                                  style: const TextStyle(fontSize: 10, color: AppTheme.textMuted, fontWeight: FontWeight.w600),
+                                ),
+                              ],
                               const SizedBox(height: 10),
                               Row(
                                 children: [
