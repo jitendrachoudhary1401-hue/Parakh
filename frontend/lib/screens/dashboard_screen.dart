@@ -284,7 +284,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         storeName: item.storeName,
                         locationAddress: item.locationAddress,
                       );
-                      Navigator.pushNamed(context, '/verdict');
+                      Navigator.pushNamed(context, '/evidence-report');
                     },
                     borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                     child: Container(

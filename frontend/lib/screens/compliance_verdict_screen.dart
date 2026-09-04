@@ -166,18 +166,18 @@ class ComplianceVerdictScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              if (!isPassed) ...[
-                ElevatedButton.icon(
-                  style:
-                      ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
-                  onPressed: () =>
-                      Navigator.pushNamed(context, '/evidence-report'),
-                  icon: const Icon(Icons.shield_outlined,
-                      size: 18, color: Colors.white),
-                  label: const Text('GENERATE BLOCKCHAIN EVIDENCE & NOTICE'),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isPassed ? AppTheme.primary : AppTheme.error,
+                  foregroundColor: Colors.white,
                 ),
-                const SizedBox(height: 10),
-              ],
+                onPressed: () =>
+                    Navigator.pushNamed(context, '/evidence-report'),
+                icon: const Icon(Icons.description_outlined,
+                    size: 18, color: Colors.white),
+                label: const Text('VIEW VERIFICATION REPORTS & ADD REMARKS'),
+              ),
+              const SizedBox(height: 10),
 
               OutlinedButton(
                 onPressed: () =>

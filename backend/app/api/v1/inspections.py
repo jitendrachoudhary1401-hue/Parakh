@@ -100,3 +100,18 @@ async def update_inspection_status(
         data=InspectionResponse.model_validate(updated).model_dump(),
         message="Inspection updated successfully",
     )
+
+
+@router.patch("/{inspection_id}/comment", dependencies=[Depends(get_current_inspector)])
+async def update_inspection_comment(
+    inspection_id: UUID,
+    payload: InspectionUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Inspector: update/append notes & comments for an inspection."""
+    service = InspectionService(db)
+    updated = await service.update_status(inspection_id, payload)
+    return success_response(
+        data=InspectionResponse.model_validate(updated).model_dump(),
+        message="Comment updated successfully",
+    )

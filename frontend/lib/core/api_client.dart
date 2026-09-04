@@ -94,6 +94,23 @@ class ApiClient {
     }
   }
 
+  /// Generic PATCH
+  Future<ApiResponse<Map<String, dynamic>>> patch(String endpoint, {dynamic body}) async {
+    try {
+      final uri = Uri.parse('$_baseUrl$endpoint');
+      final response = await http
+          .patch(
+            uri,
+            headers: _headers(),
+            body: body != null ? jsonEncode(body) : null,
+          )
+          .timeout(const Duration(seconds: 20));
+      return _handleResponse(response);
+    } catch (e) {
+      return _handleException(e);
+    }
+  }
+
   /// Multipart Image Upload
   Future<ApiResponse<Map<String, dynamic>>> uploadFile(
     String endpoint, {

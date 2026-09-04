@@ -72,8 +72,28 @@ async def init_db() -> None:
     Initialise database tables and seed default admin/inspector accounts.
     """
     try:
+        import app.models  # Ensures all ORM models are registered with Base.metadata
+        from sqlalchemy import text
+
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+
+            # Ensure schema columns exist on existing tables (non-destructive sync)
+            migration_sqls = [
+                "ALTER TABLE inspections ADD COLUMN IF NOT EXISTS law_id UUID;",
+                "ALTER TABLE inspections ADD COLUMN IF NOT EXISTS metadata_json JSONB;",
+                "ALTER TABLE inspections ADD COLUMN IF NOT EXISTS processed_image_path TEXT;",
+                "ALTER TABLE inspections ADD COLUMN IF NOT EXISTS overall_result VARCHAR(30);",
+                "ALTER TABLE inspections ADD COLUMN IF NOT EXISTS blockchain_hash VARCHAR(128);",
+                "ALTER TABLE inspections ADD COLUMN IF NOT EXISTS blockchain_tx_id VARCHAR(256);",
+                "ALTER TABLE inspections ADD COLUMN IF NOT EXISTS location_name VARCHAR(500);",
+            ]
+            for stmt in migration_sqls:
+                try:
+                    await conn.execute(text(stmt))
+                except Exception as alter_e:
+                    import logging
+                    logging.getLogger("parakh.db").debug("Migration statement skipped: %s", alter_e)
 
         async with async_session_factory() as session:
             from app.models.user import User

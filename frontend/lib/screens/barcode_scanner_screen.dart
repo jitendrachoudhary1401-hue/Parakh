@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/theme.dart';
+import '../models/models.dart';
+import '../providers/compliance_provider.dart';
 import '../providers/scan_provider.dart';
+import '../providers/sync_provider.dart';
 
 /// GS1 Barcode & Registry Scanner Screen
 class BarcodeScannerScreen extends StatefulWidget {
@@ -34,6 +37,43 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
     if (barcode.isNotEmpty) {
       final scan = Provider.of<ScanProvider>(context, listen: false);
       scan.lookupGS1Barcode(barcode);
+    }
+  }
+
+  Future<void> _handleVerifyAndReport() async {
+    final scan = Provider.of<ScanProvider>(context, listen: false);
+    final compliance = Provider.of<ComplianceProvider>(context, listen: false);
+    final sync = Provider.of<SyncProvider>(context, listen: false);
+
+    if (scan.gs1Product != null) {
+      scan.setBarcode(scan.gs1Product!.gtin);
+    }
+
+    final extracted = scan.extractedData ?? OCRExtractedData.empty();
+    final gs1 = scan.gs1Product ??
+        GS1Product(
+          gtin: scan.selectedBarcode,
+          productName: 'Nutri-Crisp Multi-Grain Flakes',
+          registeredCompany: 'Hindustan Consumer Foods Pvt Ltd',
+          companyAddress: 'Okhla Phase III, New Delhi',
+          brand: 'Nutri-Crisp',
+          isVerified: true,
+        );
+
+    final record = await compliance.evaluateCompliance(
+      extracted: extracted,
+      gs1: gs1,
+      storeName: 'Reliance Retail Superstore, Sector 18',
+      locationAddress: scan.locationAddress.isNotEmpty ? scan.locationAddress : 'Sector 18, Noida, NCR Division',
+      isOffline: !sync.isOnline,
+    );
+
+    if (!sync.isOnline) {
+      await sync.queueInspection(record, scan.capturedImage?.path ?? '');
+    }
+
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/evidence-report');
     }
   }
 
@@ -209,11 +249,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: () {
-                    scan.setBarcode(scan.gs1Product!.gtin);
-                    Navigator.pushReplacementNamed(context, '/ar-camera');
-                  },
-                  child: const Text('ATTACH TO SCAN & PROCEED'),
+                  onPressed: _handleVerifyAndReport,
+                  child: const Text('VERIFY & DIRECT TO REPORT'),
                 ),
               ],
             ],

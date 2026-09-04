@@ -131,14 +131,33 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
 
   Widget _buildLedgerCard(BuildContext context, InspectionRecord item) {
     final dateStr = DateFormat('dd MMM yyyy, HH:mm').format(item.timestamp);
+    final compliance = Provider.of<ComplianceProvider>(context, listen: false);
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-        border: Border.all(color: AppTheme.outline),
-      ),
+    return InkWell(
+      onTap: () {
+        compliance.evaluateCompliance(
+          extracted: item.extractedData,
+          gs1: GS1Product(
+            gtin: item.barcode,
+            productName: item.productName,
+            registeredCompany: 'Registered Manufacturer',
+            companyAddress: item.locationAddress,
+            brand: 'Standard Brand',
+            isVerified: true,
+          ),
+          storeName: item.storeName,
+          locationAddress: item.locationAddress,
+        );
+        Navigator.pushNamed(context, '/evidence-report');
+      },
+      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+          border: Border.all(color: AppTheme.outline),
+        ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -228,6 +247,7 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
           ],
         ],
       ),
+    ),
     );
   }
 }

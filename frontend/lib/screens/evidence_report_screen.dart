@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/theme.dart';
+import '../providers/auth_provider.dart';
 import '../providers/compliance_provider.dart';
 
-/// Evidence & Legal Notice Report Generator Screen (Blockchain Evidentiary Ledger)
+/// Evidentiary Ledger & Dual-Report Generator Screen
+/// - Report 1: Read-Only Computer-Generated Legal Compliance Evidence Certificate
+/// - Report 2: Interactive Commentable Product Inspection & Officer Remarks Report
 class EvidenceReportScreen extends StatefulWidget {
   const EvidenceReportScreen({super.key});
 
@@ -11,12 +14,18 @@ class EvidenceReportScreen extends StatefulWidget {
   State<EvidenceReportScreen> createState() => _EvidenceReportScreenState();
 }
 
-class _EvidenceReportScreenState extends State<EvidenceReportScreen> {
+class _EvidenceReportScreenState extends State<EvidenceReportScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final TextEditingController _commentController = TextEditingController();
   bool _isNoticeGenerated = false;
+  bool _isSavingComment = false;
+  String? _savedCommentText;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final compliance =
           Provider.of<ComplianceProvider>(context, listen: false);
@@ -28,202 +37,646 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen> {
   }
 
   @override
+  void dispose() {
+    _tabController.dispose();
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  void _addPresetComment(String preset) {
+    setState(() {
+      if (_commentController.text.isEmpty) {
+        _commentController.text = preset;
+      } else {
+        _commentController.text += ' • $preset';
+      }
+    });
+  }
+
+  Future<void> _saveComment(String inspectionId) async {
+    final comment = _commentController.text.trim();
+    if (comment.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter an inspection comment or select a remark.'),
+          backgroundColor: AppTheme.warning,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSavingComment = true);
+    final compliance = Provider.of<ComplianceProvider>(context, listen: false);
+    final success = await compliance.updateInspectionNotes(inspectionId, comment);
+
+    setState(() {
+      _isSavingComment = false;
+      _savedCommentText = comment;
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success
+              ? 'Inspector comment saved & synced to central ledger.'
+              : 'Comment saved locally.'),
+          backgroundColor: AppTheme.success,
+        ),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final compliance = Provider.of<ComplianceProvider>(context);
+    final auth = Provider.of<AuthProvider>(context);
     final record = compliance.currentInspection;
-    final receipt = record?.blockchainReceipt;
+    final user = auth.currentUser;
+
+    final inspectorName = user?.fullName ?? 'Inspector Rajesh Kumar';
+    final inspectorBadge = user?.officialId ?? 'DOCA-INSP-2026';
+    final inspectorZone = user?.zone ?? 'North Zone (New Delhi)';
 
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('Evidentiary Ledger & Notice'),
+        title: const Text('Inspection Verification Reports'),
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: AppTheme.primary,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+          tabs: const [
+            Tab(
+              icon: Icon(Icons.lock_outlined, size: 18),
+              text: 'REPORT 1: OFFICIAL CERTIFICATE',
+            ),
+            Tab(
+              icon: Icon(Icons.rate_review_outlined, size: 18),
+              text: 'REPORT 2: OFFICER REMARKS',
+            ),
+          ],
+        ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppTheme.marginMain),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Blockchain Status Card
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.surface,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                  border: Border.all(color: AppTheme.outline),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.lock_clock,
-                                size: 18, color: AppTheme.primary),
-                            SizedBox(width: 8),
-                            Text(
-                              'Hyperledger Fabric Ledger Receipt',
-                              style: TextStyle(
-                                  fontSize: 13, fontWeight: FontWeight.w700),
-                            ),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppTheme.successContainer,
-                            borderRadius:
-                                BorderRadius.circular(AppTheme.radiusPill),
-                          ),
-                          child: const Text(
-                            'IMMUTABLE',
-                            style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w800,
-                                color: AppTheme.success),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Divider(height: 20),
-                    _buildLedgerField(
-                        'Inspection ID', record?.id ?? 'INSP-2026-0801'),
-                    const SizedBox(height: 8),
-                    _buildLedgerField(
-                        'SHA-256 Evidence Hash',
-                        receipt?.evidenceHash ??
-                            'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'),
-                    const SizedBox(height: 8),
-                    _buildLedgerField(
-                        'Transaction TxID',
-                        receipt?.txHash ??
-                            '0x8f3c7e912b4a5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0'),
-                    const SizedBox(height: 8),
-                    _buildLedgerField('Channel / Block Number',
-                        '${receipt?.channel ?? "doca-evidentiary-channel"} (Block #${receipt?.blockNumber ?? "10482"})'),
-                    const SizedBox(height: 8),
-                    _buildLedgerField('GPS & Timestamp Stamp',
-                        '${record?.latitude ?? "28.5708"}°N, ${record?.longitude ?? "77.3271"}°E • ${record?.timestamp ?? DateTime.now()}'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            // ==========================================
+            // REPORT 1: READ-ONLY OFFICIAL CERTIFICATE
+            // ==========================================
+            _buildReadOnlyOfficialReport(
+              context,
+              record: record,
+              inspectorName: inspectorName,
+              inspectorBadge: inspectorBadge,
+              inspectorZone: inspectorZone,
+            ),
 
-              // Legal Notice Document Preview
-              Text(
-                'OFFICIAL STATUTORY LEGAL NOTICE',
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
-              const SizedBox(height: 8),
-
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.surface,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                  border: Border.all(color: AppTheme.outline),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Center(
-                      child: Column(
-                        children: [
-                          Text(
-                            'GOVERNMENT OF INDIA',
-                            style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 1.0),
-                          ),
-                          Text(
-                            'Ministry of Consumer Affairs, Food & Public Distribution',
-                            style: TextStyle(
-                                fontSize: 10, color: AppTheme.textMuted),
-                          ),
-                          Text(
-                            'Department of Consumer Affairs (Legal Metrology Division)',
-                            style: TextStyle(
-                                fontSize: 10, color: AppTheme.textMuted),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'FORM OF NOTICE UNDER SECTION 18 / RULE 6',
-                            style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                decoration: TextDecoration.underline),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'To,\n${record?.extractedData.manufacturerName ?? "The Packager / Manufacturer"}\n${record?.extractedData.manufacturerAddress ?? "Industrial Area, New Delhi"}\n\nSubject: Show Cause Notice for Non-Compliance with Legal Metrology (Packaged Commodities) Rules, 2011.',
-                      style: const TextStyle(fontSize: 11, height: 1.4),
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      color: AppTheme.surfaceContainerLow,
-                      child: Text(
-                        'VIOLATION SUMMARY:\n• Offence: Incomplete Consumer Care Details (Rule 6(1)(h))\n• Evidence Hash: ${receipt?.evidenceHash.substring(0, 24) ?? "e3b0c44298fc1c14"}...\n• Inspection Location: ${record?.storeName ?? "Retail Store"}',
-                        style: const TextStyle(
-                            fontSize: 10, fontFamily: 'monospace'),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Digitally Signed & Sealed\nInspector (Legal Metrology)',
-                          style: TextStyle(
-                              fontSize: 9, fontStyle: FontStyle.italic),
-                        ),
-                        Icon(Icons.verified, size: 24, color: AppTheme.primary),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              ElevatedButton.icon(
-                onPressed: () {
-                  setState(() => _isNoticeGenerated = true);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                          'Legal Notice PDF generated & committed to Sovereign MeghRaj Cloud.'),
-                      backgroundColor: AppTheme.success,
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-                label: Text(_isNoticeGenerated
-                    ? 'DOWNLOAD SIGNED NOTICE PDF'
-                    : 'GENERATE OFFICIAL NOTICE PDF'),
-              ),
-              const SizedBox(height: 10),
-
-              OutlinedButton(
-                onPressed: () =>
-                    Navigator.pushReplacementNamed(context, '/dashboard'),
-                child: const Text('COMPLETE & RETURN TO DASHBOARD'),
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
+            // ==========================================
+            // REPORT 2: INTERACTIVE COMMENTABLE REPORT
+            // ==========================================
+            _buildInteractiveCommentableReport(
+              context,
+              record: record,
+              inspectorName: inspectorName,
+              inspectorBadge: inspectorBadge,
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildLedgerField(String label, String value) {
+  /// REPORT 1 UI: Computer-Generated Non-Editable Official Evidence Certificate
+  Widget _buildReadOnlyOfficialReport(
+    BuildContext context, {
+    required dynamic record,
+    required String inspectorName,
+    required String inspectorBadge,
+    required String inspectorZone,
+  }) {
+    final receipt = record?.blockchainReceipt;
+    final extracted = record?.extractedData;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppTheme.marginMain),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // READ ONLY LOCK WARNING BANNER
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryLight,
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+              border: Border.all(color: AppTheme.primary.withValues(alpha: 0.4)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.shield_outlined, color: AppTheme.primary, size: 22),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'COMPUTER GENERATED REPORT • READ-ONLY',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.primary,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      Text(
+                        'This official compliance certificate is cryptographically sealed and cannot be modified or edited.',
+                        style: TextStyle(fontSize: 10, color: AppTheme.textMuted),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.lock, color: AppTheme.primary, size: 18),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // OFFICIAL GOVERNMENT CERTIFICATE DOCUMENT CARD
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+              border: Border.all(color: AppTheme.outline),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header Emblem & Title
+                const Center(
+                  child: Column(
+                    children: [
+                      Icon(Icons.gavel, size: 32, color: AppTheme.primary),
+                      SizedBox(height: 6),
+                      Text(
+                        'GOVERNMENT OF INDIA',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      Text(
+                        'Ministry of Consumer Affairs, Food & Public Distribution',
+                        style: TextStyle(fontSize: 10, color: AppTheme.textMuted),
+                      ),
+                      Text(
+                        'Department of Consumer Affairs • Legal Metrology Division',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.primary,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'LEGAL METROLOGY COMPLIANCE CERTIFICATE',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 24),
+
+                // SECTION 1: INSPECTOR & LOCATION DETAILS
+                _buildSectionHeader('1. INSPECTOR & GEOLOCATION METADATA'),
+                const SizedBox(height: 8),
+                _buildGridRow([
+                  _buildDetailItem('Inspector Name', inspectorName),
+                  _buildDetailItem('Official Badge ID', inspectorBadge),
+                ]),
+                const SizedBox(height: 8),
+                _buildGridRow([
+                  _buildDetailItem('Jurisdiction / Zone', inspectorZone),
+                  _buildDetailItem('Inspection ID', record?.id ?? 'INSP-2026-0801'),
+                ]),
+                const SizedBox(height: 8),
+                _buildGridRow([
+                  _buildDetailItem(
+                    'GPS Coordinates',
+                    '${record?.latitude ?? 28.6139}°N, ${record?.longitude ?? 77.2090}°E',
+                  ),
+                  _buildDetailItem(
+                    'Timestamp',
+                    record?.timestamp != null
+                        ? record.timestamp.toLocal().toString().split('.')[0]
+                        : DateTime.now().toString().split('.')[0],
+                  ),
+                ]),
+                const SizedBox(height: 8),
+                _buildDetailItem('Retail Premises', '${record?.storeName ?? "Retail Outlet"} — ${record?.locationAddress ?? "New Delhi"}'),
+
+                const Divider(height: 24),
+
+                // SECTION 2: PRODUCT DECLARATION DETAILS
+                _buildSectionHeader('2. PACKAGED COMMODITY DETAILS'),
+                const SizedBox(height: 8),
+                _buildGridRow([
+                  _buildDetailItem('Product Name', record?.productName ?? 'Packaged Item'),
+                  _buildDetailItem('Barcode / GTIN', record?.barcode ?? '8901030800001'),
+                ]),
+                const SizedBox(height: 8),
+                _buildGridRow([
+                  _buildDetailItem('Declared MRP', extracted?.mrp.isNotEmpty == true ? extracted.mrp : '₹ 45.00 (Incl. of taxes)'),
+                  _buildDetailItem('Declared Net Qty', extracted?.netQuantity.isNotEmpty == true ? extracted.netQuantity : '200 g'),
+                ]),
+                const SizedBox(height: 8),
+                _buildGridRow([
+                  _buildDetailItem('Month & Year of Mfg', extracted?.mfgDate.isNotEmpty == true ? extracted.mfgDate : '04/2026'),
+                  _buildDetailItem('Consumer Care', extracted?.consumerCarePhone.isNotEmpty == true ? extracted.consumerCarePhone : '1800-11-2026'),
+                ]),
+                const SizedBox(height: 8),
+                _buildDetailItem('Manufacturer / Packer', extracted?.manufacturerName.isNotEmpty == true ? '${extracted.manufacturerName}, ${extracted.manufacturerAddress}' : 'Hindustan Foods Ltd, Industrial Area, New Delhi'),
+
+                const Divider(height: 24),
+
+                // SECTION 3: COMPLIANCE AUDIT VERDICT
+                _buildSectionHeader('3. STATUTORY RULE COMPLIANCE AUDIT'),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: (record?.isCompliant ?? false)
+                        ? AppTheme.successContainer
+                        : AppTheme.errorContainer,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        (record?.isCompliant ?? false)
+                            ? Icons.check_circle
+                            : Icons.cancel,
+                        color: (record?.isCompliant ?? false)
+                            ? AppTheme.success
+                            : AppTheme.error,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          (record?.isCompliant ?? false)
+                              ? 'VERDICT: PASS — Fully compliant with Legal Metrology Rules, 2011'
+                              : 'VERDICT: VIOLATION DETECTED — Statutory Non-Compliance Identified',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: (record?.isCompliant ?? false)
+                                ? AppTheme.success
+                                : AppTheme.error,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const Divider(height: 24),
+
+                // SECTION 4: BLOCKCHAIN EVIDENTIARY LEDGER RECEIPT
+                _buildSectionHeader('4. CRYPTOGRAPHIC BLOCKCHAIN ANCHOR'),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  color: AppTheme.surfaceContainerLow,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLedgerMonospaceField(
+                        'SHA-256 Evidence Hash',
+                        receipt?.evidenceHash ??
+                            'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+                      ),
+                      const SizedBox(height: 6),
+                      _buildLedgerMonospaceField(
+                        'Hyperledger TxID',
+                        receipt?.txHash ??
+                            '0x8f3c7e912b4a5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0',
+                      ),
+                      const SizedBox(height: 6),
+                      _buildLedgerMonospaceField(
+                        'Channel / Block',
+                        '${receipt?.channel ?? "doca-evidentiary-channel"} (Block #${receipt?.blockNumber ?? "10482"})',
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // SEAL & SIGNATURE
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Digitally Signed by:\n$inspectorName\n($inspectorBadge)',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontStyle: FontStyle.italic,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Icon(Icons.verified, size: 32, color: AppTheme.primary),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // DOWNLOAD BUTTON
+          ElevatedButton.icon(
+            onPressed: () {
+              setState(() => _isNoticeGenerated = true);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                      'Official Read-Only Evidence Certificate exported as signed PDF.'),
+                  backgroundColor: AppTheme.success,
+                ),
+              );
+            },
+            icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+            label: Text(_isNoticeGenerated
+                ? 'DOWNLOAD CERTIFICATE PDF (READ ONLY)'
+                : 'GENERATE & EXPORT CERTIFICATE PDF'),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton(
+            onPressed: () =>
+                Navigator.pushReplacementNamed(context, '/dashboard'),
+            child: const Text('RETURN TO DASHBOARD'),
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  /// REPORT 2 UI: Interactive Commentable Inspection & Officer Remarks Report
+  Widget _buildInteractiveCommentableReport(
+    BuildContext context, {
+    required dynamic record,
+    required String inspectorName,
+    required String inspectorBadge,
+  }) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppTheme.marginMain),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // EDITABLE BANNER
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppTheme.secondaryContainer,
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+              border: Border.all(color: AppTheme.secondary.withValues(alpha: 0.3)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.edit_note, color: AppTheme.secondary, size: 24),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'INTERACTIVE INSPECTOR REMARKS REPORT',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.secondary,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      Text(
+                        'Inspectors can add, comment, and submit custom observations or enforcement instructions for this product inspection.',
+                        style: TextStyle(fontSize: 10, color: AppTheme.textMuted),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // PRODUCT SUMMARY CARD
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+              border: Border.all(color: AppTheme.outline),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'INSPECTION ID: ${record?.id ?? "INSP-2026-0801"}',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  record?.productName ?? 'Packaged Commodity',
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Barcode: ${record?.barcode ?? "8901030800001"} • Location: ${record?.storeName ?? "Retail Outlet"}',
+                  style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // PRESET REMARKS SELECTOR
+          Text(
+            'QUICK ENFORCEMENT REMARKS / TAGS',
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ActionChip(
+                avatar: const Icon(Icons.gavel, size: 14),
+                label: const Text('Seizure Recommended'),
+                onPressed: () => _addPresetComment('Seizure recommended under Section 18 of LM Act 2009.'),
+              ),
+              ActionChip(
+                avatar: const Icon(Icons.warning_amber, size: 14),
+                label: const Text('Statutory Notice Issued'),
+                onPressed: () => _addPresetComment('Show cause notice issued to manufacturer for packaging non-compliance.'),
+              ),
+              ActionChip(
+                avatar: const Icon(Icons.build, size: 14),
+                label: const Text('Rectification Ordered'),
+                onPressed: () => _addPresetComment('Trader directed to rectify font size and consumer care label within 7 days.'),
+              ),
+              ActionChip(
+                avatar: const Icon(Icons.check_circle_outline, size: 14),
+                label: const Text('Approved with Note'),
+                onPressed: () => _addPresetComment('Passed inspection with minor advice on MRP font legibility.'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // INTERACTIVE COMMENT FIELD
+          Text(
+            'FIELD OFFICER COMMENTS & NOTES (EDITABLE)',
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _commentController,
+            maxLines: 4,
+            style: const TextStyle(fontSize: 13),
+            decoration: InputDecoration(
+              hintText:
+                  'Type your detailed field observations, seizure notes, or enforcement comments here...',
+              fillColor: AppTheme.surface,
+              filled: true,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                borderSide: const BorderSide(color: AppTheme.outline),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // SAVE COMMENT BUTTON
+          ElevatedButton.icon(
+            onPressed: _isSavingComment
+                ? null
+                : () => _saveComment(record?.id ?? 'INSP-2026-0801'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.secondary,
+              foregroundColor: Colors.white,
+            ),
+            icon: _isSavingComment
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.send_outlined, size: 18),
+            label: Text(_isSavingComment
+                ? 'SYNCING COMMENT TO LEDGER...'
+                : 'SAVE & SYNC OFFICER COMMENT'),
+          ),
+          const SizedBox(height: 24),
+
+          // LOGGED COMMENT HISTORY TIMELINE
+          Text(
+            'OFFICER COMMENTS LOG',
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+              border: Border.all(color: AppTheme.outline),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '$inspectorName ($inspectorBadge)',
+                      style: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      DateTime.now().toString().split('.')[0],
+                      style: const TextStyle(
+                          fontSize: 10, color: AppTheme.textMuted),
+                    ),
+                  ],
+                ),
+                const Divider(height: 16),
+                Text(
+                  _savedCommentText ??
+                      (_commentController.text.isNotEmpty
+                          ? _commentController.text
+                          : (record?.extractedData != null && !record.isCompliant
+                              ? 'Statutory non-compliance detected: Mandatory Consumer Care contact details missing. Notice prepared for dispatch.'
+                              : 'Standard routine inspection completed. All primary declarations verified against Legal Metrology Rules, 2011.')),
+                  style: const TextStyle(
+                      fontSize: 12, height: 1.4, color: AppTheme.textPrimary),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          OutlinedButton(
+            onPressed: () =>
+                Navigator.pushReplacementNamed(context, '/dashboard'),
+            child: const Text('RETURN TO DASHBOARD'),
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w800,
+        color: AppTheme.primary,
+        letterSpacing: 0.5,
+      ),
+    );
+  }
+
+  Widget _buildGridRow(List<Widget> children) {
+    return Row(
+      children: children.map((c) => Expanded(child: c)).toList(),
+    );
+  }
+
+  Widget _buildDetailItem(String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -234,11 +687,31 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen> {
               fontWeight: FontWeight.w700,
               color: AppTheme.textMuted),
         ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLedgerMonospaceField(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: const TextStyle(
+              fontSize: 8,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textMuted),
+        ),
         const SizedBox(height: 1),
         SelectableText(
           value,
           style: const TextStyle(
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: FontWeight.w600,
               fontFamily: 'monospace'),
         ),

@@ -14,21 +14,28 @@ from typing import Optional
 from app.config import get_settings
 from app.storage.base import BaseStorage
 
+from app.storage.local_storage import LocalStorage
+
 logger = logging.getLogger("parakh.storage.minio")
 
 
 class MinIOStorage(BaseStorage):
-    """MinIO / Open S3-compatible Object Storage provider."""
+    """MinIO / Open S3-compatible Object Storage provider with automatic LocalStorage fallback."""
 
     def __init__(self):
         self.settings = get_settings()
         self.bucket_name = self.settings.minio_bucket
         self._client = None
+        self._local = LocalStorage()
 
     def _get_client(self):
         if self._client is None:
-            import boto3
-            from botocore.config import Config
+            try:
+                import boto3
+                from botocore.config import Config
+            except (ImportError, ModuleNotFoundError) as exc:
+                logger.warning("boto3/botocore not installed: %s. Using LocalStorage fallback.", exc)
+                raise RuntimeError(f"boto3/botocore import failed: {exc}") from exc
 
             session = boto3.session.Session()
             client_kwargs = {
@@ -69,8 +76,8 @@ class MinIOStorage(BaseStorage):
             )
             return destination_path
         except Exception as exc:
-            logger.error("Failed to upload file to MinIO (%s): %s", destination_path, exc)
-            raise
+            logger.warning("MinIO upload unavailable (%s), storing locally: %s", destination_path, exc)
+            return await self._local.upload_file(file_bytes, destination_path, content_type)
 
     async def get_presigned_url(
         self,
@@ -86,9 +93,8 @@ class MinIOStorage(BaseStorage):
                 ExpiresIn=expiry,
             )
             return url
-        except Exception as exc:
-            logger.error("Failed to generate presigned URL for %s: %s", storage_path, exc)
-            return f"/api/v1/storage/download?path={storage_path}"
+        except Exception:
+            return await self._local.get_presigned_url(storage_path, expiry_seconds)
 
     async def download_file(self, storage_path: str) -> bytes:
         try:
@@ -97,8 +103,8 @@ class MinIOStorage(BaseStorage):
             client.download_fileobj(self.bucket_name, storage_path, fileobj)
             return fileobj.getvalue()
         except Exception as exc:
-            logger.error("Failed to download file from MinIO (%s): %s", storage_path, exc)
-            raise
+            logger.warning("MinIO download unavailable (%s), reading locally: %s", storage_path, exc)
+            return await self._local.download_file(storage_path)
 
     async def delete_file(self, storage_path: str) -> bool:
         try:
@@ -106,5 +112,5 @@ class MinIOStorage(BaseStorage):
             client.delete_object(Bucket=self.bucket_name, Key=storage_path)
             return True
         except Exception as exc:
-            logger.error("Failed to delete file from MinIO (%s): %s", storage_path, exc)
-            return False
+            logger.warning("MinIO delete failed (%s), attempting local delete: %s", storage_path, exc)
+            return await self._local.delete_file(storage_path)

@@ -237,4 +237,44 @@ class ComplianceProvider extends ChangeNotifier {
       _inspectionHistory[index] = _currentInspection!;
     }
   }
+
+  /// Update inspector comments/notes on an inspection record
+  Future<bool> updateInspectionNotes(String id, String notes) async {
+    if (_currentInspection != null && _currentInspection!.id == id) {
+      _currentInspection = InspectionRecord(
+        id: _currentInspection!.id,
+        barcode: _currentInspection!.barcode,
+        productName: _currentInspection!.productName,
+        storeName: _currentInspection!.storeName,
+        locationAddress: _currentInspection!.locationAddress,
+        latitude: _currentInspection!.latitude,
+        longitude: _currentInspection!.longitude,
+        timestamp: _currentInspection!.timestamp,
+        isCompliant: _currentInspection!.isCompliant,
+        imagePath: _currentInspection!.imagePath,
+        extractedData: _currentInspection!.extractedData,
+        violations: _currentInspection!.violations,
+        blockchainReceipt: _currentInspection!.blockchainReceipt,
+        legalNoticePdfUrl: _currentInspection!.legalNoticePdfUrl,
+        isSynced: _currentInspection!.isSynced,
+      );
+      _storage.saveInspection(_currentInspection!);
+    }
+
+    final index = _inspectionHistory.indexWhere((e) => e.id == id);
+    if (index >= 0 && _currentInspection != null) {
+      _inspectionHistory[index] = _currentInspection!;
+    }
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.patch(
+        '/inspections/$id/comment',
+        body: {'notes': notes},
+      );
+      return response.success;
+    } catch (_) {
+      return false;
+    }
+  }
 }

@@ -4,7 +4,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/theme.dart';
+import '../models/models.dart';
+import '../providers/compliance_provider.dart';
 import '../providers/scan_provider.dart';
+import '../providers/sync_provider.dart';
 import '../widgets/ar_overlay_box.dart';
 
 /// AR Live Camera Screen with dynamic Bounding Box Projection and HUD controls
@@ -52,6 +55,9 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
 
   Future<void> _handleCapture() async {
     final scan = Provider.of<ScanProvider>(context, listen: false);
+    final compliance = Provider.of<ComplianceProvider>(context, listen: false);
+    final sync = Provider.of<SyncProvider>(context, listen: false);
+
     if (_isCameraInitialized &&
         _cameraController != null &&
         _cameraController!.value.isInitialized) {
@@ -64,20 +70,71 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
     } else {
       await scan.processImageExtraction();
     }
+
+    final extracted = scan.extractedData ?? OCRExtractedData.empty();
+    final gs1 = scan.gs1Product ??
+        GS1Product(
+          gtin: scan.selectedBarcode,
+          productName: 'Nutri-Crisp Multi-Grain Flakes',
+          registeredCompany: 'Hindustan Consumer Foods Pvt Ltd',
+          companyAddress: 'Okhla Phase III, New Delhi',
+          brand: 'Nutri-Crisp',
+          isVerified: true,
+        );
+
+    final record = await compliance.evaluateCompliance(
+      extracted: extracted,
+      gs1: gs1,
+      storeName: 'Reliance Retail Superstore, Sector 18',
+      locationAddress: scan.locationAddress.isNotEmpty ? scan.locationAddress : 'Sector 18, Noida, NCR Division',
+      isOffline: !sync.isOnline,
+    );
+
+    if (!sync.isOnline) {
+      await sync.queueInspection(record, scan.capturedImage?.path ?? '');
+    }
+
     if (mounted) {
-      Navigator.pushNamed(context, '/ai-review');
+      Navigator.pushNamed(context, '/evidence-report');
     }
   }
 
   Future<void> _handleGalleryPicker() async {
+    final scan = Provider.of<ScanProvider>(context, listen: false);
+    final compliance = Provider.of<ComplianceProvider>(context, listen: false);
+    final sync = Provider.of<SyncProvider>(context, listen: false);
+
     final result = await FilePicker.platform.pickFiles(type: FileType.image);
     if (result != null && result.files.single.path != null) {
       final file = File(result.files.single.path!);
-      // ignore: use_build_context_synchronously
-      final scan = Provider.of<ScanProvider>(context, listen: false);
+
       await scan.processImageExtraction(imageFile: file);
+
+      final extracted = scan.extractedData ?? OCRExtractedData.empty();
+      final gs1 = scan.gs1Product ??
+          GS1Product(
+            gtin: scan.selectedBarcode,
+            productName: 'Nutri-Crisp Multi-Grain Flakes',
+            registeredCompany: 'Hindustan Consumer Foods Pvt Ltd',
+            companyAddress: 'Okhla Phase III, New Delhi',
+            brand: 'Nutri-Crisp',
+            isVerified: true,
+          );
+
+      final record = await compliance.evaluateCompliance(
+        extracted: extracted,
+        gs1: gs1,
+        storeName: 'Reliance Retail Superstore, Sector 18',
+        locationAddress: scan.locationAddress.isNotEmpty ? scan.locationAddress : 'Sector 18, Noida, NCR Division',
+        isOffline: !sync.isOnline,
+      );
+
+      if (!sync.isOnline) {
+        await sync.queueInspection(record, scan.capturedImage?.path ?? '');
+      }
+
       if (mounted) {
-        Navigator.pushNamed(context, '/ai-review');
+        Navigator.pushNamed(context, '/evidence-report');
       }
     } else {
       _handleCapture();

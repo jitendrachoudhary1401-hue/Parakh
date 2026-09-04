@@ -66,7 +66,7 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
     }
 
     if (mounted) {
-      Navigator.pushNamed(context, '/verdict');
+      Navigator.pushNamed(context, '/evidence-report');
     }
   }
 

@@ -212,7 +212,7 @@ class AnalysisService:
                 for e in entities
             ],
             "rule_results": rule_eval["rule_results"],
-            "gs1_comparison": gs1_info,
+            "gs1_comparison": product_info,
             "anomalies": anomalies,
             "raw_ocr_text": raw_ocr_text,
             "processing_time_ms": elapsed_ms,
