@@ -42,9 +42,9 @@ async def get_current_user(
 
 
 def get_current_inspector(
-    payload: Dict[str, Any] = Depends(require_roles(Role.INSPECTOR, Role.ADMIN)),
+    payload: Dict[str, Any] = Depends(require_roles(Role.INSPECTOR, Role.NODAL_OFFICER, Role.FOOD_COMMISSIONER, Role.ADMIN)),
 ) -> Dict[str, Any]:
-    """Dependency allowing Inspectors or Admins."""
+    """Dependency allowing Inspectors, Nodal Officers, Food Commissioners, or Admins."""
     return payload
 
 

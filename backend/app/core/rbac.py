@@ -22,8 +22,10 @@ from app.core.security import get_current_user_payload
 
 
 class Role(str, Enum):
-    """User roles matching §11 specification."""
+    """User roles matching §11 specification & multi-tier authorization."""
     INSPECTOR = "inspector"
+    NODAL_OFFICER = "nodal_officer"
+    FOOD_COMMISSIONER = "food_commissioner"
     ADMIN = "admin"
     CITIZEN = "citizen"
 
@@ -39,6 +41,31 @@ ROLE_PERMISSIONS: dict[Role, set[str]] = {
         "compliance:read",
         "evidence:create",
         "evidence:read",
+        "sync:upload",
+    },
+    Role.NODAL_OFFICER: {
+        "scan:upload",
+        "scan:analyze",
+        "inspection:create",
+        "inspection:read_own",
+        "inspection:read",
+        "compliance:read",
+        "evidence:create",
+        "evidence:read",
+        "evidence:verify",
+        "sync:upload",
+    },
+    Role.FOOD_COMMISSIONER: {
+        "scan:upload",
+        "scan:analyze",
+        "inspection:create",
+        "inspection:read_own",
+        "inspection:read",
+        "compliance:read",
+        "evidence:create",
+        "evidence:read",
+        "evidence:verify",
+        "evidence:sign",
         "sync:upload",
     },
     Role.ADMIN: {
