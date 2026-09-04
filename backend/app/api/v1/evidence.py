@@ -11,7 +11,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_admin, get_current_inspector, get_current_user
+from app.api.deps import get_current_admin, get_current_inspector, get_current_nodal_officer, get_current_user
 from app.audit.logger import AuditService
 from app.core.rate_limiter import limiter
 from app.core.responses import success_response
@@ -85,7 +85,7 @@ async def get_evidence_detail(
     return success_response(data=EvidenceResponse.model_validate(evidence).model_dump())
 
 
-@router.post("/{evidence_id}/verify", dependencies=[Depends(get_current_admin)])
+@router.post("/{evidence_id}/verify", dependencies=[Depends(get_current_nodal_officer)])
 async def verify_evidence_integrity(
     evidence_id: UUID,
     request: Request,
@@ -97,7 +97,10 @@ async def verify_evidence_integrity(
     Stored evidence -> Recalculate SHA-256 -> Compare with ledger hash.
     """
     service = EvidenceService(db)
-    verification = await service.verify_evidence(evidence_id)
+    verification = await service.verify_evidence(
+        evidence_id=evidence_id,
+        verified_by_user_id=current_user.user_id,
+    )
 
     # Audit log
     audit = AuditService(db)

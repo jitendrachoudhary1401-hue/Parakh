@@ -22,17 +22,19 @@ from app.core.security import get_current_user_payload
 
 
 class Role(str, Enum):
-    """User roles matching §11 specification & multi-tier authorization."""
-    INSPECTOR = "inspector"
+    """User roles strictly matching SIH 2026 specification."""
+    FOOD_INSPECTOR = "food_inspector"
     NODAL_OFFICER = "nodal_officer"
-    FOOD_COMMISSIONER = "food_commissioner"
-    ADMIN = "admin"
-    CITIZEN = "citizen"
+    FOOD_SAFETY_COMMISSIONER = "food_safety_commissioner"
+
+    # Backward compatibility aliases
+    INSPECTOR = "food_inspector"
+    ADMIN = "food_safety_commissioner"
 
 
 # Permission mapping per role
 ROLE_PERMISSIONS: dict[Role, set[str]] = {
-    Role.INSPECTOR: {
+    Role.FOOD_INSPECTOR: {
         "scan:upload",
         "scan:analyze",
         "inspection:create",
@@ -42,60 +44,47 @@ ROLE_PERMISSIONS: dict[Role, set[str]] = {
         "evidence:create",
         "evidence:read",
         "sync:upload",
+        "report:create",
+        "report:edit",
+        "report:submit",
+        "report:read_own",
     },
     Role.NODAL_OFFICER: {
         "scan:upload",
         "scan:analyze",
-        "inspection:create",
-        "inspection:read_own",
         "inspection:read",
-        "compliance:read",
-        "evidence:create",
-        "evidence:read",
-        "evidence:verify",
-        "sync:upload",
-    },
-    Role.FOOD_COMMISSIONER: {
-        "scan:upload",
-        "scan:analyze",
-        "inspection:create",
-        "inspection:read_own",
-        "inspection:read",
-        "compliance:read",
-        "evidence:create",
-        "evidence:read",
-        "evidence:verify",
-        "evidence:sign",
-        "sync:upload",
-    },
-    Role.ADMIN: {
-        "scan:upload",
-        "scan:analyze",
-        "inspection:create",
-        "inspection:read",
-        "inspection:read_own",
-        "inspection:update",
         "inspection:search",
         "compliance:read",
-        "evidence:create",
+        "evidence:read",
+        "evidence:verify",
+        "report:read",
+        "report:review",
+        "report:approve",
+        "report:reject",
+        "legal_notice:create",
+        "legal_notice:read",
+        "analytics:read",
+    },
+    Role.FOOD_SAFETY_COMMISSIONER: {
+        "scan:upload",
+        "scan:analyze",
+        "inspection:read",
+        "inspection:search",
+        "compliance:read",
         "evidence:read",
         "evidence:verify",
         "evidence:export",
-        "citizen:read",
-        "citizen:triage",
-        "analytics:read",
-        "heatmap:read",
+        "report:read",
+        "report:final_verify",
         "legal_notice:create",
         "legal_notice:read",
+        "analytics:read",
+        "heatmap:read",
         "user:read",
         "user:create",
         "user:update",
         "audit:read",
         "sync:upload",
-    },
-    Role.CITIZEN: {
-        "citizen:submit",
-        "citizen:read_own",
     },
 }
 

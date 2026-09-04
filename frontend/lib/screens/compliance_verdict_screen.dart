@@ -128,54 +128,24 @@ class ComplianceVerdictScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
 
-              _buildRuleCheckCard(
-                title: 'Rule 6(1)(e): MRP Format & Inclusion of Taxes',
-                isPassed: true,
-                note: 'Verified "₹ 45.00 (Incl. of all taxes)"',
-              ),
-              const SizedBox(height: 8),
-
-              _buildRuleCheckCard(
-                title: 'Rule 6(1)(f): Net Quantity Unit Declarations',
-                isPassed: true,
-                note: 'Verified "200 g" standard unit & minimum font size',
-              ),
-              const SizedBox(height: 8),
-
-              _buildRuleCheckCard(
-                title: 'Rule 6(1)(d): Month & Year of Mfg/Packing',
-                isPassed: true,
-                note: 'Verified "04/2026"',
-              ),
-              const SizedBox(height: 8),
-
-              _buildRuleCheckCard(
-                title: 'Rule 6(1)(h): Mandatory Consumer Care Contact',
-                isPassed: isPassed,
-                note: isPassed
-                    ? 'Verified Phone (1800-11-2026) & Email (care@hindustanfoods.in)'
-                    : 'Rule Violation: Missing official Consumer Care email address for grievance redressal.',
-              ),
-              const SizedBox(height: 8),
-
-              _buildRuleCheckCard(
-                title: 'Rule 6(1)(a): Open Food Facts Manufacturer Registry',
-                isPassed: true,
-                note:
-                    'Product barcode matches registered manufacturer in Open Food Facts database',
-              ),
+              // Dynamic Legal Metrology Rules Breakdown
+              ..._buildDynamicRuleCards(context, record),
               const SizedBox(height: 24),
 
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isPassed ? AppTheme.primary : AppTheme.error,
-                  foregroundColor: Colors.white,
                 ),
                 onPressed: () =>
                     Navigator.pushNamed(context, '/evidence-report'),
-                icon: const Icon(Icons.description_outlined,
-                    size: 18, color: Colors.white),
-                label: const Text('VIEW VERIFICATION REPORTS & ADD REMARKS'),
+                icon: Icon(
+                  isPassed ? Icons.description_outlined : Icons.shield_outlined,
+                  size: 18,
+                  color: Colors.white,
+                ),
+                label: Text(isPassed
+                    ? 'VIEW OFFICIAL DOSSIER & FORWARD REPORT'
+                    : 'GENERATE ENFORCEMENT DOSSIER & FORWARD REPORT'),
               ),
               const SizedBox(height: 10),
 
@@ -190,6 +160,77 @@ class ComplianceVerdictScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  List<Widget> _buildDynamicRuleCards(BuildContext context, dynamic record) {
+    final extracted = record.extractedData;
+    final List<dynamic> violations = record.violations;
+
+    bool hasViolation(String code) => violations.any((v) =>
+        v.ruleCode.toString().toUpperCase().contains(code.toUpperCase()));
+
+    final mrpPassed = !hasViolation('MRP') &&
+        extracted.mrp.isNotEmpty &&
+        (extracted.mrp.contains('₹') || extracted.mrp.contains('Rs'));
+
+    final netQtyPassed =
+        !hasViolation('NET_QTY') && extracted.netQuantity.isNotEmpty;
+
+    final datePassed =
+        !hasViolation('DATE') && extracted.mfgDate.isNotEmpty;
+
+    final carePassed = !hasViolation('CONSUMER_CARE') &&
+        extracted.consumerCarePhone.isNotEmpty &&
+        extracted.consumerCareEmail.isNotEmpty;
+
+    final regPassed = !hasViolation('OPENFOODFACTS') &&
+        (record.barcode.isNotEmpty || extracted.manufacturerName.isNotEmpty);
+
+    return [
+      _buildRuleCheckCard(
+        title: 'Rule 6(1)(e): MRP Declaration & Format',
+        isPassed: mrpPassed,
+        note: mrpPassed
+            ? 'Verified: ${extracted.mrp}'
+            : (extracted.mrp.isEmpty
+                ? 'Rule Violation: No Maximum Retail Price (MRP) declaration detected on package.'
+                : 'Rule Violation: MRP format invalid or lacks currency symbol.'),
+      ),
+      const SizedBox(height: 8),
+      _buildRuleCheckCard(
+        title: 'Rule 6(1)(f): Net Quantity Unit Declarations',
+        isPassed: netQtyPassed,
+        note: netQtyPassed
+            ? 'Verified: ${extracted.netQuantity}'
+            : 'Rule Violation: Net quantity not declared in prescribed standard units.',
+      ),
+      const SizedBox(height: 8),
+      _buildRuleCheckCard(
+        title: 'Rule 6(1)(d): Month & Year of Mfg/Packaging',
+        isPassed: datePassed,
+        note: datePassed
+            ? 'Verified Mfg: ${extracted.mfgDate}${extracted.expiryDate.isNotEmpty ? " • Exp: ${extracted.expiryDate}" : ""}'
+            : 'Rule Violation: Mandatory month & year of manufacture/packaging is missing.',
+      ),
+      const SizedBox(height: 8),
+      _buildRuleCheckCard(
+        title: 'Rule 6(1)(h): Mandatory Consumer Care Contact',
+        isPassed: carePassed,
+        note: carePassed
+            ? 'Verified Phone: ${extracted.consumerCarePhone} & Email: ${extracted.consumerCareEmail}'
+            : 'Rule Violation: Incomplete consumer grievance details (Mandatory phone and email required).',
+      ),
+      const SizedBox(height: 8),
+      _buildRuleCheckCard(
+        title: 'Rule 6(1)(a): Manufacturer & Origin Registry',
+        isPassed: regPassed,
+        note: regPassed
+            ? (extracted.manufacturerName.isNotEmpty
+                ? 'Verified: ${extracted.manufacturerName}'
+                : 'Verified registered GTIN: ${record.barcode}')
+            : 'Rule Violation: Manufacturer name or country of origin not identified.',
+      ),
+    ];
   }
 
   Widget _buildRuleCheckCard({

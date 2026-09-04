@@ -37,15 +37,6 @@ class AuthProvider extends ChangeNotifier {
 
   void updateServerUrl(String url) => updateBaseUrl(url);
 
-  /// Switch active role perspective for RBAC dashboard view testing
-  void switchRole(UserRole newRole) {
-    if (_currentUser != null) {
-      _currentUser = _currentUser!.copyWith(role: newRole);
-      _storage.saveUser(_currentUser!);
-      notifyListeners();
-    }
-  }
-
   void _loadPersistedUser() {
     _currentUser = _storage.getUser();
     // Don't mark session as validated yet — must verify token against backend
@@ -63,9 +54,9 @@ class AuthProvider extends ChangeNotifier {
     }
 
     try {
-      // Attempt a lightweight authenticated request to verify the token
-      final response = await _apiClient.get('/health');
-      if (response.statusCode == 401) {
+      // Validate session against authenticated /auth/me endpoint
+      final response = await _apiClient.get(AppConstants.authMe);
+      if (!response.success || response.statusCode == 401) {
         // Token is invalid/expired — clear stale auth
         await _clearStaleAuth();
         return false;
@@ -101,7 +92,7 @@ class AuthProvider extends ChangeNotifier {
       final response = await _apiClient.post(
         AppConstants.authLogin,
         body: {
-          'email': officialId.contains('@') ? officialId : '$officialId@doca.gov.in',
+          'email': officialId.trim(),
           'password': password,
         },
       );

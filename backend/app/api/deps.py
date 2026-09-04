@@ -41,29 +41,27 @@ async def get_current_user(
     return user
 
 
-def get_current_inspector(
-    payload: Dict[str, Any] = Depends(require_roles(Role.INSPECTOR, Role.NODAL_OFFICER, Role.FOOD_COMMISSIONER, Role.ADMIN)),
+def get_current_food_inspector(
+    payload: Dict[str, Any] = Depends(require_roles(Role.FOOD_INSPECTOR, Role.NODAL_OFFICER, Role.FOOD_SAFETY_COMMISSIONER)),
 ) -> Dict[str, Any]:
-    """Dependency allowing Inspectors, Nodal Officers, Food Commissioners, or Admins."""
-    return payload
-
-
-def get_current_admin(
-    payload: Dict[str, Any] = Depends(require_roles(Role.ADMIN)),
-) -> Dict[str, Any]:
-    """Dependency allowing Admins only."""
+    """Dependency allowing Food Inspectors, Nodal Officers, or Commissioner."""
     return payload
 
 
 def get_current_nodal_officer(
-    payload: Dict[str, Any] = Depends(require_roles(Role.NODAL_OFFICER, Role.FOOD_COMMISSIONER, Role.ADMIN, Role.INSPECTOR)),
+    payload: Dict[str, Any] = Depends(require_roles(Role.NODAL_OFFICER, Role.FOOD_SAFETY_COMMISSIONER)),
 ) -> Dict[str, Any]:
-    """Dependency allowing Nodal Officers, Commissioners, Admins, or Inspectors."""
+    """Dependency allowing Nodal Officers or Commissioner."""
     return payload
 
 
-def get_current_citizen(
-    payload: Dict[str, Any] = Depends(require_roles(Role.CITIZEN, Role.ADMIN)),
+def get_current_commissioner(
+    payload: Dict[str, Any] = Depends(require_roles(Role.FOOD_SAFETY_COMMISSIONER)),
 ) -> Dict[str, Any]:
-    """Dependency allowing Citizens or Admins."""
+    """Dependency allowing Food Safety Commissioner only."""
     return payload
+
+
+# Aliases for existing controllers
+get_current_inspector = get_current_food_inspector
+get_current_admin = get_current_commissioner

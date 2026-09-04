@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import '../core/api_client.dart';
@@ -13,19 +14,30 @@ class ComplianceProvider extends ChangeNotifier {
 
   InspectionRecord? _currentInspection;
   List<InspectionRecord> _inspectionHistory = [];
-  List<Map<String, dynamic>> _statutoryRules = [];
   bool _isEvaluating = false;
   bool _isCommittingBlockchain = false;
   String? _statusMessage;
 
+  ReportWorkflowRecord? _activeReport;
+  List<ReportWorkflowRecord> _nodalQueue = [];
+  List<ReportWorkflowRecord> _commissionerQueue = [];
+  bool _isLoadingWorkflow = false;
+
+  ReportWorkflowRecord? get activeReport => _activeReport;
+  List<ReportWorkflowRecord> get nodalQueue => _nodalQueue;
+  List<ReportWorkflowRecord> get commissionerQueue => _commissionerQueue;
+  bool get isLoadingWorkflow => _isLoadingWorkflow;
+
+  bool _isLoadingHistory = false;
+  bool get isLoadingHistory => _isLoadingHistory;
+
   ComplianceProvider(this._apiClient, this._storage) {
     _loadHistory();
-    fetchStatutoryRules();
+    fetchRemoteInspections();
   }
 
   InspectionRecord? get currentInspection => _currentInspection;
   List<InspectionRecord> get inspectionHistory => _inspectionHistory;
-  List<Map<String, dynamic>> get statutoryRules => _statutoryRules;
   bool get isEvaluating => _isEvaluating;
   bool get isCommittingBlockchain => _isCommittingBlockchain;
   String? get statusMessage => _statusMessage;
@@ -35,210 +47,160 @@ class ComplianceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Fetch all 12 statutory rules from backend legal_metrology_rules.json
-  Future<List<Map<String, dynamic>>> fetchStatutoryRules() async {
+  Future<void> fetchRemoteInspections() async {
+    _isLoadingHistory = true;
+    notifyListeners();
+
     try {
-      final response = await _apiClient.get('/compliance/rules');
-      if (response.success && response.data != null && response.data!['rules'] != null) {
-        _statutoryRules = List<Map<String, dynamic>>.from(response.data!['rules']);
-        notifyListeners();
-        return _statutoryRules;
+      final response = await _apiClient.get(AppConstants.inspectionsList);
+      if (response.success && response.data != null) {
+        final List<dynamic> items;
+        if (response.data is List) {
+          items = response.data as List<dynamic>;
+        } else if (response.data is Map) {
+          final map = response.data as Map;
+          items = (map['items'] ?? map['data'] ?? []) as List<dynamic>;
+        } else {
+          items = [];
+        }
+        final remoteRecords = items
+            .map((item) =>
+                InspectionRecord.fromJson(item as Map<String, dynamic>))
+            .toList();
+
+        final localRecords = _storage.getInspections();
+        final Set<String> seenIds = {};
+        final List<InspectionRecord> merged = [];
+
+        for (final r in localRecords) {
+          if (seenIds.add(r.id)) {
+            merged.add(r);
+          }
+        }
+        for (final r in remoteRecords) {
+          if (seenIds.add(r.id)) {
+            merged.add(r);
+          }
+        }
+
+        _inspectionHistory = merged;
       }
-    } catch (_) {}
-    return _statutoryRules;
+    } catch (_) {
+      // Retain local history if offline
+    } finally {
+      _isLoadingHistory = false;
+      notifyListeners();
+    }
+  }
+
+  void setCurrentInspection(InspectionRecord record) {
+    _currentInspection = record;
+    notifyListeners();
   }
 
   /// Run Rule Engine against extracted OCR/NLP data
   Future<InspectionRecord> evaluateCompliance({
-    String? inspectionId,
     required OCRExtractedData extracted,
     required GS1Product gs1,
     required String storeName,
-    String shopOwnerName = '',
     required String locationAddress,
-    double latitude = 28.6139,
-    double longitude = 77.2090,
-    String imagePath = '',
-    String unwarpedImagePath = '',
     bool isOffline = false,
   }) async {
     _isEvaluating = true;
     _statusMessage =
-        'Evaluating extracted packaging labels against Legal Metrology Rules, 2011...';
+        'Validating extracted data against Legal Metrology Rules, 2011...';
     notifyListeners();
 
-    await Future.delayed(const Duration(milliseconds: 600));
+    await Future.delayed(const Duration(milliseconds: 900));
 
     final List<RuleViolation> violations = [];
 
-    // Rule 1: MRP Check (Rule 6(1)(e))
+    // Rule 1: MRP Check
     if (extracted.mrp.isEmpty ||
-        (!extracted.mrp.contains('₹') && !extracted.mrp.contains('Rs'))) {
+        !extracted.mrp.contains('₹') && !extracted.mrp.contains('Rs')) {
       violations.add(RuleViolation(
-        ruleCode: 'LM-006',
-        ruleName: 'Rule 6(1)(e): Maximum Retail Price (MRP) Declaration',
-        description:
-            'Missing or non-standard Maximum Retail Price declaration (mandatory "inclusive of all taxes" format).',
-        severity: 'Critical',
-        isPassed: false,
-      ));
-    }
-
-    // Rule 2: Net Quantity Check (Rule 6(1)(c))
-    if (extracted.netQuantity.isEmpty) {
-      violations.add(RuleViolation(
-        ruleCode: 'LM-003',
-        ruleName: 'Rule 6(1)(c): Net Quantity Declaration & Units',
-        description:
-            'Net Quantity not declared in standard units of weight, measure, or number (g, kg, ml, l).',
-        severity: 'Critical',
-        isPassed: false,
-      ));
-    }
-
-    // Rule 3: Date Check (Rule 6(1)(d))
-    if (extracted.mfgDate.isEmpty) {
-      violations.add(RuleViolation(
-        ruleCode: 'LM-004',
-        ruleName: 'Rule 6(1)(d): Month & Year of Manufacture / Packaging',
-        description:
-            'Mandatory month and year of manufacture or pre-packaging is absent on the principal display panel.',
+        ruleCode: 'RULE_MRP',
+        ruleName: 'Rule 6(1)(e): MRP Declaration',
+        description: 'Missing or malformed Maximum Retail Price declaration.',
         severity: 'High',
         isPassed: false,
       ));
     }
 
-    // Rule 4: Manufacturer / Packer Name & Address (Rule 6(1)(a))
-    if (extracted.manufacturerName.isEmpty) {
+    // Rule 2: Net Quantity Check
+    if (extracted.netQuantity.isEmpty) {
       violations.add(RuleViolation(
-        ruleCode: 'LM-001',
-        ruleName: 'Rule 6(1)(a): Complete Manufacturer / Packer Details',
-        description:
-            'Absence of complete name and geographical address of the manufacturer or packer.',
-        severity: 'Critical',
+        ruleCode: 'RULE_NET_QTY',
+        ruleName: 'Rule 6(1)(f): Net Quantity Unit',
+        description: 'Net Quantity not declared in prescribed standard units.',
+        severity: 'High',
         isPassed: false,
       ));
     }
 
-    // Rule 5: Consumer Care (Rule 6(1)(h))
-    if (extracted.consumerCareEmail.isEmpty && extracted.consumerCarePhone.isEmpty) {
+    // Rule 3: Date Check
+    if (extracted.mfgDate.isEmpty) {
       violations.add(RuleViolation(
-        ruleCode: 'LM-008',
-        ruleName: 'Rule 6(1)(h): Mandatory Consumer Care Details',
+        ruleCode: 'RULE_DATE',
+        ruleName: 'Rule 6(1)(d): Month & Year of Mfg/Packaging',
+        description: 'Mandatory month and year of manufacture is missing.',
+        severity: 'Medium',
+        isPassed: false,
+      ));
+    }
+
+    // Rule 4: Consumer Care
+    if (extracted.consumerCareEmail.isEmpty ||
+        extracted.consumerCarePhone.isEmpty) {
+      violations.add(RuleViolation(
+        ruleCode: 'RULE_CONSUMER_CARE',
+        ruleName: 'Rule 6(1)(h): Consumer Care Details',
         description:
-            'Incomplete consumer grievance contact details (telephone number and email address required).',
+            'Incomplete consumer grievance contact details (Mandatory phone and email address required).',
+        severity: 'High',
+        isPassed: false,
+      ));
+    }
+
+    // Rule 5: Open Food Facts Product Registry Cross-check
+    if (gs1.gtin.isEmpty) {
+      violations.add(RuleViolation(
+        ruleCode: 'RULE_OPENFOODFACTS',
+        ruleName: 'Open Food Facts Registry Check',
+        description:
+            'Manufacturer barcode mismatch or missing in official Open Food Facts registry.',
         severity: 'High',
         isPassed: false,
       ));
     }
 
     final isPassed = violations.isEmpty;
-    final realId = (inspectionId != null && inspectionId.isNotEmpty)
-        ? inspectionId
-        : 'INSP-${DateTime.now().year}-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    final inspectionId =
+        'INSP-${DateTime.now().year}-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
 
     _currentInspection = InspectionRecord(
-      id: realId,
+      id: inspectionId,
       barcode: extracted.barcode.isNotEmpty ? extracted.barcode : gs1.gtin,
       productName: gs1.productName,
       storeName: storeName,
-      shopOwnerName: shopOwnerName,
       locationAddress: locationAddress,
-      latitude: latitude,
-      longitude: longitude,
+      latitude: 28.6139,
+      longitude: 77.2090,
       timestamp: DateTime.now(),
       isCompliant: isPassed,
-      imagePath: imagePath,
-      unwarpedImagePath: unwarpedImagePath,
+      imagePath: '',
       extractedData: extracted,
       violations: violations,
       isSynced: !isOffline,
-      status: isPassed ? 'COMPLIANT' : 'VIOLATION',
     );
 
     await _storage.saveInspection(_currentInspection!);
-    _inspectionHistory.removeWhere((e) => e.id == realId);
     _inspectionHistory.insert(0, _currentInspection!);
 
     _isEvaluating = false;
     _statusMessage = null;
     notifyListeners();
     return _currentInspection!;
-  }
-
-  /// Submit Finalized Dossier directly to Nodal Verifier
-  Future<bool> submitToNodalVerifier({
-    required String inspectionId,
-    required String shopName,
-    required String shopOwnerName,
-    required String shopAddress,
-    required String inspectorNotes,
-    required List<Map<String, dynamic>> violationRules,
-    List<String>? evidenceImages,
-  }) async {
-    _isCommittingBlockchain = true;
-    _statusMessage =
-        'Transmitting inspection dossier to Nodal Verification Authority (S. K. Sharma)...';
-    notifyListeners();
-
-    try {
-      final response = await _apiClient.post(
-        '/inspections/$inspectionId/submit-nodal',
-        body: {
-          'shop_name': shopName,
-          'shop_owner_name': shopOwnerName,
-          'shop_address': shopAddress,
-          'notes': inspectorNotes,
-          'violation_rules': violationRules,
-          if (evidenceImages != null && evidenceImages.isNotEmpty)
-            'evidence_images': evidenceImages,
-        },
-      );
-
-      if (response.success) {
-        if (_currentInspection != null && _currentInspection!.id == inspectionId) {
-          _currentInspection = InspectionRecord(
-            id: _currentInspection!.id,
-            barcode: _currentInspection!.barcode,
-            productName: _currentInspection!.productName,
-            storeName: shopName.isNotEmpty ? shopName : _currentInspection!.storeName,
-            shopOwnerName: shopOwnerName.isNotEmpty ? shopOwnerName : _currentInspection!.shopOwnerName,
-            locationAddress: shopAddress.isNotEmpty ? shopAddress : _currentInspection!.locationAddress,
-            latitude: _currentInspection!.latitude,
-            longitude: _currentInspection!.longitude,
-            timestamp: _currentInspection!.timestamp,
-            isCompliant: _currentInspection!.isCompliant,
-            imagePath: _currentInspection!.imagePath,
-            unwarpedImagePath: _currentInspection!.unwarpedImagePath,
-            extractedData: _currentInspection!.extractedData,
-            violations: _currentInspection!.violations,
-            blockchainReceipt: _currentInspection!.blockchainReceipt,
-            legalNoticePdfUrl: _currentInspection!.legalNoticePdfUrl,
-            isSynced: true,
-            inspectorRemarks: inspectorNotes,
-            status: 'unverified',
-          );
-          await _storage.saveInspection(_currentInspection!);
-          final idx = _inspectionHistory.indexWhere((e) => e.id == inspectionId);
-          if (idx >= 0) _inspectionHistory[idx] = _currentInspection!;
-        }
-
-        _isCommittingBlockchain = false;
-        _statusMessage = null;
-        notifyListeners();
-        return true;
-      } else {
-        _isCommittingBlockchain = false;
-        _statusMessage = response.message ?? 'Failed to submit to Nodal Verifier';
-        notifyListeners();
-        return false;
-      }
-    } catch (e) {
-      _isCommittingBlockchain = false;
-      _statusMessage = 'Nodal Submission Error: ${e.toString()}';
-      notifyListeners();
-      return false;
-    }
   }
 
   void setInspectionSynced(String id, {required bool isSynced}) {
@@ -250,28 +212,24 @@ class ComplianceProvider extends ChangeNotifier {
         barcode: old.barcode,
         productName: old.productName,
         storeName: old.storeName,
-        shopOwnerName: old.shopOwnerName,
         locationAddress: old.locationAddress,
         latitude: old.latitude,
         longitude: old.longitude,
         timestamp: old.timestamp,
         isCompliant: old.isCompliant,
         imagePath: old.imagePath,
-        unwarpedImagePath: old.unwarpedImagePath,
         extractedData: old.extractedData,
         violations: old.violations,
         blockchainReceipt: old.blockchainReceipt,
         legalNoticePdfUrl: old.legalNoticePdfUrl,
         isSynced: isSynced,
-        inspectorRemarks: old.inspectorRemarks,
-        status: old.status,
       );
       _storage.saveInspection(_inspectionHistory[index]);
       notifyListeners();
     }
   }
 
-  /// Commit SHA-256 Tamper-Proof Evidence to Ledger
+  /// Commit SHA-256 Tamper-Proof Evidence to Hyperledger Fabric
   Future<BlockchainReceipt> commitEvidenceToBlockchain(
       InspectionRecord record) async {
     _isCommittingBlockchain = true;
@@ -279,6 +237,7 @@ class ComplianceProvider extends ChangeNotifier {
         'Anchoring cryptographic SHA-256 hash to Hyperledger Fabric...';
     notifyListeners();
 
+    // Compute deterministic SHA-256 hash of (InspectionId + Timestamp + Barcode + Violations)
     final payload =
         '${record.id}|${record.timestamp.toIso8601String()}|${record.barcode}|${record.violations.length}';
     final bytes = utf8.encode(payload);
@@ -324,21 +283,17 @@ class ComplianceProvider extends ChangeNotifier {
         barcode: _currentInspection!.barcode,
         productName: _currentInspection!.productName,
         storeName: _currentInspection!.storeName,
-        shopOwnerName: _currentInspection!.shopOwnerName,
         locationAddress: _currentInspection!.locationAddress,
         latitude: _currentInspection!.latitude,
         longitude: _currentInspection!.longitude,
         timestamp: _currentInspection!.timestamp,
         isCompliant: _currentInspection!.isCompliant,
         imagePath: _currentInspection!.imagePath,
-        unwarpedImagePath: _currentInspection!.unwarpedImagePath,
         extractedData: _currentInspection!.extractedData,
         violations: _currentInspection!.violations,
         blockchainReceipt: receipt,
-        legalNoticePdfUrl: 'https://doca.gov.in/notices/LEGAL-NOTICE-$id.pdf',
+        legalNoticePdfUrl: '/api/v1/legal-notices/download/$id',
         isSynced: true,
-        inspectorRemarks: _currentInspection!.inspectorRemarks,
-        status: _currentInspection!.status,
       );
       _storage.saveInspection(_currentInspection!);
     }
@@ -349,258 +304,184 @@ class ComplianceProvider extends ChangeNotifier {
     }
   }
 
-  /// Update inspector comments/notes on an inspection record
-  Future<bool> updateInspectionNotes(String id, String notes) async {
-    if (_currentInspection != null && _currentInspection!.id == id) {
-      _currentInspection = InspectionRecord(
-        id: _currentInspection!.id,
-        barcode: _currentInspection!.barcode,
-        productName: _currentInspection!.productName,
-        storeName: _currentInspection!.storeName,
-        shopOwnerName: _currentInspection!.shopOwnerName,
-        locationAddress: _currentInspection!.locationAddress,
-        latitude: _currentInspection!.latitude,
-        longitude: _currentInspection!.longitude,
-        timestamp: _currentInspection!.timestamp,
-        isCompliant: _currentInspection!.isCompliant,
-        imagePath: _currentInspection!.imagePath,
-        unwarpedImagePath: _currentInspection!.unwarpedImagePath,
-        extractedData: _currentInspection!.extractedData,
-        violations: _currentInspection!.violations,
-        blockchainReceipt: _currentInspection!.blockchainReceipt,
-        legalNoticePdfUrl: _currentInspection!.legalNoticePdfUrl,
-        isSynced: _currentInspection!.isSynced,
-        inspectorRemarks: notes,
-        status: _currentInspection!.status,
-      );
-      _storage.saveInspection(_currentInspection!);
-    }
+  /// Download or generate statutory PDF notice from backend
+  Future<Uint8List?> generateOrDownloadNoticePdf(String inspectionId) async {
+    final bytes = await _apiClient
+        .downloadBytes('/legal-notices/download/$inspectionId');
+    return bytes;
+  }
 
-    final index = _inspectionHistory.indexWhere((e) => e.id == id);
-    if (index >= 0 && _currentInspection != null) {
-      _inspectionHistory[index] = _currentInspection!;
-    }
+  /// Stage 1: Load or create draft report for an inspection
+  Future<ReportWorkflowRecord?> loadOrCreateReport(String inspectionId, {String? inspectorNotes}) async {
+    _isLoadingWorkflow = true;
+    _statusMessage = 'Generating official inspection dossier...';
     notifyListeners();
 
     try {
-      final response = await _apiClient.patch(
-        '/inspections/$id/comment',
-        body: {'notes': notes},
+      final response = await _apiClient.post(
+        '${AppConstants.reports}/create-or-get/$inspectionId',
+        body: inspectorNotes != null ? {'inspector_notes': inspectorNotes} : {},
       );
-      return response.success;
-    } catch (_) {
-      return false;
-    }
-  }
 
-  /// Fetch live inspection status from backend
-  Future<InspectionRecord?> fetchInspectionStatus(String id) async {
-    try {
-      final response = await _apiClient.get('/inspections/$id');
       if (response.success && response.data != null) {
-        final updatedRecord = InspectionRecord.fromJson(response.data!);
-        if (_currentInspection?.id == id) {
-          _currentInspection = updatedRecord;
-        }
-        final index = _inspectionHistory.indexWhere((e) => e.id == id);
-        if (index >= 0) {
-          _inspectionHistory[index] = updatedRecord;
-        } else {
-          _inspectionHistory.insert(0, updatedRecord);
-        }
-        _storage.saveInspection(updatedRecord);
+        _activeReport = ReportWorkflowRecord.fromJson(response.data!);
+        _isLoadingWorkflow = false;
+        _statusMessage = null;
         notifyListeners();
-        return updatedRecord;
+        return _activeReport;
+      } else {
+        _isLoadingWorkflow = false;
+        _statusMessage = response.message ?? 'Failed to initialize dossier';
+        notifyListeners();
+        return null;
       }
-    } catch (_) {}
-    return _currentInspection;
+    } catch (e) {
+      _isLoadingWorkflow = false;
+      _statusMessage = 'Report Error: ${e.toString()}';
+      notifyListeners();
+      return null;
+    }
   }
 
-  /// Nodal Verifier: Fetch all pending dossiers awaiting scrutiny
-  Future<List<InspectionRecord>> fetchPendingNodalInspections() async {
-    try {
-      final response = await _apiClient.get('/inspections/pending-nodal');
-      if (response.success && response.data != null && response.data is List) {
-        final list = (response.data as List)
-            .map((item) => InspectionRecord.fromJson(item as Map<String, dynamic>))
-            .toList();
-        return list;
-      }
-    } catch (_) {}
-
-    // Fallback to local storage records with unverified / pending status
-    return _inspectionHistory
-        .where((e) => e.status.toLowerCase() == 'unverified' || e.status.toLowerCase().contains('pending'))
-        .toList();
-  }
-
-  /// Nodal Verifier: Record scrutiny decision (Accept & Send to Commissioner OR Deny & Reject)
-  Future<bool> submitNodalDecision({
-    required String inspectionId,
-    required String decision,
-    required String comment,
-    String verifierName = 'Nodal Officer S. K. Sharma',
-  }) async {
-    _isCommittingBlockchain = true;
-    _statusMessage = 'Recording Nodal Verifier decision ($decision)...';
+  /// Stage 1 Submit: Food Inspector sends report to Nodal Officer
+  Future<ReportWorkflowRecord?> submitToNodal(String reportId, String inspectorNotes) async {
+    _isLoadingWorkflow = true;
+    _statusMessage = 'Submitting report to Nodal Officer for verification...';
     notifyListeners();
 
     try {
       final response = await _apiClient.post(
-        '/inspections/$inspectionId/nodal-decision',
-        body: {
-          'decision': decision,
-          'verifier_comment': comment,
-          'verifier_name': verifierName,
-        },
+        '${AppConstants.reports}/$reportId/submit-to-nodal',
+        body: {'inspector_notes': inspectorNotes},
       );
 
-      final isAccept = decision.toUpperCase() == 'ACCEPT';
-      final newStatus = isAccept ? 'verified_accepted' : 'verified_rejected';
-
-      if (response.success) {
-        if (_currentInspection != null && _currentInspection!.id == inspectionId) {
-          _currentInspection = InspectionRecord(
-            id: _currentInspection!.id,
-            barcode: _currentInspection!.barcode,
-            productName: _currentInspection!.productName,
-            storeName: _currentInspection!.storeName,
-            shopOwnerName: _currentInspection!.shopOwnerName,
-            locationAddress: _currentInspection!.locationAddress,
-            latitude: _currentInspection!.latitude,
-            longitude: _currentInspection!.longitude,
-            timestamp: _currentInspection!.timestamp,
-            isCompliant: _currentInspection!.isCompliant,
-            imagePath: _currentInspection!.imagePath,
-            unwarpedImagePath: _currentInspection!.unwarpedImagePath,
-            extractedData: _currentInspection!.extractedData,
-            violations: _currentInspection!.violations,
-            blockchainReceipt: _currentInspection!.blockchainReceipt,
-            legalNoticePdfUrl: _currentInspection!.legalNoticePdfUrl,
-            isSynced: true,
-            inspectorRemarks: _currentInspection!.inspectorRemarks,
-            status: newStatus,
-            verifierComment: comment,
-            verifierDecision: isAccept ? 'ACCEPTED' : 'REJECTED',
-            commissionerStatus: isAccept ? 'FORWARDED_FOR_DIGITAL_SIGNATURE' : 'NOT_FORWARDED',
-            verifiedAt: DateTime.now().toIso8601String(),
-          );
-          await _storage.saveInspection(_currentInspection!);
-        }
-
-        final idx = _inspectionHistory.indexWhere((e) => e.id == inspectionId);
-        if (idx >= 0 && _currentInspection != null) {
-          _inspectionHistory[idx] = _currentInspection!;
-          await _storage.saveInspection(_currentInspection!);
-        }
-
-        _isCommittingBlockchain = false;
+      if (response.success && response.data != null) {
+        _activeReport = ReportWorkflowRecord.fromJson(response.data!);
+        _isLoadingWorkflow = false;
         _statusMessage = null;
         notifyListeners();
-        return true;
+        return _activeReport;
       } else {
-        _isCommittingBlockchain = false;
-        _statusMessage = response.message ?? 'Failed to record Nodal decision';
+        _isLoadingWorkflow = false;
+        _statusMessage = response.message ?? 'Failed to submit report';
         notifyListeners();
-        return false;
+        return null;
       }
     } catch (e) {
-      _isCommittingBlockchain = false;
-      _statusMessage = 'Nodal Decision Error: ${e.toString()}';
+      _isLoadingWorkflow = false;
+      _statusMessage = 'Submission Error: ${e.toString()}';
       notifyListeners();
-      return false;
+      return null;
     }
   }
 
-  /// Fetch all dossiers forwarded to Commissioner for digital signature
-  Future<List<InspectionRecord>> fetchPendingCommissionerInspections() async {
+  /// Stage 2: Nodal Officer queue
+  Future<List<ReportWorkflowRecord>> fetchNodalQueue() async {
+    _isLoadingWorkflow = true;
+    notifyListeners();
+
     try {
-      final response = await _apiClient.get('/inspections/pending-commissioner');
-      if (response.success && response.data != null && response.data is List) {
-        final list = (response.data as List)
-            .map((item) => InspectionRecord.fromJson(item as Map<String, dynamic>))
+      final response = await _apiClient.getList('${AppConstants.reports}/queue/nodal');
+      if (response.success && response.data != null) {
+        _nodalQueue = response.data!
+            .map((e) => ReportWorkflowRecord.fromJson(e as Map<String, dynamic>))
             .toList();
-        return list;
       }
     } catch (_) {}
-    return _inspectionHistory
-        .where((e) =>
-            e.status == 'verified_accepted' ||
-            e.commissionerStatus == 'FORWARDED_FOR_DIGITAL_SIGNATURE')
-        .toList();
+
+    _isLoadingWorkflow = false;
+    notifyListeners();
+    return _nodalQueue;
   }
 
-  /// Commissioner applies digital signature to the forwarded dossier
-  Future<bool> submitCommissionerSignature({
-    required String inspectionId,
-    required String commissionerName,
-    required String remarks,
-  }) async {
-    _isCommittingBlockchain = true;
-    _statusMessage = 'Applying Commissioner Digital Signature & issuing Notice...';
+  /// Stage 2 Review & Forward: Nodal Officer comments and forwards to Commissioner
+  Future<ReportWorkflowRecord?> nodalForwardToCommissioner(String reportId, String comments) async {
+    _isLoadingWorkflow = true;
+    _statusMessage = 'Forwarding verified dossier to Food Safety Commissioner...';
     notifyListeners();
 
     try {
       final response = await _apiClient.post(
-        '/inspections/$inspectionId/commissioner-sign',
-        body: {
-          'commissioner_name': commissionerName,
-          'remarks': remarks,
-        },
+        '${AppConstants.reports}/$reportId/nodal-forward',
+        body: {'nodal_comments': comments},
       );
 
-      if (response.success) {
-        if (_currentInspection != null && _currentInspection!.id == inspectionId) {
-          _currentInspection = InspectionRecord(
-            id: _currentInspection!.id,
-            barcode: _currentInspection!.barcode,
-            productName: _currentInspection!.productName,
-            storeName: _currentInspection!.storeName,
-            shopOwnerName: _currentInspection!.shopOwnerName,
-            locationAddress: _currentInspection!.locationAddress,
-            latitude: _currentInspection!.latitude,
-            longitude: _currentInspection!.longitude,
-            timestamp: _currentInspection!.timestamp,
-            isCompliant: _currentInspection!.isCompliant,
-            imagePath: _currentInspection!.imagePath,
-            unwarpedImagePath: _currentInspection!.unwarpedImagePath,
-            extractedData: _currentInspection!.extractedData,
-            violations: _currentInspection!.violations,
-            blockchainReceipt: _currentInspection!.blockchainReceipt,
-            legalNoticePdfUrl: _currentInspection!.legalNoticePdfUrl,
-            isSynced: true,
-            inspectorRemarks: _currentInspection!.inspectorRemarks,
-            status: 'signed_notice_issued',
-            verifierComment: _currentInspection!.verifierComment,
-            verifierDecision: _currentInspection!.verifierDecision,
-            commissionerStatus: 'DIGITALLY_SIGNED_AND_ISSUED',
-            verifiedAt: _currentInspection!.verifiedAt,
-          );
-          await _storage.saveInspection(_currentInspection!);
-        }
-
-        final idx = _inspectionHistory.indexWhere((e) => e.id == inspectionId);
-        if (idx >= 0 && _currentInspection != null) {
-          _inspectionHistory[idx] = _currentInspection!;
-          await _storage.saveInspection(_currentInspection!);
-        }
-
-        _isCommittingBlockchain = false;
+      if (response.success && response.data != null) {
+        _activeReport = ReportWorkflowRecord.fromJson(response.data!);
+        _nodalQueue.removeWhere((r) => r.reportId == reportId);
+        _isLoadingWorkflow = false;
         _statusMessage = null;
         notifyListeners();
-        return true;
+        return _activeReport;
       } else {
-        _isCommittingBlockchain = false;
-        _statusMessage = response.message ?? 'Failed to apply Digital Signature';
+        _isLoadingWorkflow = false;
+        _statusMessage = response.message ?? 'Failed to forward report';
         notifyListeners();
-        return false;
+        return null;
       }
     } catch (e) {
-      _isCommittingBlockchain = false;
-      _statusMessage = 'Commissioner Sign Error: ${e.toString()}';
+      _isLoadingWorkflow = false;
+      _statusMessage = 'Forwarding Error: ${e.toString()}';
       notifyListeners();
-      return false;
+      return null;
     }
+  }
+
+  /// Stage 3: Commissioner queue
+  Future<List<ReportWorkflowRecord>> fetchCommissionerQueue() async {
+    _isLoadingWorkflow = true;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.getList('${AppConstants.reports}/queue/commissioner');
+      if (response.success && response.data != null) {
+        _commissionerQueue = response.data!
+            .map((e) => ReportWorkflowRecord.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (_) {}
+
+    _isLoadingWorkflow = false;
+    notifyListeners();
+    return _commissionerQueue;
+  }
+
+  /// Stage 3 Certify: Food Safety Commissioner certifies & digitally signs
+  Future<ReportWorkflowRecord?> commissionerCertifyReport(String reportId, String comments) async {
+    _isLoadingWorkflow = true;
+    _statusMessage = 'Applying statutory digital signature and seal...';
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.post(
+        '${AppConstants.reports}/$reportId/certify',
+        body: {'commissioner_comments': comments},
+      );
+
+      if (response.success && response.data != null) {
+        _activeReport = ReportWorkflowRecord.fromJson(response.data!);
+        _commissionerQueue.removeWhere((r) => r.reportId == reportId);
+        _isLoadingWorkflow = false;
+        _statusMessage = null;
+        notifyListeners();
+        return _activeReport;
+      } else {
+        _isLoadingWorkflow = false;
+        _statusMessage = response.message ?? 'Failed to certify report';
+        notifyListeners();
+        return null;
+      }
+    } catch (e) {
+      _isLoadingWorkflow = false;
+      _statusMessage = 'Certification Error: ${e.toString()}';
+      notifyListeners();
+      return null;
+    }
+  }
+
+  /// Download official signed statutory PDF
+  Future<Uint8List?> downloadCertifiedPdf(String reportId) async {
+    final bytes = await _apiClient.downloadBytes('${AppConstants.reports}/$reportId/pdf');
+    return bytes;
   }
 }
-

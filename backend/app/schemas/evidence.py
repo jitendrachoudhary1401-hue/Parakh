@@ -35,6 +35,8 @@ class EvidenceResponse(BaseModel):
     gps_latitude: Optional[float] = None
     gps_longitude: Optional[float] = None
     capture_timestamp: Optional[datetime] = None
+    last_verified_at: Optional[datetime] = None
+    verified_by_user_id: Optional[UUID] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -47,4 +49,5 @@ class EvidenceVerifyResponse(BaseModel):
     stored_hash: str
     recalculated_hash: str
     ledger_hash: Optional[str] = None
+    verified_by_user_id: Optional[UUID] = None
     message: str

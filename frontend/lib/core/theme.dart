@@ -31,8 +31,7 @@ class AppTheme {
   static const Color surface = Color(0xFFFFFFFF); // Pure White
   static const Color surfaceContainerLow = Color(0xFFF8FAFC); // Slate-50
   static const Color surfaceContainer = Color(0xFFECEEF0);
-  static const Color outline =
-      Color(0xFFE2E8F0); // Slate-200 (1px structural border)
+  static const Color outline = Color(0xFFE2E8F0); // Slate-200 (1px structural border)
   static const Color outlineVariant = Color(0xFFCBD5E1);
 
   // Text Colors
@@ -152,7 +151,7 @@ class AppTheme {
           backgroundColor: primary,
           foregroundColor: Colors.white,
           elevation: 0,
-          minimumSize: const Size(0, touchTargetMin),
+          minimumSize: const Size.fromHeight(touchTargetMin),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusSm),
@@ -168,7 +167,7 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: primary,
           elevation: 0,
-          minimumSize: const Size(0, touchTargetMin),
+          minimumSize: const Size.fromHeight(touchTargetMin),
           side: const BorderSide(color: outlineVariant, width: 1),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           shape: RoundedRectangleBorder(
@@ -183,8 +182,7 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surface,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusSm),
           borderSide: const BorderSide(color: outline, width: 1),
@@ -210,10 +208,8 @@ class AppTheme {
         selectedItemColor: primary,
         unselectedItemColor: textMuted,
         type: BottomNavigationBarType.fixed,
-        selectedLabelStyle:
-            TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-        unselectedLabelStyle:
-            TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+        selectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
       ),
       dividerTheme: const DividerThemeData(
         color: outline,
@@ -222,6 +218,4 @@ class AppTheme {
       ),
     );
   }
-
-  static const Color borderLight = outline;
 }

@@ -32,22 +32,10 @@ class AuthService:
 
     async def authenticate_user(self, email: str, password: str) -> Dict[str, Any]:
         """Authenticate user against PostgreSQL database, return JWT tokens."""
-        clean_email = email.lower().strip()
-        if clean_email in ("doca-insp-2026", "insp-2026", "doca-insp-2026@doca.gov.in", "insp-2026@doca.gov.in", "inspector") or clean_email.startswith("doca-insp-"):
-            clean_email = "officer.rajesh@doca.gov.in"
-        elif clean_email in ("nodal", "nodal@doca.gov.in", "nodal.officer", "nodal-2026", "nodal-officer-01", "nodal-officer-01@doca.gov.in"):
-            clean_email = "nodal.officer@doca.gov.in"
-        elif clean_email in ("comm", "commissioner", "food.commissioner", "comm@doca.gov.in", "comm-2026", "food-comm-01", "food-comm-01@doca.gov.in"):
-            clean_email = "food.commissioner@doca.gov.in"
-
-        user = await self.user_repo.get_by_email(clean_email)
-        if not user:
-            raise UnauthorizedError("Invalid email or password")
-
-        # Allow password123 or role-specific passwords for seamless demo
-        valid_password = verify_password(password, user.hashed_password) or password in ("password123", "Insp@2026", "Nodal@2026", "Comm@2026", "admin123")
-        if not valid_password:
-            raise UnauthorizedError("Invalid email or password")
+        clean_identifier = email.strip()
+        user = await self.user_repo.get_by_identifier(clean_identifier)
+        if not user or not verify_password(password, user.hashed_password):
+            raise UnauthorizedError("Invalid credentials (email/UID or password)")
 
         if not user.is_active:
             raise UnauthorizedError("User account is inactive")
@@ -60,10 +48,12 @@ class AuthService:
         user_role = user.role
         zone_id = user.zone_id or "North Zone (New Delhi Division)"
         full_name = user.full_name
+        official_uid = user.official_uid
 
         claims = {
             "sub": user_id,
-            "email": clean_email,
+            "email": user.email,
+            "official_uid": official_uid,
             "role": user_role,
             "zone_id": zone_id,
             "full_name": full_name,
@@ -79,8 +69,9 @@ class AuthService:
             "expires_in": self.settings.jwt_access_token_expire_minutes * 60,
             "user": {
                 "user_id": user_id,
-                "official_id": "DOCA-INSP-2026",
-                "email": clean_email,
+                "official_id": official_uid,
+                "official_uid": official_uid,
+                "email": user.email,
                 "full_name": full_name,
                 "role": user_role,
                 "zone_id": zone_id,

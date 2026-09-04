@@ -77,29 +77,58 @@ class ApiClient {
     }
   }
 
+  /// Generic GET returning List
+  Future<ApiResponse<List<dynamic>>> getList(String endpoint, {Map<String, String>? queryParams}) async {
+    try {
+      var uri = Uri.parse('$_baseUrl$endpoint');
+      if (queryParams != null && queryParams.isNotEmpty) {
+        uri = uri.replace(queryParameters: queryParams);
+      }
+
+      final response = await http.get(uri, headers: _headers()).timeout(const Duration(seconds: 15));
+      final decoded = jsonDecode(response.body);
+      final isSuccess = response.statusCode >= 200 && response.statusCode < 300;
+
+      if (decoded is Map<String, dynamic>) {
+        final listData = decoded['data'] is List ? decoded['data'] as List<dynamic> : <dynamic>[];
+        return ApiResponse<List<dynamic>>(
+          success: isSuccess && (decoded['success'] ?? true),
+          data: listData,
+          message: decoded['message'] ?? (isSuccess ? 'Success' : 'Request failed'),
+          errorCode: decoded['error_code'] ?? (isSuccess ? null : 'HTTP_${response.statusCode}'),
+          statusCode: response.statusCode,
+        );
+      } else if (decoded is List) {
+        return ApiResponse<List<dynamic>>(
+          success: isSuccess,
+          data: decoded,
+          message: isSuccess ? 'Success' : 'Request failed',
+          statusCode: response.statusCode,
+        );
+      }
+
+      return ApiResponse<List<dynamic>>(
+        success: isSuccess,
+        data: [],
+        message: 'Unexpected format',
+        statusCode: response.statusCode,
+      );
+    } catch (e) {
+      return ApiResponse<List<dynamic>>(
+        success: false,
+        message: 'Service error: ${e.toString()}',
+        errorCode: 'CLIENT_EXCEPTION',
+        statusCode: 0,
+      );
+    }
+  }
+
   /// Generic POST
   Future<ApiResponse<Map<String, dynamic>>> post(String endpoint, {dynamic body}) async {
     try {
       final uri = Uri.parse('$_baseUrl$endpoint');
       final response = await http
           .post(
-            uri,
-            headers: _headers(),
-            body: body != null ? jsonEncode(body) : null,
-          )
-          .timeout(const Duration(seconds: 20));
-      return _handleResponse(response);
-    } catch (e) {
-      return _handleException(e);
-    }
-  }
-
-  /// Generic PATCH
-  Future<ApiResponse<Map<String, dynamic>>> patch(String endpoint, {dynamic body}) async {
-    try {
-      final uri = Uri.parse('$_baseUrl$endpoint');
-      final response = await http
-          .patch(
             uri,
             headers: _headers(),
             body: body != null ? jsonEncode(body) : null,
@@ -137,16 +166,41 @@ class ApiClient {
     }
   }
 
+  /// Download raw binary bytes (e.g., PDF reports)
+  Future<Uint8List?> downloadBytes(String endpoint) async {
+    try {
+      final uri = Uri.parse('$_baseUrl$endpoint');
+      final response = await http
+          .get(uri, headers: _headers())
+          .timeout(const Duration(seconds: 30));
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return response.bodyBytes;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   ApiResponse<Map<String, dynamic>> _handleResponse(http.Response response) {
     try {
       final decoded = jsonDecode(response.body);
       final isSuccess = response.statusCode >= 200 && response.statusCode < 300;
 
       if (decoded is Map<String, dynamic>) {
+        String? message;
+        if (decoded['message'] is String) {
+          message = decoded['message'];
+        } else if (decoded['detail'] is String) {
+          message = decoded['detail'];
+        } else if (decoded['error'] is Map && decoded['error']['message'] is String) {
+          message = decoded['error']['message'];
+        }
+
         return ApiResponse<Map<String, dynamic>>(
           success: isSuccess && (decoded['success'] ?? true),
           data: decoded['data'] is Map<String, dynamic> ? decoded['data'] : decoded,
-          message: decoded['message'] ?? (isSuccess ? 'Success' : 'Request failed'),
+          message: message ?? (isSuccess ? 'Success' : 'Request failed (HTTP ${response.statusCode})'),
           errorCode: decoded['error_code'] ?? (isSuccess ? null : 'HTTP_${response.statusCode}'),
           statusCode: response.statusCode,
         );
@@ -155,7 +209,7 @@ class ApiClient {
       return ApiResponse<Map<String, dynamic>>(
         success: isSuccess,
         data: {'result': decoded},
-        message: isSuccess ? 'Success' : 'Request failed',
+        message: isSuccess ? 'Success' : 'Request failed (HTTP ${response.statusCode})',
         statusCode: response.statusCode,
       );
     } catch (_) {

@@ -37,9 +37,6 @@ class ScanService:
         longitude: Optional[float] = None,
         location_name: Optional[str] = None,
         notes: Optional[str] = None,
-        shop_name: Optional[str] = None,
-        shop_owner_name: Optional[str] = None,
-        shop_address: Optional[str] = None,
     ) -> Inspection:
         """Validate uploaded image, store in object storage, and create inspection entity."""
         # 1. Strict file validation
@@ -56,14 +53,6 @@ class ScanService:
             content_type=mime_type,
         )
 
-        metadata = {}
-        if shop_name or shop_owner_name or shop_address:
-            metadata["establishment"] = {
-                "shop_name": shop_name,
-                "shop_owner_name": shop_owner_name,
-                "shop_address": shop_address,
-            }
-
         # 3. Create inspection record
         inspection = Inspection(
             inspection_id=inspection_id,
@@ -71,11 +60,10 @@ class ScanService:
             product_barcode=product_barcode,
             latitude=latitude,
             longitude=longitude,
-            location_name=shop_name or location_name,
+            location_name=location_name,
             status="pending",
             image_storage_path=storage_path,
             notes=notes,
-            metadata_json=metadata if metadata else None,
         )
 
         created_inspection = await self.inspection_repo.create(inspection)

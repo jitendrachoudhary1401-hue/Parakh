@@ -2,9 +2,9 @@ name: Project PARAKH CI
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [ Jitendra, master, develop ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ Jitendra, master ]
 
 jobs:
   backend-test:

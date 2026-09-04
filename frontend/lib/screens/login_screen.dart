@@ -14,9 +14,18 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _officialIdController = TextEditingController(text: 'DOCA-INSP-2026');
-  final _passwordController = TextEditingController(text: 'password123');
+  final _officialIdController = TextEditingController(text: 'DOCA-FI-2026-0101');
+  final _passwordController = TextEditingController(text: 'Inspector@2026');
   bool _obscurePassword = true;
+  String _selectedRole = 'food_inspector';
+
+  void _selectDemoAccount(String role, String uid, String password) {
+    setState(() {
+      _selectedRole = role;
+      _officialIdController.text = uid;
+      _passwordController.text = password;
+    });
+  }
 
   @override
   void dispose() {
@@ -116,21 +125,68 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 16),
                   ],
 
+                  // SIH 2026 Role Selector
+                  Text(
+                    'SELECT OFFICIAL ROLE (SIH 2026)',
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        ChoiceChip(
+                          avatar: const Icon(Icons.shield_outlined, size: 16),
+                          label: const Text('Food Inspector'),
+                          selected: _selectedRole == 'food_inspector',
+                          onSelected: (_) => _selectDemoAccount(
+                            'food_inspector',
+                            'DOCA-FI-2026-0101',
+                            'Inspector@2026',
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ChoiceChip(
+                          avatar: const Icon(Icons.gavel_outlined, size: 16),
+                          label: const Text('Nodal Officer'),
+                          selected: _selectedRole == 'nodal_officer',
+                          onSelected: (_) => _selectDemoAccount(
+                            'nodal_officer',
+                            'DOCA-NO-2026-0202',
+                            'Nodal@2026',
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ChoiceChip(
+                          avatar: const Icon(Icons.account_balance_outlined, size: 16),
+                          label: const Text('Commissioner'),
+                          selected: _selectedRole == 'food_safety_commissioner',
+                          onSelected: (_) => _selectDemoAccount(
+                            'food_safety_commissioner',
+                            'DOCA-FSC-2026-0303',
+                            'Commissioner@2026',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
                   // Official ID Input
                   Text(
-                    'OFFICIAL BADGE ID',
+                    'OFFICIAL BADGE ID / EMAIL',
                     style: Theme.of(context).textTheme.labelSmall,
                   ),
                   const SizedBox(height: 6),
                   TextFormField(
                     controller: _officialIdController,
                     decoration: const InputDecoration(
-                      hintText: 'e.g. DOCA-INSP-2026',
+                      hintText: 'e.g. DOCA-FI-2026-0101',
                       prefixIcon: Icon(Icons.badge_outlined,
                           size: 20, color: AppTheme.secondary),
                     ),
                     validator: (val) => val == null || val.isEmpty
-                        ? 'Please enter Official Badge ID'
+                        ? 'Please enter Official Badge ID or Email'
                         : null,
                   ),
                   const SizedBox(height: 16),
@@ -165,55 +221,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         : null,
                   ),
                   const SizedBox(height: 24),
-
-                  // Quick Demo Account Selection Chips
-                  const Text(
-                    'DEMO ROLE ACCOUNTS',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.textMuted,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      ActionChip(
-                        avatar: const Icon(Icons.security, size: 14),
-                        label: const Text('Inspector', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-                        onPressed: () {
-                          setState(() {
-                            _officialIdController.text = 'DOCA-INSP-2026';
-                            _passwordController.text = 'password123';
-                          });
-                        },
-                      ),
-                      ActionChip(
-                        avatar: const Icon(Icons.fact_check, size: 14),
-                        label: const Text('Nodal Officer', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-                        onPressed: () {
-                          setState(() {
-                            _officialIdController.text = 'NODAL-OFFICER-01';
-                            _passwordController.text = 'password123';
-                          });
-                        },
-                      ),
-                      ActionChip(
-                        avatar: const Icon(Icons.verified_user, size: 14),
-                        label: const Text('Food Commissioner', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-                        onPressed: () {
-                          setState(() {
-                            _officialIdController.text = 'FOOD-COMM-01';
-                            _passwordController.text = 'password123';
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
 
                   // Login Button
                   ElevatedButton(

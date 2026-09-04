@@ -17,6 +17,7 @@ from app.api.v1.health import router as health_router
 from app.api.v1.heatmaps import router as heatmaps_router
 from app.api.v1.inspections import router as inspections_router
 from app.api.v1.legal_notices import router as legal_notices_router
+from app.api.v1.reports import router as reports_router
 from app.api.v1.scan import router as scan_router
 from app.api.v1.sync import router as sync_router
 from app.api.v1.users import router as users_router
@@ -36,6 +37,7 @@ api_v1_router.include_router(citizen_router)
 api_v1_router.include_router(analytics_router)
 api_v1_router.include_router(heatmaps_router)
 api_v1_router.include_router(legal_notices_router)
+api_v1_router.include_router(reports_router)
 api_v1_router.include_router(audit_router)
 api_v1_router.include_router(sync_router)
 

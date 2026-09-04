@@ -108,14 +108,19 @@ class EvidenceService:
 
         return await self.evidence_repo.update(saved_evidence)
 
-    async def verify_evidence(self, evidence_id: UUID) -> Dict[str, Any]:
+    async def verify_evidence(
+        self, evidence_id: UUID, verified_by_user_id: Optional[UUID] = None,
+    ) -> Dict[str, Any]:
         """Verify evidence payload against its SHA-256 hash and ledger receipt."""
         evidence = await self.get_by_id(evidence_id)
         result = await self.verifier.verify(evidence)
 
         evidence.verification_status = result["status"].lower()
         evidence.last_verified_at = datetime.now(timezone.utc)
+        if verified_by_user_id:
+            evidence.verified_by_user_id = verified_by_user_id
         await self.evidence_repo.update(evidence)
 
         result["evidence_id"] = evidence_id
+        result["verified_by_user_id"] = verified_by_user_id
         return result

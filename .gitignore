@@ -90,3 +90,11 @@ Thumbs.db
 uploads/
 storage/temp/
 *.log
+
+# Databases & Local state
+*.db
+*.sqlite3
+frontend/build/
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies

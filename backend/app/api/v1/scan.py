@@ -35,15 +35,12 @@ async def upload_inspection_image(
     longitude: Optional[float] = Form(None),
     location_name: Optional[str] = Form(None),
     notes: Optional[str] = Form(None),
-    shop_name: Optional[str] = Form(None),
-    shop_owner_name: Optional[str] = Form(None),
-    shop_address: Optional[str] = Form(None),
     user_payload: dict = Depends(get_current_inspector),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Receive product inspection image, validate MIME/integrity, store in object storage,
-    and initialize an inspection entity with shop details.
+    and initialize an inspection entity.
     """
     file_bytes = await file.read()
     inspector_id = UUID(user_payload["sub"])
@@ -56,11 +53,8 @@ async def upload_inspection_image(
         product_barcode=product_barcode,
         latitude=latitude,
         longitude=longitude,
-        location_name=shop_name or location_name,
+        location_name=location_name,
         notes=notes,
-        shop_name=shop_name,
-        shop_owner_name=shop_owner_name,
-        shop_address=shop_address,
     )
 
     # Audit log

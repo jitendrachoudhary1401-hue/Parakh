@@ -11,17 +11,11 @@ import 'providers/sync_provider.dart';
 import 'screens/ai_review_screen.dart';
 import 'screens/ar_camera_screen.dart';
 import 'screens/barcode_scanner_screen.dart';
-import 'screens/citizen_dashboard_screen.dart';
-import 'screens/commissioner_dashboard_screen.dart';
-import 'screens/commissioner_portal_screen.dart';
+import 'screens/compliance_verdict_screen.dart';
 import 'screens/dashboard_screen.dart';
-import 'screens/establishment_intake_screen.dart';
 import 'screens/evidence_report_screen.dart';
 import 'screens/inspection_history_screen.dart';
-import 'screens/inspector_dashboard_screen.dart';
 import 'screens/login_screen.dart';
-import 'screens/nodal_dashboard_screen.dart';
-import 'screens/nodal_verifier_screen.dart';
 import 'screens/offline_sync_hub_screen.dart';
 import 'screens/profile_settings_screen.dart';
 import 'screens/splash_screen.dart';
@@ -60,21 +54,14 @@ class ParakhMobileApp extends StatelessWidget {
         '/': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
         '/dashboard': (context) => const DashboardScreen(),
-        '/inspector-dashboard': (context) => const InspectorDashboardScreen(),
-        '/nodal-dashboard': (context) => const NodalDashboardScreen(),
-        '/commissioner-dashboard': (context) => const CommissionerDashboardScreen(),
-        '/citizen-dashboard': (context) => const CitizenDashboardScreen(),
-        '/establishment-intake': (context) => const EstablishmentIntakeScreen(),
         '/ar-camera': (context) => const ArCameraScreen(),
         '/barcode-scanner': (context) => const BarcodeScannerScreen(),
         '/ai-review': (context) => const AiReviewScreen(),
-        '/verdict': (context) => const EvidenceReportScreen(),
+        '/verdict': (context) => const ComplianceVerdictScreen(),
         '/evidence-report': (context) => const EvidenceReportScreen(),
         '/history': (context) => const InspectionHistoryScreen(),
         '/sync-hub': (context) => const OfflineSyncHubScreen(),
         '/profile': (context) => const ProfileSettingsScreen(),
-        '/nodal-verifier': (context) => const NodalVerifierScreen(),
-        '/commissioner-portal': (context) => const CommissionerPortalScreen(),
       },
     );
   }

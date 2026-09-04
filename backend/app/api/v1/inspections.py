@@ -12,7 +12,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_admin, get_current_inspector, get_current_nodal_officer, get_current_user
+from app.api.deps import get_current_admin, get_current_inspector, get_current_user
 from app.core.responses import paginated_response, success_response
 from app.db.postgres import get_db
 from app.models.user import User
@@ -21,8 +21,6 @@ from app.schemas.inspection import (
     InspectionResponse,
     InspectionSummary,
     InspectionUpdate,
-    NodalSubmissionPayload,
-    NodalDecisionPayload,
 )
 from app.services.inspection_service import InspectionService
 
@@ -44,7 +42,11 @@ async def list_inspections(
     """List and filter inspections. Inspectors see own or zone records; Admins see all."""
     service = InspectionService(db)
     offset = (page - 1) * page_size
-    inspector_filter = current_user.user_id if current_user.role == "inspector" else None
+    inspector_filter = (
+        current_user.user_id
+        if current_user.role in ("food_inspector", "inspector")
+        else None
+    )
 
     inspections, total = await service.list_inspections(
         offset=offset,
@@ -61,7 +63,7 @@ async def list_inspections(
     return paginated_response(data=data, total=total, page=page, page_size=page_size)
 
 
-@router.post("/", dependencies=[Depends(get_current_inspector)])
+@router.post("/")
 async def create_inspection(
     payload: InspectionCreate,
     current_user: User = Depends(get_current_user),
@@ -74,23 +76,6 @@ async def create_inspection(
         data=InspectionResponse.model_validate(created).model_dump(),
         message="Inspection created successfully",
         status_code=201,
-    )
-
-
-@router.get("/pending-nodal", dependencies=[Depends(get_current_nodal_officer)])
-async def get_pending_nodal_inspections(
-    page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=100),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Nodal Verifier: List all dossiers awaiting statutory verification scrutiny."""
-    service = InspectionService(db)
-    offset = (page - 1) * page_size
-    pending = await service.get_pending_nodal(limit=page_size, offset=offset)
-    return success_response(
-        data=[InspectionResponse.model_validate(i).model_dump() for i in pending],
-        message=f"Retrieved {len(pending)} pending dossiers for Nodal scrutiny",
     )
 
 
@@ -119,97 +104,3 @@ async def update_inspection_status(
         data=InspectionResponse.model_validate(updated).model_dump(),
         message="Inspection updated successfully",
     )
-
-
-@router.patch("/{inspection_id}/comment", dependencies=[Depends(get_current_inspector)])
-async def update_inspection_comment(
-    inspection_id: UUID,
-    payload: InspectionUpdate,
-    db: AsyncSession = Depends(get_db),
-):
-    """Inspector: update/append notes & comments for an inspection."""
-    service = InspectionService(db)
-    updated = await service.update_status(inspection_id, payload)
-    return success_response(
-        data=InspectionResponse.model_validate(updated).model_dump(),
-        message="Comment updated successfully",
-    )
-
-
-@router.post("/{inspection_id}/submit-nodal", dependencies=[Depends(get_current_inspector)])
-async def submit_inspection_to_nodal(
-    inspection_id: UUID,
-    payload: NodalSubmissionPayload,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Inspector: Transmit finalized inspection dossier (shop details, remarks, evidence photos,
-    statutory violation rules) to Nodal Verifier queue for legal scrutiny.
-    """
-    service = InspectionService(db)
-    updated = await service.submit_to_nodal(inspection_id, payload)
-    return success_response(
-        data=InspectionResponse.model_validate(updated).model_dump(),
-        message="Inspection dossier successfully transmitted to Nodal Verification Authority (S. K. Sharma)",
-    )
-
-
-@router.post("/{inspection_id}/nodal-decision", dependencies=[Depends(get_current_nodal_officer)])
-async def record_nodal_decision(
-    inspection_id: UUID,
-    payload: NodalDecisionPayload,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Nodal Verifier: Record statutory scrutiny decision.
-    - Accept and forward to Commissioner for digital signature
-    - Deny and Reject
-    Requires verifier comments.
-    """
-    service = InspectionService(db)
-    updated = await service.record_nodal_decision(inspection_id, payload)
-    is_accept = payload.decision.upper() in ("ACCEPT", "ACCEPTED", "APPROVE", "APPROVED")
-    decision_verb = "accepted and forwarded to Commissioner for digital signature" if is_accept else "rejected"
-    return success_response(
-        data=InspectionResponse.model_validate(updated).model_dump(),
-        message=f"Dossier successfully {decision_verb} by Nodal Verifier",
-    )
-
-
-@router.get("/pending-commissioner")
-async def get_pending_commissioner(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """List all dossiers forwarded to Commissioner for digital signature."""
-    service = InspectionService(db)
-    items = await service.get_pending_commissioner()
-    return success_response(
-        data=[InspectionResponse.model_validate(i).model_dump() for i in items],
-        message=f"Found {len(items)} dossiers awaiting Commissioner digital signature",
-    )
-
-
-@router.post("/{inspection_id}/commissioner-sign")
-async def record_commissioner_signature(
-    inspection_id: UUID,
-    payload: Optional[Dict[str, Any]] = None,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Commissioner: Apply digital e-Signature and issue statutory enforcement notice."""
-    service = InspectionService(db)
-    comm_name = (payload or {}).get("commissioner_name") or current_user.full_name or "Dr. V. K. Verma"
-    remarks = (payload or {}).get("remarks") or "Digital signature applied. Statutory legal notice issued under Rule 32 of LM Rules, 2011."
-    updated = await service.record_commissioner_signature(
-        inspection_id=inspection_id,
-        commissioner_name=comm_name,
-        remarks=remarks,
-    )
-    return success_response(
-        data=InspectionResponse.model_validate(updated).model_dump(),
-        message="Statutory digital signature applied successfully. Notice issued.",
-    )
-

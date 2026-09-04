@@ -25,7 +25,22 @@ class UserRepository:
 
     async def get_by_email(self, email: str) -> Optional[User]:
         result = await self.db.execute(
-            select(User).where(User.email == email)
+            select(User).where(User.email == email.lower().strip())
+        )
+        return result.scalar_one_or_none()
+
+    async def get_by_official_uid(self, uid: str) -> Optional[User]:
+        result = await self.db.execute(
+            select(User).where(User.official_uid == uid.upper().strip())
+        )
+        return result.scalar_one_or_none()
+
+    async def get_by_identifier(self, identifier: str) -> Optional[User]:
+        clean = identifier.strip()
+        result = await self.db.execute(
+            select(User).where(
+                (User.email == clean.lower()) | (User.official_uid == clean.upper())
+            )
         )
         return result.scalar_one_or_none()
 

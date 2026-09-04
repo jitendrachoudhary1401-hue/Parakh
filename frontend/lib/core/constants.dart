@@ -10,9 +10,8 @@ class AppConstants {
   static const String apiKey = 'parakh_sec_api_key_2026';
   static const String apiKeyHeaderName = 'X-API-Key';
 
-  // Default points to ADB reverse localhost (USB) or current Wi-Fi LAN IP
-  static const String defaultApiBaseUrl = 'http://127.0.0.1:8000/api/v1'; // Zero-latency via ADB reverse
-  static const String wifiLanApiUrl = 'http://10.199.56.59:8000/api/v1'; // Active Wi-Fi LAN IP
+  // Default points to the local FastAPI Gateway over ADB reverse or Wi-Fi (192.168.1.7)
+  static const String defaultApiBaseUrl = 'http://127.0.0.1:8000/api/v1';
   static const String emulatorApiUrl = 'http://10.0.2.2:8000/api/v1';
   static const String localhostApiUrl = 'http://127.0.0.1:8000/api/v1';
 
@@ -32,6 +31,7 @@ class AppConstants {
   static const String evidenceVerify = '/evidence/verify';
   static const String inspectionsList = '/inspections';
   static const String legalNotices = '/legal-notices';
+  static const String reports = '/reports';
   static const String syncStatus = '/sync/status';
   static const String healthCheck = '/health';
 

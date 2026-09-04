@@ -18,12 +18,12 @@ from app.db.postgres import Base
 
 
 class UserRole(str):
-    """User role constants matching RBAC specification §11."""
-    INSPECTOR = "inspector"
-    ADMIN = "admin"
-    CITIZEN = "citizen"
+    """User role constants strictly matching SIH 2026 specification."""
+    FOOD_INSPECTOR = "food_inspector"
     NODAL_OFFICER = "nodal_officer"
-    FOOD_COMMISSIONER = "food_commissioner"
+    FOOD_SAFETY_COMMISSIONER = "food_safety_commissioner"
+    # Legacy alias for inspector
+    INSPECTOR = "food_inspector"
 
 
 class User(Base):
@@ -34,18 +34,24 @@ class User(Base):
         primary_key=True,
         default=uuid.uuid4,
     )
+    official_uid: Mapped[str] = mapped_column(
+        String(50),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(
         String(255), unique=True, nullable=False, index=True,
     )
     hashed_password: Mapped[str] = mapped_column(Text, nullable=False)
     role: Mapped[str] = mapped_column(
-        String(20),
+        String(50),
         nullable=False,
         index=True,
-        default="citizen",
+        default=UserRole.FOOD_INSPECTOR,
     )
-    zone_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    zone_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 

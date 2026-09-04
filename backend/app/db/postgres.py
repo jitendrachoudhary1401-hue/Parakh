@@ -69,76 +69,73 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     """
-    Initialise database tables and seed default admin/inspector accounts.
+    Initialise database tables and seed the 3 official SIH demo accounts:
+    1. Food Inspector
+    2. Nodal Officer
+    3. Food Safety Commissioner
     """
     try:
-        import app.models  # Ensures all ORM models are registered with Base.metadata
-        from sqlalchemy import text
-
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-            # Ensure schema columns exist on existing tables (non-destructive sync)
-            migration_sqls = [
-                "ALTER TABLE inspections ADD COLUMN IF NOT EXISTS law_id UUID;",
-                "ALTER TABLE inspections ADD COLUMN IF NOT EXISTS metadata_json JSONB;",
-                "ALTER TABLE inspections ADD COLUMN IF NOT EXISTS processed_image_path TEXT;",
-                "ALTER TABLE inspections ADD COLUMN IF NOT EXISTS overall_result VARCHAR(30);",
-                "ALTER TABLE inspections ADD COLUMN IF NOT EXISTS blockchain_hash VARCHAR(128);",
-                "ALTER TABLE inspections ADD COLUMN IF NOT EXISTS blockchain_tx_id VARCHAR(256);",
-                "ALTER TABLE inspections ADD COLUMN IF NOT EXISTS location_name VARCHAR(500);",
-            ]
-            for stmt in migration_sqls:
-                try:
-                    await conn.execute(text(stmt))
-                except Exception as alter_e:
-                    import logging
-                    logging.getLogger("parakh.db").debug("Migration statement skipped: %s", alter_e)
-
         async with async_session_factory() as session:
-            from app.models.user import User
+            from app.models.user import User, UserRole
             from app.core.security import hash_password
             from sqlalchemy import select
 
-            users_to_seed = [
+            demo_accounts = [
                 {
-                    "full_name": "Inspector Rajesh Kumar (Legal Metrology)",
-                    "email": "officer.rajesh@doca.gov.in",
-                    "password": "password123",
-                    "role": "inspector",
+                    "full_name": "Priya Sharma (Food Safety Officer)",
+                    "email": "inspector.sharma@doca.gov.in",
+                    "official_uid": "DOCA-FI-2026-0101",
+                    "role": UserRole.FOOD_INSPECTOR,
                     "zone_id": "North Zone (New Delhi Division)",
+                    "password": "Inspector@2026",
                 },
                 {
-                    "full_name": "Nodal Officer S. K. Sharma (Verification Authority)",
-                    "email": "nodal.officer@doca.gov.in",
-                    "password": "password123",
-                    "role": "nodal_officer",
-                    "zone_id": "Central HQ (Verification Division)",
+                    "full_name": "Rajesh Verma (Zonal Nodal Officer)",
+                    "email": "nodal.verma@doca.gov.in",
+                    "official_uid": "DOCA-NO-2026-0202",
+                    "role": UserRole.NODAL_OFFICER,
+                    "zone_id": "North Zone (New Delhi Division)",
+                    "password": "Nodal@2026",
                 },
                 {
-                    "full_name": "Dr. V. K. Verma (Food Safety Commissioner)",
-                    "email": "food.commissioner@doca.gov.in",
-                    "password": "password123",
-                    "role": "food_commissioner",
-                    "zone_id": "Directorate General (Apex Authority)",
+                    "full_name": "Dr. Ananya Iyer (Food Safety Commissioner)",
+                    "email": "commissioner.iyer@doca.gov.in",
+                    "official_uid": "DOCA-FSC-2026-0303",
+                    "role": UserRole.FOOD_SAFETY_COMMISSIONER,
+                    "zone_id": "National Headquarters (DoCA)",
+                    "password": "Commissioner@2026",
                 },
             ]
 
-            for u_data in users_to_seed:
+            for acc in demo_accounts:
                 res = await session.execute(
-                    select(User).where(User.email == u_data["email"])
+                    select(User).where(
+                        (User.email == acc["email"]) | (User.official_uid == acc["official_uid"])
+                    )
                 )
                 existing = res.scalar_one_or_none()
                 if not existing:
-                    new_u = User(
-                        full_name=u_data["full_name"],
-                        email=u_data["email"],
-                        hashed_password=hash_password(u_data["password"]),
-                        role=u_data["role"],
-                        zone_id=u_data["zone_id"],
+                    user_obj = User(
+                        full_name=acc["full_name"],
+                        email=acc["email"],
+                        official_uid=acc["official_uid"],
+                        hashed_password=hash_password(acc["password"]),
+                        role=acc["role"],
+                        zone_id=acc["zone_id"],
                         is_active=True,
                     )
-                    session.add(new_u)
+                    session.add(user_obj)
+                else:
+                    # Update credentials / role if needed
+                    existing.official_uid = acc["official_uid"]
+                    existing.role = acc["role"]
+                    existing.hashed_password = hash_password(acc["password"])
+                    existing.full_name = acc["full_name"]
+                    existing.zone_id = acc["zone_id"]
+
             await session.commit()
     except Exception as e:
         import logging

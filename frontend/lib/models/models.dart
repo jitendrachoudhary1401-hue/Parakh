@@ -1,5 +1,34 @@
-/// User Role definition matching statutory RBAC specifications
-enum UserRole { inspector, nodalOfficer, commissioner, admin, citizen }
+/// SIH 2026 Statutory Official Roles
+enum UserRole {
+  foodInspector,
+  nodalOfficer,
+  foodSafetyCommissioner;
+
+  static UserRole fromString(String? role) {
+    switch (role?.toLowerCase()) {
+      case 'food_safety_commissioner':
+      case 'commissioner':
+        return UserRole.foodSafetyCommissioner;
+      case 'nodal_officer':
+        return UserRole.nodalOfficer;
+      case 'food_inspector':
+      case 'inspector':
+      default:
+        return UserRole.foodInspector;
+    }
+  }
+
+  String toDisplayString() {
+    switch (this) {
+      case UserRole.foodSafetyCommissioner:
+        return 'Food Safety Commissioner';
+      case UserRole.nodalOfficer:
+        return 'Nodal Officer';
+      case UserRole.foodInspector:
+        return 'Food Inspector';
+    }
+  }
+}
 
 /// User Model
 class UserModel {
@@ -21,54 +50,16 @@ class UserModel {
     required this.token,
   });
 
-  bool get isInspector => role == UserRole.inspector;
-  bool get isNodalOfficer => role == UserRole.nodalOfficer;
-  bool get isCommissioner => role == UserRole.commissioner;
-  bool get isAdmin => role == UserRole.admin;
-  bool get isCitizen => role == UserRole.citizen;
-
   factory UserModel.fromJson(Map<String, dynamic> json, {String token = ''}) {
-    final rawRole = (json['role'] ?? '').toString().toLowerCase();
-    UserRole resolvedRole = UserRole.inspector;
-    if (rawRole == 'nodal_officer' || rawRole == 'nodal_verifier') {
-      resolvedRole = UserRole.nodalOfficer;
-    } else if (rawRole == 'food_commissioner' || rawRole == 'commissioner') {
-      resolvedRole = UserRole.commissioner;
-    } else if (rawRole == 'admin') {
-      resolvedRole = UserRole.admin;
-    } else if (rawRole == 'citizen') {
-      resolvedRole = UserRole.citizen;
-    }
-
     return UserModel(
-      id: json['id'] ?? '',
+      id: json['id'] ?? json['user_id'] ?? '',
       email: json['email'] ?? '',
       fullName: json['full_name'] ?? json['name'] ?? 'Enforcement Officer',
       officialId:
-          json['official_id'] ?? json['badge_number'] ?? 'DOCA-INSP-2026',
-      role: resolvedRole,
-      zone: json['zone'] ?? 'North Zone (New Delhi Division)',
+          json['official_uid'] ?? json['official_id'] ?? json['badge_number'] ?? 'DOCA-OFFICIAL',
+      role: UserRole.fromString(json['role']),
+      zone: json['zone_id'] ?? json['zone'] ?? 'North Zone (New Delhi Division)',
       token: token,
-    );
-  }
-
-  UserModel copyWith({
-    String? id,
-    String? email,
-    String? fullName,
-    String? officialId,
-    UserRole? role,
-    String? zone,
-    String? token,
-  }) {
-    return UserModel(
-      id: id ?? this.id,
-      email: email ?? this.email,
-      fullName: fullName ?? this.fullName,
-      officialId: officialId ?? this.officialId,
-      role: role ?? this.role,
-      zone: zone ?? this.zone,
-      token: token ?? this.token,
     );
   }
 
@@ -451,13 +442,6 @@ class InspectionRecord {
   final BlockchainReceipt? blockchainReceipt;
   final String legalNoticePdfUrl;
   final bool isSynced;
-  final String shopOwnerName;
-  final String inspectorRemarks;
-  final String status;
-  final String verifierComment;
-  final String verifierDecision;
-  final String commissionerStatus;
-  final String verifiedAt;
 
   InspectionRecord({
     required this.id,
@@ -476,31 +460,43 @@ class InspectionRecord {
     this.blockchainReceipt,
     this.legalNoticePdfUrl = '',
     this.isSynced = true,
-    this.shopOwnerName = '',
-    this.inspectorRemarks = '',
-    this.status = 'PENDING',
-    this.verifierComment = '',
-    this.verifierDecision = '',
-    this.commissionerStatus = '',
-    this.verifiedAt = '',
   });
 
   factory InspectionRecord.fromJson(Map<String, dynamic> json) {
+    final rawId = json['id'] ?? json['inspection_id']?.toString() ?? '';
+    final rawBarcode = json['barcode'] ?? json['product_barcode'] ?? '';
+    final rawOverall = json['overall_result']?.toString().toUpperCase();
+    final bool compliant = json['is_compliant'] ??
+        (rawOverall == 'PASS' ||
+            rawOverall == 'COMPLIANT' ||
+            (json['violations'] == null &&
+                rawOverall != 'VIOLATION' &&
+                rawOverall != 'FAIL'));
+
     return InspectionRecord(
-      id: (json['id'] ?? json['inspection_id'] ?? '').toString(),
-      barcode: json['barcode'] ?? json['product_barcode'] ?? '',
-      productName: json['product_name'] ?? json['metadata_json']?['product_name'] ?? 'Packaged Commodity',
-      storeName: json['store_name'] ?? json['metadata_json']?['establishment']?['shop_name'] ?? json['location_name'] ?? 'Retail Outlet',
-      locationAddress: json['location_address'] ?? json['metadata_json']?['establishment']?['shop_address'] ?? 'New Delhi, India',
+      id: rawId,
+      barcode: rawBarcode,
+      productName: json['product_name'] ??
+          (rawBarcode.isNotEmpty
+              ? 'Commodity ($rawBarcode)'
+              : 'Packaged Commodity'),
+      storeName:
+          json['store_name'] ?? json['location_name'] ?? 'Inspection Premise',
+      locationAddress:
+          json['location_address'] ?? json['location_name'] ?? 'Jurisdiction Area',
       latitude: (json['latitude'] as num?)?.toDouble() ?? 28.6139,
       longitude: (json['longitude'] as num?)?.toDouble() ?? 77.2090,
       timestamp: json['timestamp'] != null
           ? DateTime.parse(json['timestamp'])
-          : (json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now()),
-      isCompliant: json['is_compliant'] ??
-          (json['overall_result'] == 'compliant' || (json['violations'] == null || (json['violations'] as List).isEmpty)),
-      imagePath: json['image_path'] ?? json['image_storage_path'] ?? json['image_url'] ?? '',
-      unwarpedImagePath: json['unwarped_image_path'] ?? json['processed_image_path'] ?? '',
+          : (json['created_at'] != null
+              ? DateTime.parse(json['created_at'])
+              : DateTime.now()),
+      isCompliant: compliant,
+      imagePath: json['image_path'] ??
+          json['image_storage_path'] ??
+          json['image_url'] ??
+          '',
+      unwarpedImagePath: json['unwarped_image_path'] ?? '',
       extractedData: json['extracted_data'] != null
           ? OCRExtractedData.fromJson(json['extracted_data'])
           : OCRExtractedData.empty(),
@@ -512,23 +508,18 @@ class InspectionRecord {
           ? BlockchainReceipt.fromJson(json['blockchain_receipt'])
           : (json['blockchain_hash'] != null
               ? BlockchainReceipt(
-                  txHash: json['blockchain_tx_id'] ?? 'DOCA-TX-2026',
+                  txHash: json['blockchain_tx_id'] ?? '',
                   evidenceHash: json['blockchain_hash'],
-                  blockNumber: '10482',
-                  timestamp: json['created_at'] ?? DateTime.now().toIso8601String(),
+                  blockNumber: '1',
+                  timestamp:
+                      json['created_at'] ?? DateTime.now().toIso8601String(),
                   channel: 'doca-evidentiary-channel',
                   isAnchored: true,
                 )
               : null),
-      legalNoticePdfUrl: json['legal_notice_pdf_url'] ?? '',
+      legalNoticePdfUrl: json['legal_notice_pdf_url'] ??
+          (rawId.isNotEmpty ? '/api/v1/legal-notices/download/$rawId' : ''),
       isSynced: json['is_synced'] ?? true,
-      shopOwnerName: json['shop_owner_name'] ?? json['metadata_json']?['establishment']?['shop_owner_name'] ?? '',
-      inspectorRemarks: json['inspector_remarks'] ?? json['notes'] ?? '',
-      status: json['status'] ?? 'PENDING',
-      verifierComment: json['verifier_comment'] ?? json['metadata_json']?['nodal_verification']?['verifier_comment'] ?? '',
-      verifierDecision: json['verifier_decision'] ?? json['metadata_json']?['nodal_verification']?['decision'] ?? '',
-      commissionerStatus: json['commissioner_status'] ?? json['metadata_json']?['nodal_verification']?['commissioner_status'] ?? '',
-      verifiedAt: json['verified_at'] ?? json['metadata_json']?['nodal_verification']?['verified_at'] ?? '',
     );
   }
 
@@ -548,13 +539,6 @@ class InspectionRecord {
         'violations': violations.map((e) => e.toJson()).toList(),
         'legal_notice_pdf_url': legalNoticePdfUrl,
         'is_synced': isSynced,
-        'shop_owner_name': shopOwnerName,
-        'inspector_remarks': inspectorRemarks,
-        'status': status,
-        'verifier_comment': verifierComment,
-        'verifier_decision': verifierDecision,
-        'commissioner_status': commissionerStatus,
-        'verified_at': verifiedAt,
       };
 }
 
@@ -604,3 +588,109 @@ class SyncQueueItem {
     );
   }
 }
+
+/// Multi-Tier Statutory Verification & Certification Workflow Report
+class ReportWorkflowRecord {
+  final String reportId;
+  final String inspectionId;
+  final String generatedByUserId;
+  final String reportType;
+  final String pdfUrl;
+  final String fileHash;
+  final String status;
+  final DateTime createdAt;
+  final String? inspectorNotes;
+  final String? nodalOfficerId;
+  final String? nodalComments;
+  final DateTime? nodalReviewedAt;
+  final String? commissionerId;
+  final String? commissionerComments;
+  final DateTime? commissionerCertifiedAt;
+  final String? digitalSignatureHash;
+
+  ReportWorkflowRecord({
+    required this.reportId,
+    required this.inspectionId,
+    required this.generatedByUserId,
+    required this.reportType,
+    required this.pdfUrl,
+    required this.fileHash,
+    required this.status,
+    required this.createdAt,
+    this.inspectorNotes,
+    this.nodalOfficerId,
+    this.nodalComments,
+    this.nodalReviewedAt,
+    this.commissionerId,
+    this.commissionerComments,
+    this.commissionerCertifiedAt,
+    this.digitalSignatureHash,
+  });
+
+  bool get isDraft => status == 'DRAFT';
+  bool get isPendingNodal => status == 'PENDING_NODAL_REVIEW';
+  bool get isForwardedToCommissioner => status == 'FORWARDED_TO_COMMISSIONER';
+  bool get isCertified => status == 'CERTIFIED';
+
+  String get statusDisplay {
+    switch (status) {
+      case 'DRAFT':
+        return 'Inspector Draft';
+      case 'PENDING_NODAL_REVIEW':
+        return 'Pending Nodal Review';
+      case 'FORWARDED_TO_COMMISSIONER':
+        return 'Pending FSC Certification';
+      case 'CERTIFIED':
+        return 'Statutory Certified';
+      default:
+        return status;
+    }
+  }
+
+  factory ReportWorkflowRecord.fromJson(Map<String, dynamic> json) {
+    return ReportWorkflowRecord(
+      reportId: json['report_id']?.toString() ?? '',
+      inspectionId: json['inspection_id']?.toString() ?? '',
+      generatedByUserId: json['generated_by_user_id']?.toString() ?? '',
+      reportType: json['report_type'] ?? 'LEGAL_SHOW_CAUSE',
+      pdfUrl: json['pdf_url'] ?? '',
+      fileHash: json['file_hash'] ?? '',
+      status: json['status'] ?? 'DRAFT',
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : DateTime.now(),
+      inspectorNotes: json['inspector_notes'],
+      nodalOfficerId: json['nodal_officer_id']?.toString(),
+      nodalComments: json['nodal_comments'],
+      nodalReviewedAt: json['nodal_reviewed_at'] != null
+          ? DateTime.parse(json['nodal_reviewed_at'])
+          : null,
+      commissionerId: json['commissioner_id']?.toString(),
+      commissionerComments: json['commissioner_comments'],
+      commissionerCertifiedAt: json['commissioner_certified_at'] != null
+          ? DateTime.parse(json['commissioner_certified_at'])
+          : null,
+      digitalSignatureHash: json['digital_signature_hash'],
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'report_id': reportId,
+        'inspection_id': inspectionId,
+        'generated_by_user_id': generatedByUserId,
+        'report_type': reportType,
+        'pdf_url': pdfUrl,
+        'file_hash': fileHash,
+        'status': status,
+        'created_at': createdAt.toIso8601String(),
+        'inspector_notes': inspectorNotes,
+        'nodal_officer_id': nodalOfficerId,
+        'nodal_comments': nodalComments,
+        'nodal_reviewed_at': nodalReviewedAt?.toIso8601String(),
+        'commissioner_id': commissionerId,
+        'commissioner_comments': commissionerComments,
+        'commissioner_certified_at': commissionerCertifiedAt?.toIso8601String(),
+        'digital_signature_hash': digitalSignatureHash,
+      };
+}
+

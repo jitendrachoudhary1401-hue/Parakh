@@ -89,50 +89,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
-
-              // Role Authorization Badge Card
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                  border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.security, color: AppTheme.primary, size: 22),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Active Jurisdiction: ${(user?.role.name ?? "inspector").toUpperCase()}',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                          ),
-                          const Text(
-                            'Statutory Legal Metrology (Packaged Commodities) Grid',
-                            style: TextStyle(fontSize: 10, color: AppTheme.textMuted),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppTheme.success.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text(
-                        'AUTHORIZED',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.success),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
               // Preferences Section
               Text(
@@ -170,6 +127,10 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                             DropdownMenuItem(
                                 value: 'English',
                                 child: Text('English',
+                                    style: TextStyle(fontSize: 13))),
+                            DropdownMenuItem(
+                                value: 'Hindi',
+                                child: Text('हिन्दी (Hindi)',
                                     style: TextStyle(fontSize: 13))),
                           ],
                           onChanged: (val) {
@@ -247,8 +208,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                           auth.updateServerUrl(newUrl);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(
-                                  'Server Gateway URL updated to: $newUrl'),
+                              content: Text('Server Gateway URL updated to: $newUrl'),
                               backgroundColor: AppTheme.success,
                             ),
                           );

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/theme.dart';
@@ -16,10 +17,21 @@ class AiReviewScreen extends StatefulWidget {
 }
 
 class _AiReviewScreenState extends State<AiReviewScreen> {
-  final _storeNameController =
-      TextEditingController(text: 'Reliance Retail Superstore, Sector 18');
-  final _locationController =
-      TextEditingController(text: 'Sector 18, Noida, NCR Division');
+  late final TextEditingController _storeNameController;
+  late final TextEditingController _locationController;
+
+  @override
+  void initState() {
+    super.initState();
+    final scan = Provider.of<ScanProvider>(context, listen: false);
+    _storeNameController = TextEditingController();
+    _locationController = TextEditingController(
+      text: scan.locationAddress.isNotEmpty &&
+              scan.locationAddress != 'Acquiring GPS location...'
+          ? scan.locationAddress
+          : '',
+    );
+  }
 
   @override
   void dispose() {
@@ -35,28 +47,33 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
     final isOffline = !sync.isOnline;
 
     final extracted = scan.extractedData ?? OCRExtractedData.empty();
-    final barcode = scan.selectedBarcode.isNotEmpty ? scan.selectedBarcode : '8901030912345';
     final gs1 = scan.gs1Product ??
         GS1Product(
-          gtin: barcode,
-          productName: extracted.manufacturerName.isNotEmpty
-              ? 'Packaged Commodity ($barcode)'
-              : 'Pre-Packaged Commodity ($barcode)',
+          gtin: scan.selectedBarcode,
+          productName: scan.selectedBarcode.isNotEmpty
+              ? 'Commodity (GTIN: ${scan.selectedBarcode})'
+              : 'Packaged Commodity',
           registeredCompany: extracted.manufacturerName.isNotEmpty
               ? extracted.manufacturerName
-              : 'Registered Entity ($barcode)',
+              : 'Unknown / Unregistered Manufacturer',
           companyAddress: extracted.manufacturerAddress.isNotEmpty
               ? extracted.manufacturerAddress
-              : 'Premise Jurisdiction Address',
-          brand: 'Commercial Packaged Goods',
-          isVerified: true,
+              : '',
+          brand: '',
+          isVerified: false,
         );
 
     final record = await compliance.evaluateCompliance(
       extracted: extracted,
       gs1: gs1,
-      storeName: _storeNameController.text.trim(),
-      locationAddress: _locationController.text.trim(),
+      storeName: _storeNameController.text.trim().isNotEmpty
+          ? _storeNameController.text.trim()
+          : 'Inspection Location',
+      locationAddress: _locationController.text.trim().isNotEmpty
+          ? _locationController.text.trim()
+          : (scan.locationAddress.isNotEmpty && scan.locationAddress != 'Acquiring GPS location...'
+              ? scan.locationAddress
+              : 'GPS Geo-Coordinate Location'),
       isOffline: isOffline,
     );
 
@@ -73,7 +90,7 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
     }
 
     if (mounted) {
-      Navigator.pushNamed(context, '/evidence-report');
+      Navigator.pushNamed(context, '/verdict');
     }
   }
 
@@ -131,28 +148,38 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
                     ),
                     const SizedBox(height: 10),
                     Container(
-                      height: 140,
+                      height: 160,
+                      width: double.infinity,
                       decoration: BoxDecoration(
                         color: const Color(0xFF1E293B),
                         borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                       ),
-                      child: const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.crop_original,
-                                size: 36, color: Colors.white60),
-                            SizedBox(height: 6),
-                            Text(
-                              'Label Perspective Rectified • Real-time OCR Analysis Active',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600),
+                      child: scan.capturedImage != null &&
+                              File(scan.capturedImage!.path).existsSync()
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                              child: Image.file(
+                                File(scan.capturedImage!.path),
+                                fit: BoxFit.contain,
+                              ),
+                            )
+                          : const Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.crop_original,
+                                      size: 36, color: Colors.white60),
+                                  SizedBox(height: 6),
+                                  Text(
+                                    'Surface Unwarped Label Evidence',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ],
-                        ),
-                      ),
                     ),
                   ],
                 ),
@@ -169,6 +196,7 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
                 controller: _storeNameController,
                 decoration: const InputDecoration(
                   labelText: 'Retail Outlet / Store Name',
+                  hintText: 'Enter retail outlet / premise name',
                   prefixIcon: Icon(Icons.storefront_outlined,
                       size: 18, color: AppTheme.secondary),
                 ),
@@ -178,6 +206,7 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
                 controller: _locationController,
                 decoration: const InputDecoration(
                   labelText: 'Location / Market Division',
+                  hintText: 'Enter division or city',
                   prefixIcon: Icon(Icons.location_on_outlined,
                       size: 18, color: AppTheme.secondary),
                 ),
@@ -196,7 +225,7 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
                 title: 'MRP Declaration (Rule 6(1)(e))',
                 value: extracted.mrp.isNotEmpty
                     ? extracted.mrp
-                    : '[NOT DETECTED — VIOLATION OF RULE 6(1)(e)]',
+                    : 'Not Detected (Non-compliant)',
                 isValid: extracted.mrp.isNotEmpty,
                 icon: Icons.currency_rupee,
               ),
@@ -207,7 +236,7 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
                 title: 'Net Quantity (Rule 6(1)(f))',
                 value: extracted.netQuantity.isNotEmpty
                     ? extracted.netQuantity
-                    : '[NOT DETECTED — VIOLATION OF RULE 6(1)(f)]',
+                    : 'Not Detected (Non-compliant)',
                 isValid: extracted.netQuantity.isNotEmpty,
                 icon: Icons.scale_outlined,
               ),
@@ -217,8 +246,10 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
                 context,
                 title: 'Mfg / Packaging Date (Rule 6(1)(d))',
                 value: extracted.mfgDate.isNotEmpty
-                    ? 'Mfg: ${extracted.mfgDate} • Exp: ${extracted.expiryDate}'
-                    : '[NOT DETECTED — VIOLATION OF RULE 6(1)(d)]',
+                    ? (extracted.expiryDate.isNotEmpty
+                        ? 'Mfg: ${extracted.mfgDate} • Exp: ${extracted.expiryDate}'
+                        : 'Mfg: ${extracted.mfgDate}')
+                    : 'Not Detected (Non-compliant)',
                 isValid: extracted.mfgDate.isNotEmpty,
                 icon: Icons.calendar_today_outlined,
               ),
@@ -227,10 +258,11 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
               _buildFieldCard(
                 context,
                 title: 'Consumer Care Grievance (Rule 6(1)(h))',
-                value: extracted.consumerCarePhone.isNotEmpty
-                    ? 'Tel: ${extracted.consumerCarePhone} | Email: ${extracted.consumerCareEmail.isNotEmpty ? extracted.consumerCareEmail : "MISSING EMAIL"}'
-                    : '[NOT DETECTED — VIOLATION OF RULE 6(1)(h)]',
-                isValid: extracted.consumerCarePhone.isNotEmpty && extracted.consumerCareEmail.isNotEmpty,
+                value: (extracted.consumerCarePhone.isNotEmpty ||
+                        extracted.consumerCareEmail.isNotEmpty)
+                    ? 'Tel: ${extracted.consumerCarePhone.isNotEmpty ? extracted.consumerCarePhone : "Not Declared"} | Email: ${extracted.consumerCareEmail.isNotEmpty ? extracted.consumerCareEmail : "Not Declared"}'
+                    : 'Not Detected (Non-compliant)',
+                isValid: extracted.consumerCareEmail.isNotEmpty,
                 icon: Icons.support_agent_outlined,
               ),
               const SizedBox(height: 8),
@@ -239,49 +271,12 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
                 context,
                 title: 'Manufacturer / Packer (Rule 6(1)(a))',
                 value: extracted.manufacturerName.isNotEmpty
-                    ? '${extracted.manufacturerName}, ${extracted.manufacturerAddress}'
-                    : '[NOT DETECTED — VIOLATION OF RULE 6(1)(a)]',
+                    ? (extracted.manufacturerAddress.isNotEmpty
+                        ? '${extracted.manufacturerName}, ${extracted.manufacturerAddress}'
+                        : extracted.manufacturerName)
+                    : 'Not Detected (Non-compliant)',
                 isValid: extracted.manufacturerName.isNotEmpty,
                 icon: Icons.business_outlined,
-              ),
-              const SizedBox(height: 16),
-
-              // Font Size and Readability Analysis Section (Rule 7, 8, 9 & Schedule I)
-              Text(
-                'FONT SIZE & READABILITY ANALYSIS (RULE 7, 8, 9 / SCHED I)',
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppTheme.surface,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                  border: Border.all(color: AppTheme.outline),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.text_fields, color: AppTheme.primary, size: 18),
-                        SizedBox(width: 8),
-                        Text(
-                          'Optical Character Font Metric Evaluation',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    _buildMetricRow('Principal Display Panel (PDP) Ratio', '32.4% of total pack area', true),
-                    const SizedBox(height: 6),
-                    _buildMetricRow('Minimum Numeral Height (Sched. I)', '2.2 mm (Statutory requirement: ≥ 2.0 mm)', true),
-                    const SizedBox(height: 6),
-                    _buildMetricRow('Background Contrast Ratio', '4.8 : 1 (Rule 9 distinct contrast satisfied)', true),
-                    const SizedBox(height: 6),
-                    _buildMetricRow('Readability & Clarity Index', 'High Sharpness (Laplacian clarity 142.6)', true),
-                  ],
-                ),
               ),
               const SizedBox(height: 24),
 
@@ -295,28 +290,6 @@ class _AiReviewScreenState extends State<AiReviewScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildMetricRow(String label, String value, bool isCompliant) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 11, color: AppTheme.textMuted, fontWeight: FontWeight.w500),
-          ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: isCompliant ? AppTheme.textPrimary : AppTheme.error,
-          ),
-        ),
-      ],
     );
   }
 

@@ -20,6 +20,15 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
   String _searchQuery = '';
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<ComplianceProvider>(context, listen: false)
+          .fetchRemoteInspections();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final compliance = Provider.of<ComplianceProvider>(context);
     final history = compliance.inspectionHistory.where((item) {
@@ -39,6 +48,13 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
       backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: const Text('Inspection Ledger'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, size: 20),
+            onPressed: () => compliance.fetchRemoteInspections(),
+            tooltip: 'Refresh Ledger',
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -75,28 +91,38 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
 
             // Ledger List
             Expanded(
-              child: history.isEmpty
-                  ? const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.inventory_outlined,
-                              size: 40, color: AppTheme.textMuted),
-                          SizedBox(height: 8),
-                          Text('No inspection records match the filter',
-                              style: TextStyle(color: AppTheme.textMuted)),
+              child: RefreshIndicator(
+                onRefresh: () => compliance.fetchRemoteInspections(),
+                child: history.isEmpty
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: const [
+                          SizedBox(height: 120),
+                          Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.inventory_outlined,
+                                    size: 40, color: AppTheme.textMuted),
+                                SizedBox(height: 8),
+                                Text('No inspection records match the filter',
+                                    style: TextStyle(color: AppTheme.textMuted)),
+                              ],
+                            ),
+                          ),
                         ],
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(AppTheme.marginMain),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: history.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          final item = history[index];
+                          return _buildLedgerCard(context, item);
+                        },
                       ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.all(AppTheme.marginMain),
-                      itemCount: history.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) {
-                        final item = history[index];
-                        return _buildLedgerCard(context, item);
-                      },
-                    ),
+              ),
             ),
           ],
         ),
@@ -131,33 +157,22 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
 
   Widget _buildLedgerCard(BuildContext context, InspectionRecord item) {
     final dateStr = DateFormat('dd MMM yyyy, HH:mm').format(item.timestamp);
-    final compliance = Provider.of<ComplianceProvider>(context, listen: false);
 
     return InkWell(
       onTap: () {
-        compliance.evaluateCompliance(
-          extracted: item.extractedData,
-          gs1: GS1Product(
-            gtin: item.barcode,
-            productName: item.productName,
-            registeredCompany: 'Registered Manufacturer',
-            companyAddress: item.locationAddress,
-            brand: 'Standard Brand',
-            isVerified: true,
-          ),
-          storeName: item.storeName,
-          locationAddress: item.locationAddress,
-        );
-        Navigator.pushNamed(context, '/evidence-report');
+        final compliance =
+            Provider.of<ComplianceProvider>(context, listen: false);
+        compliance.setCurrentInspection(item);
+        Navigator.pushNamed(context, '/verdict');
       },
       borderRadius: BorderRadius.circular(AppTheme.radiusSm),
       child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-          border: Border.all(color: AppTheme.outline),
-        ),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+        border: Border.all(color: AppTheme.outline),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -248,6 +263,6 @@ class _InspectionHistoryScreenState extends State<InspectionHistoryScreen> {
         ],
       ),
     ),
-    );
-  }
+  );
+}
 }

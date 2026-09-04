@@ -8,10 +8,12 @@ Login, token refresh, and logout.
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_user
 from app.audit.logger import AuditService
 from app.core.rate_limiter import limiter
 from app.core.responses import success_response
 from app.db.postgres import get_db
+from app.models.user import User
 from app.schemas.auth import LoginRequest, RefreshTokenRequest, LogoutRequest
 from app.services.auth_service import AuthService
 
@@ -67,3 +69,21 @@ async def logout(
 ):
     """Invalidate session / logout."""
     return success_response(data={"logged_out": True}, message="Successfully logged out")
+
+
+@router.get("/me")
+async def get_me(
+    current_user: User = Depends(get_current_user),
+):
+    """Return currently authenticated user information."""
+    return success_response(
+        data={
+            "user_id": str(current_user.user_id),
+            "official_uid": current_user.official_uid,
+            "full_name": current_user.full_name,
+            "email": current_user.email,
+            "role": current_user.role,
+            "zone_id": current_user.zone_id,
+        },
+        message="User profile retrieved successfully",
+    )

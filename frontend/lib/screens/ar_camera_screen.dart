@@ -4,10 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/theme.dart';
-import '../models/models.dart';
-import '../providers/compliance_provider.dart';
 import '../providers/scan_provider.dart';
-import '../providers/sync_provider.dart';
 import '../widgets/ar_overlay_box.dart';
 
 /// AR Live Camera Screen with dynamic Bounding Box Projection and HUD controls
@@ -55,102 +52,93 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
 
   Future<void> _handleCapture() async {
     final scan = Provider.of<ScanProvider>(context, listen: false);
-    final compliance = Provider.of<ComplianceProvider>(context, listen: false);
-    final sync = Provider.of<SyncProvider>(context, listen: false);
-
-    if (scan.product == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please verify a valid product barcode in Step 2 first.'),
-          backgroundColor: AppTheme.warning,
-        ),
-      );
-      Navigator.pushReplacementNamed(context, '/barcode-scanner');
-      return;
-    }
-
+    File? fileToProcess;
     if (_isCameraInitialized &&
         _cameraController != null &&
         _cameraController!.value.isInitialized) {
       try {
         final xFile = await _cameraController!.takePicture();
-        await scan.processImageExtraction(imageFile: File(xFile.path));
-      } catch (_) {
-        await scan.processImageExtraction();
+        fileToProcess = File(xFile.path);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Camera capture failed: $e'),
+              backgroundColor: Colors.red.shade700,
+            ),
+          );
+        }
+        return;
       }
-    } else {
-      await scan.processImageExtraction();
     }
 
-    final extracted = scan.extractedData ?? OCRExtractedData.empty();
-    final gs1 = scan.product!;
-
-    final record = await compliance.evaluateCompliance(
-      inspectionId: scan.lastInspectionId,
-      extracted: extracted,
-      gs1: gs1,
-      storeName: scan.shopName.isNotEmpty ? scan.shopName : 'Commercial Establishment',
-      shopOwnerName: scan.shopOwnerName,
-      locationAddress: scan.shopAddress.isNotEmpty ? scan.shopAddress : scan.locationAddress,
-      latitude: scan.currentLocation?.latitude ?? 28.6139,
-      longitude: scan.currentLocation?.longitude ?? 77.2090,
-      imagePath: scan.capturedImage?.path ?? '',
-      isOffline: !sync.isOnline,
-    );
-
-    if (!sync.isOnline) {
-      await sync.queueInspection(record, scan.capturedImage?.path ?? '');
-    }
-
-    if (mounted) {
-      Navigator.pushNamed(context, '/evidence-report');
+    try {
+      await scan.processImageExtraction(imageFile: fileToProcess);
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/barcode-scanner');
+      }
+    } catch (e) {
+      if (mounted) {
+        final isAuth = e.toString().contains('401') ||
+            e.toString().toLowerCase().contains('unauthorized') ||
+            e.toString().toLowerCase().contains('not authenticated');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isAuth
+                  ? 'Session expired or not authenticated. Please log in again.'
+                  : 'Image processing failed: $e',
+            ),
+            backgroundColor: Colors.red.shade700,
+            duration: const Duration(seconds: 4),
+            action: isAuth
+                ? SnackBarAction(
+                    label: 'Log In',
+                    textColor: Colors.white,
+                    onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+                  )
+                : null,
+          ),
+        );
+      }
     }
   }
 
   Future<void> _handleGalleryPicker() async {
-    final scan = Provider.of<ScanProvider>(context, listen: false);
-    final compliance = Provider.of<ComplianceProvider>(context, listen: false);
-    final sync = Provider.of<SyncProvider>(context, listen: false);
-
-    if (scan.product == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please verify a valid product barcode in Step 2 first.'),
-          backgroundColor: AppTheme.warning,
-        ),
-      );
-      Navigator.pushReplacementNamed(context, '/barcode-scanner');
-      return;
-    }
-
     final result = await FilePicker.platform.pickFiles(type: FileType.image);
     if (result != null && result.files.single.path != null) {
       final file = File(result.files.single.path!);
-
-      await scan.processImageExtraction(imageFile: file);
-
-      final extracted = scan.extractedData ?? OCRExtractedData.empty();
-      final gs1 = scan.product!;
-
-      final record = await compliance.evaluateCompliance(
-        inspectionId: scan.lastInspectionId,
-        extracted: extracted,
-        gs1: gs1,
-        storeName: scan.shopName.isNotEmpty ? scan.shopName : 'Commercial Establishment',
-        shopOwnerName: scan.shopOwnerName,
-        locationAddress: scan.shopAddress.isNotEmpty ? scan.shopAddress : scan.locationAddress,
-        latitude: scan.currentLocation?.latitude ?? 28.6139,
-        longitude: scan.currentLocation?.longitude ?? 77.2090,
-        imagePath: file.path,
-        isOffline: !sync.isOnline,
-      );
-
-      if (!sync.isOnline) {
-        await sync.queueInspection(record, scan.capturedImage?.path ?? '');
-      }
-
-      if (mounted) {
-        Navigator.pushNamed(context, '/evidence-report');
+      if (!mounted) return;
+      final scan = Provider.of<ScanProvider>(context, listen: false);
+      try {
+        await scan.processImageExtraction(imageFile: file);
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/barcode-scanner');
+        }
+      } catch (e) {
+        if (mounted) {
+          final isAuth = e.toString().contains('401') ||
+              e.toString().toLowerCase().contains('unauthorized') ||
+              e.toString().toLowerCase().contains('not authenticated');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                isAuth
+                    ? 'Session expired or not authenticated. Please log in again.'
+                    : 'Image processing failed: $e',
+              ),
+              backgroundColor: Colors.red.shade700,
+              duration: const Duration(seconds: 4),
+              action: isAuth
+                  ? SnackBarAction(
+                      label: 'Log In',
+                      textColor: Colors.white,
+                      onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+                    )
+                  : null,
+            ),
+          );
+        }
       }
     }
   }

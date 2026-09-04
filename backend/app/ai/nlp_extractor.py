@@ -47,41 +47,41 @@ class NLPExtractor:
     domain-specific entities (MRP, dates, quantities).
     """
 
-    # Enhanced Regex patterns for Indian product label entities (§17 Legal Metrology Rules)
+    # Regex patterns for Indian product label entities
     PATTERNS: Dict[str, List[re.Pattern]] = {
         "MRP": [
-            re.compile(r"(?:M\.?R\.?P\.?|Max\.?\s*Retail\s*Price|Maximum\s+Retail\s+Price)\s*[:\-]?\s*(?:Rs\.?|₹|INR)?\s*(\d+[\.,]?\d*)(?:\s*(?:Incl|Inclusive|\/|\n|$))?", re.IGNORECASE),
+            re.compile(r"(?:M\.?R\.?P\.?|Maximum\s+Retail\s+Price)\s*[:\-]?\s*(?:Rs\.?|₹|INR)?\s*(\d+[\.,]?\d*)", re.IGNORECASE),
             re.compile(r"(?:Rs\.?|₹|INR)\s*(\d+[\.,]?\d*)", re.IGNORECASE),
         ],
         "NET_QUANTITY": [
-            re.compile(r"(?:Net\s+(?:Wt\.?|Weight|Qty\.?|Quantity|Content|Vol\.?|Volume))\s*[:\-]?\s*(\d+[\.,]?\d*\s*(?:g|gm|gms|kg|ml|l|ltr|litre|litres|cc|oz|n|pcs?|units?))\b", re.IGNORECASE),
-            re.compile(r"\b(\d+[\.,]?\d*\s*(?:g|gm|gms|kg|ml|l|ltr|litre|litres|cc|n|pcs|units))\b", re.IGNORECASE),
+            re.compile(r"(?:Net\s+(?:Wt\.?|Weight|Qty\.?|Quantity|Content))\s*[:\-]?\s*(\d+[\.,]?\d*\s*(?:g|gm|gms|kg|ml|l|ltr|litre|cc|oz|pieces?|pcs?))", re.IGNORECASE),
+            re.compile(r"(\d+[\.,]?\d*\s*(?:g|gm|gms|kg|ml|l|ltr|litre))\b", re.IGNORECASE),
         ],
         "MFG_DATE": [
-            re.compile(r"(?:Mfg\.?\s*(?:Date)?|Mfd\.?\s*(?:Date)?|Manufacturing\s+Date|Date\s+of\s+Mfg\.?|DOM|Pkd\.?\s*(?:Date)?|Packed\s*(?:Date|on)?)\s*[:\-]?\s*(\d{1,2}[\-/\.]\d{1,2}[\-/\.]\d{2,4}|\d{1,2}[\-/\.]\d{2,4}|[A-Za-z]{3,9}\s*\d{2,4})", re.IGNORECASE),
+            re.compile(r"(?:Mfg\.?\s*(?:Date)?|Mfd\.?\s*(?:Date)?|Manufacturing\s+Date|Date\s+of\s+Mfg\.?|DOM)\s*[:\-]?\s*(\d{1,2}[\-/\.]\d{1,2}[\-/\.]\d{2,4}|\d{1,2}[\-/\.]\d{2,4}|\w+\s*\d{2,4})", re.IGNORECASE),
         ],
         "PKG_DATE": [
-            re.compile(r"(?:Pkg\.?\s*(?:Date)?|Packed\s+(?:on|Date)|Packaging\s+Date|DOP)\s*[:\-]?\s*(\d{1,2}[\-/\.]\d{1,2}[\-/\.]\d{2,4}|\d{1,2}[\-/\.]\d{2,4}|[A-Za-z]{3,9}\s*\d{2,4})", re.IGNORECASE),
+            re.compile(r"(?:Pkg\.?\s*(?:Date)?|Packed\s+(?:on|Date)|Packaging\s+Date|DOP)\s*[:\-]?\s*(\d{1,2}[\-/\.]\d{1,2}[\-/\.]\d{2,4}|\d{1,2}[\-/\.]\d{2,4}|\w+\s*\d{2,4})", re.IGNORECASE),
         ],
         "EXPIRY_DATE": [
-            re.compile(r"(?:Exp\.?\s*(?:Date)?|Expiry\s*(?:Date)?|Best\s+Before|Use\s+By|BB)\s*[:\-]?\s*(\d{1,2}[\-/\.]\d{1,2}[\-/\.]\d{2,4}|\d{1,2}[\-/\.]\d{2,4}|[A-Za-z]{3,9}\s*\d{2,4}|\d+\s*(?:months?|days?|years?))", re.IGNORECASE),
+            re.compile(r"(?:Exp\.?\s*(?:Date)?|Expiry\s*(?:Date)?|Best\s+Before|Use\s+By|BB)\s*[:\-]?\s*(\d{1,2}[\-/\.]\d{1,2}[\-/\.]\d{2,4}|\d{1,2}[\-/\.]\d{2,4}|\w+\s*\d{2,4}|\d+\s*(?:months?|days?))", re.IGNORECASE),
         ],
         "CONSUMER_CARE_PHONE": [
-            re.compile(r"(?:Consumer\s+Care|Customer\s+Care|Helpline|Toll\s*Free|Contact\s*(?:No\.?)?|Ph\.?|Phone|Tel\.?)\s*[:\-]?\s*(\+?\d[\d\s\-\.\(\)]{8,15})", re.IGNORECASE),
-            re.compile(r"\b(1800[\s\-]?\d{3}[\s\-]?\d{3,4})\b", re.IGNORECASE),
+            re.compile(r"(?:Consumer\s+Care|Customer\s+Care|Helpline|Toll\s+Free|Contact)\s*(?:No\.?)?\s*[:\-]?\s*(\+?\d[\d\s\-\.]{6,})", re.IGNORECASE),
+            re.compile(r"(?:Ph\.?|Phone|Tel\.?|Call)\s*[:\-]?\s*(\+?\d[\d\s\-\.]{6,})", re.IGNORECASE),
         ],
         "CONSUMER_CARE_EMAIL": [
-            re.compile(r"(?:Email|E-mail|Care\s+Email)\s*[:\-]?\s*([\w\.\-+]+@[\w\.\-]+\.\w+)", re.IGNORECASE),
-            re.compile(r"\b([\w\.\-+]+@[\w\.\-]+\.(?:com|in|org|co\.in|gov\.in|net))\b", re.IGNORECASE),
+            re.compile(r"(?:Email|E-mail)\s*[:\-]?\s*([\w\.\-+]+@[\w\.\-]+\.\w+)", re.IGNORECASE),
+            re.compile(r"([\w\.\-+]+@[\w\.\-]+\.(?:com|in|org|co\.in|net))", re.IGNORECASE),
         ],
         "CONSUMER_CARE_ADDRESS": [
-            re.compile(r"(?:Consumer\s+Care\s+Address|Contact\s+Address|Regd\.?\s*(?:Off(?:ice)?\.?)?|Registered\s+Office)\s*[:\-]?\s*(.{15,120})", re.IGNORECASE),
+            re.compile(r"(?:Regd\.?\s*(?:Off(?:ice)?\.?)?|Registered\s+Office|Address)\s*[:\-]?\s*(.{20,150})", re.IGNORECASE),
         ],
         "MANUFACTURER_NAME": [
-            re.compile(r"(?:Mfg\.?\s*(?:by)?|Manufactured\s+by|Mfr\.?|Mktd\.?\s*(?:by)?|Marketed\s+by|Packed\s+by)\s*[:\-]?\s*([A-Za-z0-9\s\.,&'\(\)-]{4,80})(?:\.|\n|,|$)", re.IGNORECASE),
+            re.compile(r"(?:Mfg\.?\s*(?:by)?|Manufactured\s+by|Mfr\.?|Maker)\s*[:\-]?\s*(.{5,100}?)(?:\.|,\s*(?:Add|Regd)|\n)", re.IGNORECASE),
         ],
         "MANUFACTURER_ADDRESS": [
-            re.compile(r"(?:Mfg\.?\s*Add(?:ress)?|Manufacturer['']?s?\s+Address|Plant\s+Address|Unit\s+Address)\s*[:\-]?\s*(.{15,150})", re.IGNORECASE),
+            re.compile(r"(?:Mfg\.?\s*Add(?:ress)?|Manufacturer['']?s?\s+Address)\s*[:\-]?\s*(.{20,200})", re.IGNORECASE),
         ],
     }
 
