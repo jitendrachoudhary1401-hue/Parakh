@@ -216,7 +216,7 @@ class ComplianceProvider extends ChangeNotifier {
             legalNoticePdfUrl: _currentInspection!.legalNoticePdfUrl,
             isSynced: true,
             inspectorRemarks: inspectorNotes,
-            status: 'PENDING_NODAL_VERIFICATION',
+            status: 'unverified',
           );
           await _storage.saveInspection(_currentInspection!);
           final idx = _inspectionHistory.indexWhere((e) => e.id == inspectionId);
@@ -392,4 +392,124 @@ class ComplianceProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  /// Fetch live inspection status from backend
+  Future<InspectionRecord?> fetchInspectionStatus(String id) async {
+    try {
+      final response = await _apiClient.get('/inspections/$id');
+      if (response.success && response.data != null) {
+        final updatedRecord = InspectionRecord.fromJson(response.data!);
+        if (_currentInspection?.id == id) {
+          _currentInspection = updatedRecord;
+        }
+        final index = _inspectionHistory.indexWhere((e) => e.id == id);
+        if (index >= 0) {
+          _inspectionHistory[index] = updatedRecord;
+        } else {
+          _inspectionHistory.insert(0, updatedRecord);
+        }
+        _storage.saveInspection(updatedRecord);
+        notifyListeners();
+        return updatedRecord;
+      }
+    } catch (_) {}
+    return _currentInspection;
+  }
+
+  /// Nodal Verifier: Fetch all pending dossiers awaiting scrutiny
+  Future<List<InspectionRecord>> fetchPendingNodalInspections() async {
+    try {
+      final response = await _apiClient.get('/inspections/pending-nodal');
+      if (response.success && response.data != null && response.data is List) {
+        final list = (response.data as List)
+            .map((item) => InspectionRecord.fromJson(item as Map<String, dynamic>))
+            .toList();
+        return list;
+      }
+    } catch (_) {}
+
+    // Fallback to local storage records with unverified / pending status
+    return _inspectionHistory
+        .where((e) => e.status.toLowerCase() == 'unverified' || e.status.toLowerCase().contains('pending'))
+        .toList();
+  }
+
+  /// Nodal Verifier: Record scrutiny decision (Accept & Send to Commissioner OR Deny & Reject)
+  Future<bool> submitNodalDecision({
+    required String inspectionId,
+    required String decision,
+    required String comment,
+    String verifierName = 'Nodal Officer S. K. Sharma',
+  }) async {
+    _isCommittingBlockchain = true;
+    _statusMessage = 'Recording Nodal Verifier decision ($decision)...';
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.post(
+        '/inspections/$inspectionId/nodal-decision',
+        body: {
+          'decision': decision,
+          'verifier_comment': comment,
+          'verifier_name': verifierName,
+        },
+      );
+
+      final isAccept = decision.toUpperCase() == 'ACCEPT';
+      final newStatus = isAccept ? 'verified_accepted' : 'verified_rejected';
+
+      if (response.success) {
+        if (_currentInspection != null && _currentInspection!.id == inspectionId) {
+          _currentInspection = InspectionRecord(
+            id: _currentInspection!.id,
+            barcode: _currentInspection!.barcode,
+            productName: _currentInspection!.productName,
+            storeName: _currentInspection!.storeName,
+            shopOwnerName: _currentInspection!.shopOwnerName,
+            locationAddress: _currentInspection!.locationAddress,
+            latitude: _currentInspection!.latitude,
+            longitude: _currentInspection!.longitude,
+            timestamp: _currentInspection!.timestamp,
+            isCompliant: _currentInspection!.isCompliant,
+            imagePath: _currentInspection!.imagePath,
+            unwarpedImagePath: _currentInspection!.unwarpedImagePath,
+            extractedData: _currentInspection!.extractedData,
+            violations: _currentInspection!.violations,
+            blockchainReceipt: _currentInspection!.blockchainReceipt,
+            legalNoticePdfUrl: _currentInspection!.legalNoticePdfUrl,
+            isSynced: true,
+            inspectorRemarks: _currentInspection!.inspectorRemarks,
+            status: newStatus,
+            verifierComment: comment,
+            verifierDecision: isAccept ? 'ACCEPTED' : 'REJECTED',
+            commissionerStatus: isAccept ? 'FORWARDED_FOR_DIGITAL_SIGNATURE' : 'NOT_FORWARDED',
+            verifiedAt: DateTime.now().toIso8601String(),
+          );
+          await _storage.saveInspection(_currentInspection!);
+        }
+
+        final idx = _inspectionHistory.indexWhere((e) => e.id == inspectionId);
+        if (idx >= 0 && _currentInspection != null) {
+          _inspectionHistory[idx] = _currentInspection!;
+          await _storage.saveInspection(_currentInspection!);
+        }
+
+        _isCommittingBlockchain = false;
+        _statusMessage = null;
+        notifyListeners();
+        return true;
+      } else {
+        _isCommittingBlockchain = false;
+        _statusMessage = response.message ?? 'Failed to record Nodal decision';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _isCommittingBlockchain = false;
+      _statusMessage = 'Nodal Decision Error: ${e.toString()}';
+      notifyListeners();
+      return false;
+    }
+  }
 }
+

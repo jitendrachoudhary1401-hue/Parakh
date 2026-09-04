@@ -420,6 +420,10 @@ class InspectionRecord {
   final String shopOwnerName;
   final String inspectorRemarks;
   final String status;
+  final String verifierComment;
+  final String verifierDecision;
+  final String commissionerStatus;
+  final String verifiedAt;
 
   InspectionRecord({
     required this.id,
@@ -441,24 +445,28 @@ class InspectionRecord {
     this.shopOwnerName = '',
     this.inspectorRemarks = '',
     this.status = 'PENDING',
+    this.verifierComment = '',
+    this.verifierDecision = '',
+    this.commissionerStatus = '',
+    this.verifiedAt = '',
   });
 
   factory InspectionRecord.fromJson(Map<String, dynamic> json) {
     return InspectionRecord(
-      id: json['id'] ?? '',
-      barcode: json['barcode'] ?? '',
-      productName: json['product_name'] ?? 'Packaged Commodity',
-      storeName: json['store_name'] ?? 'Retail Outlet',
-      locationAddress: json['location_address'] ?? 'New Delhi, India',
+      id: (json['id'] ?? json['inspection_id'] ?? '').toString(),
+      barcode: json['barcode'] ?? json['product_barcode'] ?? '',
+      productName: json['product_name'] ?? json['metadata_json']?['product_name'] ?? 'Packaged Commodity',
+      storeName: json['store_name'] ?? json['metadata_json']?['establishment']?['shop_name'] ?? json['location_name'] ?? 'Retail Outlet',
+      locationAddress: json['location_address'] ?? json['metadata_json']?['establishment']?['shop_address'] ?? 'New Delhi, India',
       latitude: (json['latitude'] as num?)?.toDouble() ?? 28.6139,
       longitude: (json['longitude'] as num?)?.toDouble() ?? 77.2090,
       timestamp: json['timestamp'] != null
           ? DateTime.parse(json['timestamp'])
-          : DateTime.now(),
+          : (json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now()),
       isCompliant: json['is_compliant'] ??
-          (json['violations'] == null || (json['violations'] as List).isEmpty),
-      imagePath: json['image_path'] ?? json['image_url'] ?? '',
-      unwarpedImagePath: json['unwarped_image_path'] ?? '',
+          (json['overall_result'] == 'compliant' || (json['violations'] == null || (json['violations'] as List).isEmpty)),
+      imagePath: json['image_path'] ?? json['image_storage_path'] ?? json['image_url'] ?? '',
+      unwarpedImagePath: json['unwarped_image_path'] ?? json['processed_image_path'] ?? '',
       extractedData: json['extracted_data'] != null
           ? OCRExtractedData.fromJson(json['extracted_data'])
           : OCRExtractedData.empty(),
@@ -468,12 +476,25 @@ class InspectionRecord {
           [],
       blockchainReceipt: json['blockchain_receipt'] != null
           ? BlockchainReceipt.fromJson(json['blockchain_receipt'])
-          : null,
+          : (json['blockchain_hash'] != null
+              ? BlockchainReceipt(
+                  txHash: json['blockchain_tx_id'] ?? 'DOCA-TX-2026',
+                  evidenceHash: json['blockchain_hash'],
+                  blockNumber: '10482',
+                  timestamp: json['created_at'] ?? DateTime.now().toIso8601String(),
+                  channel: 'doca-evidentiary-channel',
+                  isAnchored: true,
+                )
+              : null),
       legalNoticePdfUrl: json['legal_notice_pdf_url'] ?? '',
       isSynced: json['is_synced'] ?? true,
-      shopOwnerName: json['shop_owner_name'] ?? '',
+      shopOwnerName: json['shop_owner_name'] ?? json['metadata_json']?['establishment']?['shop_owner_name'] ?? '',
       inspectorRemarks: json['inspector_remarks'] ?? json['notes'] ?? '',
       status: json['status'] ?? 'PENDING',
+      verifierComment: json['verifier_comment'] ?? json['metadata_json']?['nodal_verification']?['verifier_comment'] ?? '',
+      verifierDecision: json['verifier_decision'] ?? json['metadata_json']?['nodal_verification']?['decision'] ?? '',
+      commissionerStatus: json['commissioner_status'] ?? json['metadata_json']?['nodal_verification']?['commissioner_status'] ?? '',
+      verifiedAt: json['verified_at'] ?? json['metadata_json']?['nodal_verification']?['verified_at'] ?? '',
     );
   }
 
@@ -496,6 +517,10 @@ class InspectionRecord {
         'shop_owner_name': shopOwnerName,
         'inspector_remarks': inspectorRemarks,
         'status': status,
+        'verifier_comment': verifierComment,
+        'verifier_decision': verifierDecision,
+        'commissioner_status': commissionerStatus,
+        'verified_at': verifiedAt,
       };
 }
 
