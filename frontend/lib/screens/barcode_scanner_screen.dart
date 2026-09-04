@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/theme.dart';
-import '../models/models.dart';
-import '../providers/compliance_provider.dart';
 import '../providers/scan_provider.dart';
-import '../providers/sync_provider.dart';
 
-/// GS1 Barcode & Registry Scanner Screen
+/// Step 2: Strict Barcode & Packaged Product Verification Screen
+/// Scans every detail carefully only for products; denies any unusual barcodes or non-products.
 class BarcodeScannerScreen extends StatefulWidget {
   const BarcodeScannerScreen({super.key});
 
@@ -15,14 +13,17 @@ class BarcodeScannerScreen extends StatefulWidget {
 }
 
 class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
-  final _barcodeController = TextEditingController(text: '8901030382910');
+  final _barcodeController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final scan = Provider.of<ScanProvider>(context, listen: false);
-      scan.lookupGS1Barcode(_barcodeController.text);
+      if (!scan.hasEstablishmentDetails) {
+        // Must complete Step 1 first
+        Navigator.pushReplacementNamed(context, '/establishment-intake');
+      }
     });
   }
 
@@ -32,49 +33,103 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
     super.dispose();
   }
 
-  void _onLookup() {
+  Future<void> _onVerifyBarcode() async {
     final barcode = _barcodeController.text.trim();
-    if (barcode.isNotEmpty) {
-      final scan = Provider.of<ScanProvider>(context, listen: false);
-      scan.lookupGS1Barcode(barcode);
+    final scan = Provider.of<ScanProvider>(context, listen: false);
+
+    FocusScope.of(context).unfocus();
+
+    try {
+      await scan.lookupBarcode(barcode);
+    } catch (e) {
+      if (!mounted) return;
+      _showRejectionDialog(scan.barcodeErrorMessage ?? e.toString().replaceAll('Exception: ', ''));
     }
   }
 
-  Future<void> _handleVerifyAndReport() async {
-    final scan = Provider.of<ScanProvider>(context, listen: false);
-    final compliance = Provider.of<ComplianceProvider>(context, listen: false);
-    final sync = Provider.of<SyncProvider>(context, listen: false);
-
-    if (scan.gs1Product != null) {
-      scan.setBarcode(scan.gs1Product!.gtin);
-    }
-
-    final extracted = scan.extractedData ?? OCRExtractedData.empty();
-    final gs1 = scan.gs1Product ??
-        GS1Product(
-          gtin: scan.selectedBarcode,
-          productName: 'Nutri-Crisp Multi-Grain Flakes',
-          registeredCompany: 'Hindustan Consumer Foods Pvt Ltd',
-          companyAddress: 'Okhla Phase III, New Delhi',
-          brand: 'Nutri-Crisp',
-          isVerified: true,
-        );
-
-    final record = await compliance.evaluateCompliance(
-      extracted: extracted,
-      gs1: gs1,
-      storeName: 'Reliance Retail Superstore, Sector 18',
-      locationAddress: scan.locationAddress.isNotEmpty ? scan.locationAddress : 'Sector 18, Noida, NCR Division',
-      isOffline: !sync.isOnline,
+  void _showRejectionDialog(String reason) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Row(
+          children: const [
+            Icon(Icons.cancel, color: AppTheme.error, size: 28),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Product Scan Denied',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.error,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.errorContainer,
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                border: Border.all(color: AppTheme.error.withOpacity(0.3)),
+              ),
+              child: Text(
+                reason,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.error,
+                  height: 1.4,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Under statutory Legal Metrology (Packaged Commodities) Rules, 2011, inspections can ONLY be conducted on verified retail packaged goods with valid GTIN/EAN barcodes.\n\n'
+              'Please scan a valid, intact product barcode from the commodity packaging.',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppTheme.textMuted,
+                height: 1.3,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.error,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Dismiss & Scan Again'),
+          ),
+        ],
+      ),
     );
+  }
 
-    if (!sync.isOnline) {
-      await sync.queueInspection(record, scan.capturedImage?.path ?? '');
+  void _proceedToPackagingScan() {
+    final scan = Provider.of<ScanProvider>(context, listen: false);
+    if (scan.product == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please verify a valid product barcode before proceeding.'),
+          backgroundColor: AppTheme.warning,
+        ),
+      );
+      return;
     }
 
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/evidence-report');
-    }
+    Navigator.pushNamed(context, '/ar-camera');
   }
 
   @override
@@ -84,7 +139,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('Open Food Facts Barcode Verification'),
+        title: const Text('Product Barcode Verification'),
+        elevation: 0,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -92,194 +148,282 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Scanner HUD Viewfinder
+              // Active Establishment Header Badge
               Container(
-                height: 220,
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0F172A),
+                  color: AppTheme.surface,
                   borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                  border: Border.all(color: AppTheme.outline),
+                  border: Border.all(color: AppTheme.borderLight),
                 ),
-                child: Stack(
+                child: Row(
                   children: [
-                    Center(
-                      child: Container(
-                        width: 240,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: AppTheme.success, width: 2),
-                          borderRadius:
-                              BorderRadius.circular(AppTheme.radiusSm),
-                        ),
-                        child: const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.qr_code_2,
-                                size: 48, color: Colors.white70),
-                            SizedBox(height: 6),
-                            Text(
-                              'ALIGN EAN-13 BARCODE',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700),
-                            ),
-                          ],
-                        ),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withOpacity(0.1),
+                        shape: BoxShape.circle,
                       ),
+                      child: const Icon(Icons.store, color: AppTheme.primary, size: 20),
                     ),
-                    const Positioned(
-                      bottom: 12,
-                      left: 12,
-                      right: 12,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.bolt, size: 14, color: AppTheme.warning),
-                          SizedBox(width: 4),
                           Text(
-                            'Real-Time Open Food Facts Database Cross-Check',
-                            style:
-                                TextStyle(color: Colors.white70, fontSize: 10),
+                            scan.shopName.isNotEmpty ? scan.shopName : 'Establishment Details',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Proprietor: ${scan.shopOwnerName.isNotEmpty ? scan.shopOwnerName : "Not specified"}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.textMuted,
+                            ),
                           ),
                         ],
                       ),
                     ),
+                    TextButton(
+                      onPressed: () => Navigator.pushReplacementNamed(context, '/establishment-intake'),
+                      child: const Text('Change', style: TextStyle(fontSize: 12)),
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Barcode Input
-              Text(
-                'ENTER OR SCANNED GTIN / BARCODE',
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _barcodeController,
-                      decoration: const InputDecoration(
-                        hintText: 'e.g. 8901030382910',
-                        prefixIcon: Icon(Icons.qr_code),
-                      ),
-                      keyboardType: TextInputType.number,
+              // Viewfinder HUD Card
+              Container(
+                height: 190,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(80, AppTheme.touchTargetMin),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                    ),
-                    onPressed: scan.isProcessing ? null : _onLookup,
-                    child: const Text('LOOKUP'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // Open Food Facts Registry Result Card
-              if (scan.product != null) ...[
-                Text(
-                  'OPEN FOOD FACTS REGISTRY RECORD',
-                  style: Theme.of(context).textTheme.labelSmall,
+                  ],
                 ),
-                const SizedBox(height: 8),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Target Frame
+                    Container(
+                      width: 240,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: scan.product != null ? AppTheme.success : AppTheme.secondary,
+                          width: 2,
+                        ),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            scan.product != null ? Icons.verified : Icons.qr_code_scanner,
+                            color: scan.product != null ? AppTheme.success : AppTheme.secondary,
+                            size: 32,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            scan.product != null
+                                ? 'PRODUCT VERIFIED'
+                                : 'ALIGN BARCODE WITHIN FRAME',
+                            style: TextStyle(
+                              color: scan.product != null ? AppTheme.success : AppTheme.secondary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (scan.isProcessing)
+                      Container(
+                        color: Colors.black54,
+                        child: const Center(
+                          child: CircularProgressIndicator(color: AppTheme.secondary),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Barcode Input & Verification Card
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.surface,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                  border: Border.all(color: AppTheme.borderLight),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'COMMODITY BARCODE (GTIN / EAN / UPC)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textMuted,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _barcodeController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              hintText: 'Enter or scan 8, 12, 13, 14 digit GTIN',
+                              prefixIcon: Icon(Icons.barcode_reader),
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            ),
+                            onSubmitted: (_) => _onVerifyBarcode(),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.secondary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                            ),
+                          ),
+                          onPressed: scan.isProcessing ? null : _onVerifyBarcode,
+                          child: const Text('VERIFY', style: TextStyle(fontWeight: FontWeight.w700)),
+                        ),
+                      ],
+                    ),
+                    if (scan.statusMessage != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        scan.statusMessage!,
+                        style: const TextStyle(fontSize: 12, color: AppTheme.primary),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Verified Product Details or Denial Banner
+              if (scan.product != null) ...[
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppTheme.surface,
+                    color: AppTheme.successContainer.withOpacity(0.5),
                     borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                    border: Border.all(color: AppTheme.outline),
+                    border: Border.all(color: AppTheme.success.withOpacity(0.4)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.verified,
-                                  size: 16, color: AppTheme.success),
-                              SizedBox(width: 6),
-                              Text(
-                                'Verified Product Registry',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppTheme.success),
-                              ),
-                            ],
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppTheme.secondaryLight,
-                              borderRadius:
-                                  BorderRadius.circular(AppTheme.radiusPill),
-                            ),
-                            child: Text(
-                              scan.product!.gtin,
-                              style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppTheme.primary),
+                        children: const [
+                          Icon(Icons.check_circle, color: AppTheme.success, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'COMMODITY VERIFIED IN REGISTRY',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.success,
                             ),
                           ),
                         ],
                       ),
                       const Divider(height: 20),
-                      _buildInfoRow(
-                          'Product Name', scan.product!.productName),
-                      const SizedBox(height: 8),
-                      _buildInfoRow('Registered Company',
-                          scan.product!.registeredCompany),
-                      const SizedBox(height: 8),
-                      _buildInfoRow('Brand', scan.product!.brand),
-                      const SizedBox(height: 8),
-                      _buildInfoRow('Registered Address',
-                          scan.product!.companyAddress),
+                      Text(
+                        scan.product!.productName,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      if (scan.product!.brand.isNotEmpty)
+                        Text(
+                          'Brand: ${scan.product!.brand}',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Manufacturer: ${scan.product!.registeredCompany}',
+                        style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                      ),
+                      if (scan.product!.companyAddress.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'Address: ${scan.product!.companyAddress}',
+                          style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                        ),
+                      ],
+                      const SizedBox(height: 4),
+                      Text(
+                        'GTIN Barcode: ${scan.product!.gtin}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
+
+                // Step 3 Action Button
                 ElevatedButton(
-                  onPressed: _handleVerifyAndReport,
-                  child: const Text('VERIFY & DIRECT TO REPORT'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                    ),
+                  ),
+                  onPressed: _proceedToPackagingScan,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Text(
+                        'CAPTURE PACKAGING & VERIFY LABELS (STEP 3)',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Icon(Icons.camera_alt, size: 18),
+                    ],
+                  ),
                 ),
               ],
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: const TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.textMuted),
-        ),
-        const SizedBox(height: 1),
-        Text(
-          value,
-          style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimary),
-        ),
-      ],
     );
   }
 }

@@ -417,6 +417,9 @@ class InspectionRecord {
   final BlockchainReceipt? blockchainReceipt;
   final String legalNoticePdfUrl;
   final bool isSynced;
+  final String shopOwnerName;
+  final String inspectorRemarks;
+  final String status;
 
   InspectionRecord({
     required this.id,
@@ -435,6 +438,9 @@ class InspectionRecord {
     this.blockchainReceipt,
     this.legalNoticePdfUrl = '',
     this.isSynced = true,
+    this.shopOwnerName = '',
+    this.inspectorRemarks = '',
+    this.status = 'PENDING',
   });
 
   factory InspectionRecord.fromJson(Map<String, dynamic> json) {
@@ -465,6 +471,9 @@ class InspectionRecord {
           : null,
       legalNoticePdfUrl: json['legal_notice_pdf_url'] ?? '',
       isSynced: json['is_synced'] ?? true,
+      shopOwnerName: json['shop_owner_name'] ?? '',
+      inspectorRemarks: json['inspector_remarks'] ?? json['notes'] ?? '',
+      status: json['status'] ?? 'PENDING',
     );
   }
 
@@ -484,6 +493,9 @@ class InspectionRecord {
         'violations': violations.map((e) => e.toJson()).toList(),
         'legal_notice_pdf_url': legalNoticePdfUrl,
         'is_synced': isSynced,
+        'shop_owner_name': shopOwnerName,
+        'inspector_remarks': inspectorRemarks,
+        'status': status,
       };
 }
 
