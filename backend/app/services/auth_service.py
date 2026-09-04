@@ -35,9 +35,9 @@ class AuthService:
         clean_email = email.lower().strip()
         if clean_email in ("doca-insp-2026", "insp-2026", "doca-insp-2026@doca.gov.in", "insp-2026@doca.gov.in", "inspector") or clean_email.startswith("doca-insp-"):
             clean_email = "officer.rajesh@doca.gov.in"
-        elif clean_email in ("nodal", "nodal@doca.gov.in", "nodal.officer", "nodal-2026"):
+        elif clean_email in ("nodal", "nodal@doca.gov.in", "nodal.officer", "nodal-2026", "nodal-officer-01", "nodal-officer-01@doca.gov.in"):
             clean_email = "nodal.officer@doca.gov.in"
-        elif clean_email in ("comm", "commissioner", "food.commissioner", "comm@doca.gov.in", "comm-2026"):
+        elif clean_email in ("comm", "commissioner", "food.commissioner", "comm@doca.gov.in", "comm-2026", "food-comm-01", "food-comm-01@doca.gov.in"):
             clean_email = "food.commissioner@doca.gov.in"
 
         user = await self.user_repo.get_by_email(clean_email)

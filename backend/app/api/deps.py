@@ -55,6 +55,13 @@ def get_current_admin(
     return payload
 
 
+def get_current_nodal_officer(
+    payload: Dict[str, Any] = Depends(require_roles(Role.NODAL_OFFICER, Role.FOOD_COMMISSIONER, Role.ADMIN, Role.INSPECTOR)),
+) -> Dict[str, Any]:
+    """Dependency allowing Nodal Officers, Commissioners, Admins, or Inspectors."""
+    return payload
+
+
 def get_current_citizen(
     payload: Dict[str, Any] = Depends(require_roles(Role.CITIZEN, Role.ADMIN)),
 ) -> Dict[str, Any]:

@@ -78,8 +78,8 @@ class _EstablishmentIntakeScreenState extends State<EstablishmentIntakeScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Icon(Icons.location_off, color: AppTheme.error),
             SizedBox(width: 8),
             Text('Turn On Device GPS', style: TextStyle(fontSize: 18)),
@@ -132,9 +132,9 @@ class _EstablishmentIntakeScreenState extends State<EstablishmentIntakeScreen> {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: AppTheme.primary.withOpacity(0.08),
+                    color: AppTheme.primary.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                    border: Border.all(color: AppTheme.primary.withOpacity(0.2)),
+                    border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
@@ -176,13 +176,13 @@ class _EstablishmentIntakeScreenState extends State<EstablishmentIntakeScreen> {
                     decoration: BoxDecoration(
                       color: AppTheme.errorContainer,
                       borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                      border: Border.all(color: AppTheme.error.withOpacity(0.3)),
+                      border: Border.all(color: AppTheme.error.withValues(alpha: 0.3)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: const [
+                        const Row(
+                          children: [
                             Icon(Icons.warning_amber_rounded,
                                 color: AppTheme.error, size: 20),
                             SizedBox(width: 8),
@@ -372,9 +372,9 @@ class _EstablishmentIntakeScreenState extends State<EstablishmentIntakeScreen> {
                     ),
                   ),
                   onPressed: _handleProceedToScan,
-                  child: Row(
+                  child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
+                    children: [
                       Text(
                         'PROCEED TO PRODUCT BARCODE SCAN',
                         style: TextStyle(

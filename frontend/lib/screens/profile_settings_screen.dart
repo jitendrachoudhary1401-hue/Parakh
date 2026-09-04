@@ -128,10 +128,6 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                                 value: 'English',
                                 child: Text('English',
                                     style: TextStyle(fontSize: 13))),
-                            DropdownMenuItem(
-                                value: 'Hindi',
-                                child: Text('हिन्दी (Hindi)',
-                                    style: TextStyle(fontSize: 13))),
                           ],
                           onChanged: (val) {
                             if (val != null) {
@@ -208,7 +204,8 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                           auth.updateServerUrl(newUrl);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Server Gateway URL updated to: $newUrl'),
+                              content: Text(
+                                  'Server Gateway URL updated to: $newUrl'),
                               backgroundColor: AppTheme.success,
                             ),
                           );

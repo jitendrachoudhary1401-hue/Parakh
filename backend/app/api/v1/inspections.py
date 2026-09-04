@@ -12,7 +12,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_admin, get_current_inspector, get_current_user
+from app.api.deps import get_current_admin, get_current_inspector, get_current_nodal_officer, get_current_user
 from app.core.responses import paginated_response, success_response
 from app.db.postgres import get_db
 from app.models.user import User
@@ -22,6 +22,7 @@ from app.schemas.inspection import (
     InspectionSummary,
     InspectionUpdate,
     NodalSubmissionPayload,
+    NodalDecisionPayload,
 )
 from app.services.inspection_service import InspectionService
 
@@ -73,6 +74,23 @@ async def create_inspection(
         data=InspectionResponse.model_validate(created).model_dump(),
         message="Inspection created successfully",
         status_code=201,
+    )
+
+
+@router.get("/pending-nodal", dependencies=[Depends(get_current_nodal_officer)])
+async def get_pending_nodal_inspections(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Nodal Verifier: List all dossiers awaiting statutory verification scrutiny."""
+    service = InspectionService(db)
+    offset = (page - 1) * page_size
+    pending = await service.get_pending_nodal(limit=page_size, offset=offset)
+    return success_response(
+        data=[InspectionResponse.model_validate(i).model_dump() for i in pending],
+        message=f"Retrieved {len(pending)} pending dossiers for Nodal scrutiny",
     )
 
 
@@ -135,3 +153,27 @@ async def submit_inspection_to_nodal(
         data=InspectionResponse.model_validate(updated).model_dump(),
         message="Inspection dossier successfully transmitted to Nodal Verification Authority (S. K. Sharma)",
     )
+
+
+@router.post("/{inspection_id}/nodal-decision", dependencies=[Depends(get_current_nodal_officer)])
+async def record_nodal_decision(
+    inspection_id: UUID,
+    payload: NodalDecisionPayload,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Nodal Verifier: Record statutory scrutiny decision.
+    - Accept and forward to Commissioner for digital signature
+    - Deny and Reject
+    Requires verifier comments.
+    """
+    service = InspectionService(db)
+    updated = await service.record_nodal_decision(inspection_id, payload)
+    is_accept = payload.decision.upper() in ("ACCEPT", "ACCEPTED", "APPROVE", "APPROVED")
+    decision_verb = "accepted and forwarded to Commissioner for digital signature" if is_accept else "rejected"
+    return success_response(
+        data=InspectionResponse.model_validate(updated).model_dump(),
+        message=f"Dossier successfully {decision_verb} by Nodal Verifier",
+    )
+

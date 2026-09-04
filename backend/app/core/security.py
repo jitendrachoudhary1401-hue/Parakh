@@ -30,11 +30,12 @@ import hashlib
 import hmac
 
 try:
-    from passlib.context import CryptContext
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    import bcrypt
 
     def hash_password(password: str) -> str:
-        return pwd_context.hash(password)
+        pwd_bytes = password.encode("utf-8")[:72]
+        salt = bcrypt.gensalt()
+        return bcrypt.hashpw(pwd_bytes, salt).decode("utf-8")
 
     def verify_password(plain_password: str, hashed_password: str) -> bool:
         if hashed_password.startswith("$pbkdf2$") or hashed_password.startswith("$sha256$"):
@@ -44,7 +45,11 @@ try:
                 salt = parts[2]
                 computed = hashlib.sha256((salt + plain_password).encode()).hexdigest()
                 return hmac.compare_digest(computed, parts[3])
-        return pwd_context.verify(plain_password, hashed_password)
+        try:
+            pwd_bytes = plain_password.encode("utf-8")[:72]
+            return bcrypt.checkpw(pwd_bytes, hashed_password.encode("utf-8"))
+        except Exception:
+            return False
 except ImportError:
     import secrets
 

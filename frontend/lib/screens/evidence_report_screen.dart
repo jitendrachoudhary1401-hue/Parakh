@@ -928,10 +928,10 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
                     return Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       decoration: BoxDecoration(
-                        color: isSelected ? AppTheme.errorContainer.withOpacity(0.3) : Colors.transparent,
+                        color: isSelected ? AppTheme.errorContainer.withValues(alpha: 0.3) : Colors.transparent,
                         borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                         border: Border.all(
-                          color: isSelected ? AppTheme.error.withOpacity(0.5) : AppTheme.outline.withOpacity(0.4),
+                          color: isSelected ? AppTheme.error.withValues(alpha: 0.5) : AppTheme.outline.withValues(alpha: 0.4),
                         ),
                       ),
                       child: CheckboxListTile(
@@ -1194,9 +1194,9 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppTheme.successContainer.withOpacity(0.5),
+                          color: AppTheme.successContainer.withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                          border: Border.all(color: AppTheme.success.withOpacity(0.3)),
+                          border: Border.all(color: AppTheme.success.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [

@@ -37,6 +37,13 @@ class NodalSubmissionPayload(BaseModel):
     evidence_images: Optional[List[str]] = None
 
 
+class NodalDecisionPayload(BaseModel):
+    """Payload submitted by Nodal Verifier during statutory scrutiny."""
+    decision: str  # "ACCEPT" or "REJECT"
+    verifier_comment: str
+    verifier_name: Optional[str] = "Nodal Officer S. K. Sharma"
+
+
 class InspectionResponse(BaseModel):
     """Inspection detail response."""
     inspection_id: UUID

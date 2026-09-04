@@ -17,6 +17,7 @@ from app.schemas.inspection import (
     InspectionCreate,
     InspectionUpdate,
     NodalSubmissionPayload,
+    NodalDecisionPayload,
 )
 
 
@@ -83,7 +84,8 @@ class InspectionService:
     ) -> Inspection:
         """Submit finalized inspection report to Nodal Verifier with shop info, comments, and statutory rules."""
         inspection = await self.get_by_id(inspection_id)
-        inspection.status = "pending_nodal_verification"
+        # Mark status as unverified until Nodal Verifier completes verification
+        inspection.status = "unverified"
         if payload.notes:
             inspection.notes = payload.notes
 
@@ -109,7 +111,7 @@ class InspectionService:
             "submitted_at": datetime.now(timezone.utc).isoformat(),
             "target_verifier": "nodal.officer@doca.gov.in",
             "verifier_name": "Nodal Officer S. K. Sharma (Verification Authority)",
-            "status": "PENDING_NODAL_VERIFICATION",
+            "status": "UNVERIFIED",
         }
 
         inspection.metadata_json = meta
@@ -128,3 +130,68 @@ class InspectionService:
         inspection.blockchain_hash = evidence_hash
 
         return await self.repo.update(inspection)
+
+    async def record_nodal_decision(
+        self,
+        inspection_id: UUID,
+        payload: NodalDecisionPayload,
+    ) -> Inspection:
+        """Nodal Verifier scrutiny decision: Accept & send to commissioner or Deny & Reject."""
+        inspection = await self.get_by_id(inspection_id)
+        is_accept = payload.decision.upper() in ("ACCEPT", "ACCEPTED", "APPROVE", "APPROVED")
+
+        meta = dict(inspection.metadata_json or {})
+        decision_timestamp = datetime.now(timezone.utc).isoformat()
+
+        if is_accept:
+            inspection.status = "verified_accepted"
+            meta["nodal_verification"] = {
+                "decision": "ACCEPTED",
+                "verifier_comment": payload.verifier_comment,
+                "verifier_name": payload.verifier_name or "Nodal Officer S. K. Sharma",
+                "verified_at": decision_timestamp,
+                "commissioner_status": "FORWARDED_FOR_DIGITAL_SIGNATURE",
+                "commissioner_name": "Dr. V. K. Verma (Food & Legal Metrology Commissioner)",
+                "forwarded_at": decision_timestamp,
+            }
+        else:
+            inspection.status = "verified_rejected"
+            meta["nodal_verification"] = {
+                "decision": "REJECTED",
+                "verifier_comment": payload.verifier_comment,
+                "verifier_name": payload.verifier_name or "Nodal Officer S. K. Sharma",
+                "verified_at": decision_timestamp,
+                "commissioner_status": "NOT_FORWARDED",
+            }
+
+        inspection.metadata_json = meta
+
+        # Recalculate cryptographic hash with verifier signature payload
+        from app.blockchain.evidence_chain import EvidenceChainService
+        updated_hash = EvidenceChainService.calculate_payload_hash(
+            image_storage_path=inspection.image_storage_path,
+            gps_latitude=inspection.latitude,
+            gps_longitude=inspection.longitude,
+            capture_timestamp=inspection.created_at or datetime.now(timezone.utc),
+            ocr_text_snapshot=f"{inspection.notes or ''} | VERIFIER: {payload.verifier_comment}",
+            inspector_id=str(inspection.inspector_id),
+            violation_data=meta.get("violation_rules", []),
+        )
+        inspection.blockchain_hash = updated_hash
+
+        return await self.repo.update(inspection)
+
+    async def get_pending_nodal(self, limit: int = 50, offset: int = 0) -> List[Inspection]:
+        """Retrieve inspections awaiting Nodal Verifier scrutiny."""
+        inspections, _ = await self.repo.list_inspections(
+            offset=offset,
+            limit=limit,
+        )
+        # Filter for unverified or pending_nodal_verification
+        pending = [
+            i for i in inspections
+            if i.status in ("unverified", "pending_nodal_verification", "pending")
+            or (i.metadata_json and "nodal_submission" in i.metadata_json and i.status not in ("verified_accepted", "verified_rejected"))
+        ]
+        return pending
+
