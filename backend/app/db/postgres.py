@@ -100,21 +100,46 @@ async def init_db() -> None:
             from app.core.security import hash_password
             from sqlalchemy import select
 
-            result = await session.execute(
-                select(User).where(User.email == "officer.rajesh@doca.gov.in")
-            )
-            user = result.scalar_one_or_none()
-            if not user:
-                default_user = User(
-                    full_name="Inspector Rajesh Kumar (Legal Metrology)",
-                    email="officer.rajesh@doca.gov.in",
-                    hashed_password=hash_password("password123"),
-                    role="inspector",
-                    zone_id="North Zone (New Delhi Division)",
-                    is_active=True,
+            users_to_seed = [
+                {
+                    "full_name": "Inspector Rajesh Kumar (Legal Metrology)",
+                    "email": "officer.rajesh@doca.gov.in",
+                    "password": "password123",
+                    "role": "inspector",
+                    "zone_id": "North Zone (New Delhi Division)",
+                },
+                {
+                    "full_name": "Nodal Officer S. K. Sharma (Verification Authority)",
+                    "email": "nodal.officer@doca.gov.in",
+                    "password": "password123",
+                    "role": "nodal_officer",
+                    "zone_id": "Central HQ (Verification Division)",
+                },
+                {
+                    "full_name": "Dr. V. K. Verma (Food Safety Commissioner)",
+                    "email": "food.commissioner@doca.gov.in",
+                    "password": "password123",
+                    "role": "food_commissioner",
+                    "zone_id": "Directorate General (Apex Authority)",
+                },
+            ]
+
+            for u_data in users_to_seed:
+                res = await session.execute(
+                    select(User).where(User.email == u_data["email"])
                 )
-                session.add(default_user)
-                await session.commit()
+                existing = res.scalar_one_or_none()
+                if not existing:
+                    new_u = User(
+                        full_name=u_data["full_name"],
+                        email=u_data["email"],
+                        hashed_password=hash_password(u_data["password"]),
+                        role=u_data["role"],
+                        zone_id=u_data["zone_id"],
+                        is_active=True,
+                    )
+                    session.add(new_u)
+            await session.commit()
     except Exception as e:
         import logging
         logging.getLogger("parakh.db").warning("Database setup note: %s", str(e))

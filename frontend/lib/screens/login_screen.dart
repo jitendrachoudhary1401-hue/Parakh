@@ -166,6 +166,55 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 24),
 
+                  // Quick Demo Account Selection Chips
+                  const Text(
+                    'DEMO ROLE ACCOUNTS',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textMuted,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ActionChip(
+                        avatar: const Icon(Icons.security, size: 14),
+                        label: const Text('Inspector', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                        onPressed: () {
+                          setState(() {
+                            _officialIdController.text = 'DOCA-INSP-2026';
+                            _passwordController.text = 'password123';
+                          });
+                        },
+                      ),
+                      ActionChip(
+                        avatar: const Icon(Icons.fact_check, size: 14),
+                        label: const Text('Nodal Officer', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                        onPressed: () {
+                          setState(() {
+                            _officialIdController.text = 'NODAL-OFFICER-01';
+                            _passwordController.text = 'password123';
+                          });
+                        },
+                      ),
+                      ActionChip(
+                        avatar: const Icon(Icons.verified_user, size: 14),
+                        label: const Text('Food Commissioner', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                        onPressed: () {
+                          setState(() {
+                            _officialIdController.text = 'FOOD-COMM-01';
+                            _passwordController.text = 'password123';
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
                   // Login Button
                   ElevatedButton(
                     onPressed: auth.isLoading ? null : _handleLogin,

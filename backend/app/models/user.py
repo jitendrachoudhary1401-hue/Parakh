@@ -22,6 +22,8 @@ class UserRole(str):
     INSPECTOR = "inspector"
     ADMIN = "admin"
     CITIZEN = "citizen"
+    NODAL_OFFICER = "nodal_officer"
+    FOOD_COMMISSIONER = "food_commissioner"
 
 
 class User(Base):

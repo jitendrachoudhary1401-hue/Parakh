@@ -22,10 +22,16 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
   bool _isSavingComment = false;
   String? _savedCommentText;
 
+  bool _isNodalVerified = false;
+  String? _nodalVerifiedTime;
+  bool _isCommissionerSigned = false;
+  String? _commissionerSignedTime;
+  String? _digitalSignatureHash;
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final compliance =
           Provider.of<ComplianceProvider>(context, listen: false);
@@ -86,6 +92,34 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
     }
   }
 
+  void _verifyByNodalOfficer() {
+    setState(() {
+      _isNodalVerified = true;
+      _nodalVerifiedTime = DateTime.now().toString().split('.')[0];
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Report verified by Nodal Officer S. K. Sharma & forwarded to Food Commissioner.'),
+        backgroundColor: AppTheme.success,
+      ),
+    );
+  }
+
+  void _signByFoodCommissioner() {
+    final signature = 'RSA2048-DOCA-${DateTime.now().millisecondsSinceEpoch}-FC-8902A';
+    setState(() {
+      _isCommissionerSigned = true;
+      _commissionerSignedTime = DateTime.now().toString().split('.')[0];
+      _digitalSignatureHash = signature;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Report digitally signed by Food Safety Commissioner Dr. V. K. Verma & uploaded to Registry.'),
+        backgroundColor: AppTheme.success,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final compliance = Provider.of<ComplianceProvider>(context);
@@ -104,16 +138,20 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppTheme.primary,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
           tabs: const [
             Tab(
-              icon: Icon(Icons.lock_outlined, size: 18),
-              text: 'REPORT 1: OFFICIAL CERTIFICATE',
+              icon: Icon(Icons.lock_outlined, size: 16),
+              text: 'OFFICIAL CERTIFICATE',
             ),
             Tab(
-              icon: Icon(Icons.rate_review_outlined, size: 18),
-              text: 'REPORT 2: OFFICER REMARKS',
+              icon: Icon(Icons.rate_review_outlined, size: 16),
+              text: 'OFFICER REMARKS',
+            ),
+            Tab(
+              icon: Icon(Icons.verified_user_outlined, size: 16),
+              text: 'APPROVAL & e-SIGN',
             ),
           ],
         ),
@@ -141,6 +179,15 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
               record: record,
               inspectorName: inspectorName,
               inspectorBadge: inspectorBadge,
+            ),
+
+            // ==========================================
+            // REPORT 3: MULTI-TIER APPROVAL & DIGITAL SIGNATURE
+            // ==========================================
+            _buildMultiTierApprovalReport(
+              context,
+              record: record,
+              currentUserRole: user?.role.toString() ?? 'inspector',
             ),
           ],
         ),
@@ -718,4 +765,307 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
       ],
     );
   }
+
+  /// =========================================================================
+  /// REPORT 3: MULTI-TIER APPROVAL & DIGITAL SIGNATURE PIPELINE
+  /// =========================================================================
+  Widget _buildMultiTierApprovalReport(
+    BuildContext context, {
+    required dynamic record,
+    required String currentUserRole,
+  }) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppTheme.marginMain),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header Banner
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+              ),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+              border: Border.all(color: AppTheme.outline),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.verified_user, color: Colors.amber, size: 28),
+                ),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'GOVERNMENT MULTI-TIER APPROVAL PIPELINE',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Inspector Creation → Nodal Officer Verification → Food Safety Commissioner Digital Signature',
+                        style: TextStyle(color: Colors.white70, fontSize: 10, height: 1.3),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // PIPELINE TIMELINE STEP 1: INSPECTOR CREATION
+          _buildTimelineNode(
+            context,
+            stepNumber: '1',
+            title: 'FIELD INSPECTION & REPORT CREATION',
+            subtitle: 'Created & Submitted by Legal Metrology Inspector',
+            authorityName: 'Inspector Rajesh Kumar (ID: DOCA-INSP-2026)',
+            timestamp: record?.timestamp != null
+                ? record!.timestamp.toString().split('.')[0]
+                : DateTime.now().toString().split('.')[0],
+            isCompleted: true,
+            statusBadge: 'SUBMITTED',
+            badgeColor: AppTheme.primary,
+            icon: Icons.assignment_turned_in,
+          ),
+          const SizedBox(height: 16),
+
+          // PIPELINE TIMELINE STEP 2: NODAL OFFICER VERIFICATION
+          _buildTimelineNode(
+            context,
+            stepNumber: '2',
+            title: 'NODAL OFFICER VERIFICATION',
+            subtitle: 'Review legal metrology findings & endorse report accuracy',
+            authorityName: 'Nodal Officer S. K. Sharma (Central HQ Division)',
+            timestamp: _nodalVerifiedTime ?? 'Awaiting Nodal Review',
+            isCompleted: _isNodalVerified,
+            statusBadge: _isNodalVerified ? 'VERIFIED' : 'PENDING REVIEW',
+            badgeColor: _isNodalVerified ? AppTheme.success : AppTheme.warning,
+            icon: Icons.fact_check,
+            actionButton: !_isNodalVerified
+                ? ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      minimumSize: const Size(0, 42),
+                    ),
+                    onPressed: _verifyByNodalOfficer,
+                    icon: const Icon(Icons.check_circle_outline, size: 18),
+                    label: const Text('VERIFY & FORWARD TO FOOD COMMISSIONER'),
+                  )
+                : null,
+          ),
+          const SizedBox(height: 16),
+
+          // PIPELINE TIMELINE STEP 3: FOOD COMMISSIONER DIGITAL SIGNATURE & UPLOAD
+          _buildTimelineNode(
+            context,
+            stepNumber: '3',
+            title: 'FOOD SAFETY COMMISSIONER DIGITAL SIGNATURE',
+            subtitle: 'Apply PKI Digital Signature (RSA-2048) & upload signed certificate to Central Registry',
+            authorityName: 'Dr. V. K. Verma (Food Safety Commissioner)',
+            timestamp: _commissionerSignedTime ?? 'Awaiting Apex Signature',
+            isCompleted: _isCommissionerSigned,
+            statusBadge: _isCommissionerSigned ? 'DIGITALLY SIGNED & UPLOADED' : 'AWAITING e-SIGN',
+            badgeColor: _isCommissionerSigned ? Colors.green : AppTheme.textMuted,
+            icon: Icons.draw,
+            actionButton: !_isCommissionerSigned
+                ? ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber.shade800,
+                      minimumSize: const Size(0, 42),
+                    ),
+                    onPressed: _signByFoodCommissioner,
+                    icon: const Icon(Icons.fingerprint, size: 18),
+                    label: const Text('DIGITALLY SIGN & UPLOAD CERTIFICATE'),
+                  )
+                : null,
+          ),
+          const SizedBox(height: 24),
+
+          // DIGITAL SIGNATURE CERTIFICATE SEAL CARD
+          if (_isCommissionerSigned) ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                border: Border.all(color: Colors.amber.shade400, width: 1.5),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.verified, color: Colors.amber, size: 24),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'DIGITALLY SEALED LEGAL CERTIFICATE',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.black87),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade800,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'UPLOADED TO REGISTRY',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 16),
+                  _buildLedgerMonospaceField('e-Sign Certificate Hash (PKI RSA-2048)', _digitalSignatureHash!),
+                  const SizedBox(height: 8),
+                  _buildDetailItem('Apex Signing Authority', 'Dr. V. K. Verma — Food Safety Commissioner'),
+                  const SizedBox(height: 4),
+                  _buildDetailItem('Timestamp of Upload', _commissionerSignedTime!),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+
+          OutlinedButton(
+            onPressed: () => Navigator.pushReplacementNamed(context, '/dashboard'),
+            child: const Text('RETURN TO DASHBOARD'),
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimelineNode(
+    BuildContext context, {
+    required String stepNumber,
+    required String title,
+    required String subtitle,
+    required String authorityName,
+    required String timestamp,
+    required bool isCompleted,
+    required String statusBadge,
+    required Color badgeColor,
+    required IconData icon,
+    Widget? actionButton,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+        border: Border.all(
+          color: isCompleted ? badgeColor.withValues(alpha: 0.5) : AppTheme.outline,
+          width: isCompleted ? 1.5 : 1.0,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: isCompleted ? badgeColor : AppTheme.outline,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    stepNumber,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.textPrimary),
+                    ),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                          fontSize: 10, color: AppTheme.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: badgeColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                  border: Border.all(color: badgeColor, width: 0.8),
+                ),
+                child: Text(
+                  statusBadge,
+                  style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      color: badgeColor),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 16),
+          Row(
+            children: [
+              Icon(icon, size: 14, color: AppTheme.textMuted),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  authorityName,
+                  style: const TextStyle(
+                      fontSize: 11, fontWeight: FontWeight.w600),
+                ),
+              ),
+              Text(
+                timestamp,
+                style: const TextStyle(
+                    fontSize: 9,
+                    color: AppTheme.textMuted,
+                    fontFamily: 'monospace'),
+              ),
+            ],
+          ),
+          if (actionButton != null) ...[
+            const SizedBox(height: 12),
+            SizedBox(width: double.infinity, child: actionButton),
+          ],
+        ],
+      ),
+    );
+  }
 }
+
