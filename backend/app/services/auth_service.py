@@ -72,6 +72,14 @@ class AuthService:
         access_token = create_access_token(claims)
         refresh_token = create_refresh_token(claims)
 
+        official_id = "DOCA-INSP-2026"
+        if user_role in ("nodal_officer", "nodal"):
+            official_id = "NODAL-OFFICER-01"
+        elif user_role in ("food_commissioner", "commissioner"):
+            official_id = "FOOD-COMM-01"
+        elif user_role == "citizen":
+            official_id = "CITIZEN-DOCA"
+
         return {
             "access_token": access_token,
             "refresh_token": refresh_token,
@@ -79,7 +87,7 @@ class AuthService:
             "expires_in": self.settings.jwt_access_token_expire_minutes * 60,
             "user": {
                 "user_id": user_id,
-                "official_id": "DOCA-INSP-2026",
+                "official_id": official_id,
                 "email": clean_email,
                 "full_name": full_name,
                 "role": user_role,

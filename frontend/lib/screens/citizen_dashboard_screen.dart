@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../core/theme.dart';
 import '../models/models.dart';
 import '../providers/auth_provider.dart';
-import '../providers/scan_provider.dart';
 import '../widgets/action_tile.dart';
 
 /// Dedicated Citizen Consumer Dashboard Screen

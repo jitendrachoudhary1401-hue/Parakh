@@ -277,7 +277,7 @@ class _CommissionerPortalScreenState extends State<CommissionerPortalScreen> {
                               ),
                               const SizedBox(height: 10),
                               DropdownButtonFormField<InspectionRecord>(
-                                value: _selectedRecord,
+                                initialValue: _selectedRecord,
                                 isExpanded: true,
                                 decoration: const InputDecoration(
                                   contentPadding: EdgeInsets.symmetric(

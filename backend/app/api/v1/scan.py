@@ -93,7 +93,6 @@ async def upload_inspection_image(
 async def lookup_barcode_info(
     request: Request,
     gtin: str,
-    user_payload: dict = Depends(get_current_inspector),
 ):
     """
     Query Open Food Facts database for GTIN/EAN barcode product information.

@@ -224,6 +224,8 @@ Detailed documentation is available in the `tools/` directory:
 
 | Document | Description |
 |---|---|
+| [Compliance Checklist](tools/LEGAL_METROLOGY_COMPLIANCE_CHECKLIST.md) | Legal Metrology Rules 2011 compliance checklist & Schedule I tables |
+| [User Types & Roles](tools/USER_TYPES_AND_ROLES.md) | Complete RBAC matrix, user roles & segregation of duties |
 | [AI Architecture](tools/Project_PARAKH_AI_Architecture.md) | Complete AI/ML pipeline documentation |
 | [System Architecture](tools/Project_PARAKH_Architecture.md) | Backend architecture & data flow |
 | [Tech Stack](tools/Project_PARAKH_TechStack.md) | Technology decisions & rationale |

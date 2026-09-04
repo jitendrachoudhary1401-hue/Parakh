@@ -19,6 +19,7 @@ from app.ai.nlp_extractor import ExtractedEntity
 from app.rules.base import RuleResult
 from app.rules.consumer_care_rule import ConsumerCareRule
 from app.rules.date_rule import DateRule
+from app.rules.font_size_rule import FontSizeRule
 from app.rules.manufacturer_rule import ManufacturerRule
 from app.rules.mrp_rule import MRPRule
 from app.rules.net_quantity_rule import NetQuantityRule
@@ -42,6 +43,7 @@ class ComplianceEngine:
             DateRule(),
             ConsumerCareRule(),
             ManufacturerRule(),
+            FontSizeRule(),
             OpenFoodFactsRule(),
         ]
         

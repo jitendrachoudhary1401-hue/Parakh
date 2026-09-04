@@ -42,10 +42,10 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
   String? _digitalSignatureHash;
 
   Future<void> _exportReportPdf() async {
+    final compliance = Provider.of<ComplianceProvider>(context, listen: false);
+    final record = compliance.currentInspection;
     try {
       final dir = await getApplicationDocumentsDirectory();
-      final compliance = Provider.of<ComplianceProvider>(context, listen: false);
-      final record = compliance.currentInspection;
       final fileId = record?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
       final filePath = '${dir.path}/LEGAL_COMPLIANCE_CERTIFICATE_$fileId.pdf';
       final file = File(filePath);
@@ -65,7 +65,7 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
           '0 -16 Td\n(Store: ${record?.storeName ?? "Commercial Premise"}) Tj\n'
           '0 -16 Td\n(Compliance Status: ${record?.isCompliant == true ? "COMPLIANT" : "FLAGGED FOR STATUTORY NOTICE"}) Tj\n'
           '0 -16 Td\n(Statutory Rule: LM Rules 2011 Rules 6, 7, 8, 9, 10, 18) Tj\n'
-          '0 -16 Td\n(SHA-256 Hash: ${record?.evidenceHash ?? "0x9f83a...b72"}) Tj\n'
+          '0 -16 Td\n(SHA-256 Hash: ${record?.blockchainReceipt?.evidenceHash ?? "0x9f83a...b72"}) Tj\n'
           '0 -16 Td\n(Generated: ${DateTime.now().toIso8601String()}) Tj\n'
           'ET';
 
@@ -117,10 +117,10 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
   }
 
   Future<void> _exportReportEditable() async {
+    final compliance = Provider.of<ComplianceProvider>(context, listen: false);
+    final record = compliance.currentInspection;
     try {
       final dir = await getApplicationDocumentsDirectory();
-      final compliance = Provider.of<ComplianceProvider>(context, listen: false);
-      final record = compliance.currentInspection;
       final fileId = record?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
       final jsonPath = '${dir.path}/LEGAL_DOSSIER_$fileId.json';
       final csvPath = '${dir.path}/LEGAL_DOSSIER_$fileId.csv';
@@ -134,19 +134,19 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
         'barcode': record?.barcode,
         'product_name': record?.productName,
         'store_name': record?.storeName,
-        'location': record?.locationName,
+        'location': record?.locationAddress,
         'gps_coordinates': '${record?.latitude}, ${record?.longitude}',
         'overall_status': record?.isCompliant == true ? 'COMPLIANT' : 'NON_COMPLIANT',
         'workflow_status': record?.status,
-        'evidence_hash': record?.evidenceHash,
-        'inspector_notes': _savedCommentText ?? record?.notes ?? '',
+        'evidence_hash': record?.blockchainReceipt?.evidenceHash ?? '',
+        'inspector_notes': _savedCommentText ?? record?.inspectorRemarks ?? '',
         'verifier_comment': record?.verifierComment ?? '',
-        'commissioner_remarks': record?.commissionerRemarks ?? '',
-        'rule_evaluations': record?.ruleResults.map((r) => {
-          'rule_id': r.ruleId,
+        'commissioner_remarks': record?.commissionerStatus ?? '',
+        'rule_evaluations': record?.violations.map((r) => {
+          'rule_code': r.ruleCode,
           'rule_name': r.ruleName,
-          'status': r.status,
-          'explanation': r.explanation,
+          'is_passed': r.isPassed,
+          'description': r.description,
         }).toList() ?? [],
       };
 

@@ -213,3 +213,76 @@ async def record_commissioner_signature(
         message="Statutory digital signature applied successfully. Notice issued.",
     )
 
+
+@router.get("/{inspection_id}/export/pdf")
+async def export_inspection_pdf(
+    inspection_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate and return formal PDF Legal Metrology Compliance Notice / Certificate."""
+    from fastapi.responses import Response
+    from app.services.legal_notice_service import LegalNoticeService
+    import uuid
+
+    service = InspectionService(db)
+    inspection = await service.get_by_id(inspection_id)
+    notice_service = LegalNoticeService(db)
+    pdf_bytes = notice_service._build_pdf_document(inspection, uuid.uuid4())
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="LEGAL_NOTICE_{inspection_id}.pdf"'
+        },
+    )
+
+
+@router.get("/{inspection_id}/export/json")
+async def export_inspection_json(
+    inspection_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Export complete statutory inspection dossier in editable JSON format."""
+    from fastapi.responses import JSONResponse
+
+    service = InspectionService(db)
+    inspection = await service.get_by_id(inspection_id)
+    data = InspectionResponse.model_validate(inspection).model_dump()
+    return JSONResponse(
+        content=data,
+        headers={
+            "Content-Disposition": f'attachment; filename="DOSSIER_{inspection_id}.json"'
+        },
+    )
+
+
+@router.get("/{inspection_id}/export/csv")
+async def export_inspection_csv(
+    inspection_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Export statutory inspection record in editable CSV format."""
+    from fastapi.responses import Response
+    import csv
+    import io
+
+    service = InspectionService(db)
+    inspection = await service.get_by_id(inspection_id)
+    data = InspectionResponse.model_validate(inspection).model_dump()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Field", "Value"])
+    for key, val in data.items():
+        writer.writerow([key, str(val)])
+
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="DOSSIER_{inspection_id}.csv"'
+        },
+    )
+
+

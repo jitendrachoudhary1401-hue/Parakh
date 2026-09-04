@@ -15,12 +15,12 @@ import re
 from typing import Any, Dict, List, Optional
 
 from app.ai.nlp_extractor import ExtractedEntity
-from app.rules.base import ComplianceRule, RuleResult
+from app.rules.base import RuleResult
 
 logger = logging.getLogger("parakh.rules.font_size")
 
 
-class FontSizeRule(ComplianceRule):
+class FontSizeRule:
     """
     Evaluates font size and readability compliance under Rule 7, 8, 9 / Schedule I.
     """
