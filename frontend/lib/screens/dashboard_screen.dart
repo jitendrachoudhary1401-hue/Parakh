@@ -38,8 +38,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final scan = Provider.of<ScanProvider>(context);
 
     final history = compliance.inspectionHistory;
-    final compliantCount = history.where((e) => e.isCompliant).length + 12;
-    final violationCount = history.where((e) => !e.isCompliant).length + 2;
+    final compliantCount = history.where((e) => e.isCompliant).length;
+    final violationCount = history.where((e) => !e.isCompliant).length;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -128,17 +128,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 6),
+                          // PLACE NAME IN LARGE
                           Text(
-                            scan.locationAddress.isNotEmpty &&
-                                    scan.locationAddress != 'Acquiring GPS location...'
-                                ? scan.locationAddress
-                                : (auth.currentUser?.zone ?? 'North Zone (New Delhi Division)'),
-                            maxLines: 2,
+                            scan.placeName.isNotEmpty
+                                ? scan.placeName
+                                : 'Central Vista, New Delhi',
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 13, color: Colors.white, fontWeight: FontWeight.w700),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.2,
+                            ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 3),
+                          // LATITUDE AND LONGITUDE IN SMALL
+                          Text(
+                            scan.formattedCoordinates,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.white70,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
                           Row(
                             children: [
                               Container(

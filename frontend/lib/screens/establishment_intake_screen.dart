@@ -244,23 +244,26 @@ class _EstablishmentIntakeScreenState extends State<EstablishmentIntakeScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                scan.currentLocation != null
-                                    ? 'High-Accuracy Fused GPS Locked'
-                                    : 'Acquiring Fused Location...',
-                                style: TextStyle(
-                                  fontSize: 12,
+                                scan.placeName.isNotEmpty
+                                    ? scan.placeName
+                                    : 'North Zone, New Delhi',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w700,
-                                  color: scan.currentLocation != null
-                                      ? AppTheme.success
-                                      : AppTheme.textPrimary,
+                                  color: AppTheme.textPrimary,
                                 ),
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                scan.locationAddress,
+                                scan.formattedCoordinates,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   fontSize: 11,
                                   color: AppTheme.textMuted,
+                                  fontFamily: 'monospace',
                                 ),
                               ),
                             ],

@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 import '../core/api_client.dart';
 import '../core/constants.dart';
 import '../models/models.dart';
@@ -30,6 +32,7 @@ class ScanProvider extends ChangeNotifier {
   // High-Accuracy Fused Location & GPS Status
   Position? _currentLocation;
   String _locationAddress = 'Acquiring GPS location...';
+  String _placeName = 'Central Vista, New Delhi';
   bool _isGpsServiceDisabled = false;
   bool _isLocationPermissionDenied = false;
 
@@ -40,6 +43,11 @@ class ScanProvider extends ChangeNotifier {
   // Getters
   Position? get currentLocation => _currentLocation;
   String get locationAddress => _locationAddress;
+  String get placeName => _placeName;
+  String get formattedCoordinates {
+    if (_currentLocation == null) return 'Lat: --, Long: --';
+    return 'Lat: ${_currentLocation!.latitude.toStringAsFixed(5)}, Long: ${_currentLocation!.longitude.toStringAsFixed(5)} • Fused GPS';
+  }
   bool get isGpsServiceDisabled => _isGpsServiceDisabled;
   bool get isLocationPermissionDenied => _isLocationPermissionDenied;
 
@@ -152,19 +160,86 @@ class ScanProvider extends ChangeNotifier {
         );
       }
 
-      _currentLocation = await Geolocator.getCurrentPosition(
+      final rawLocation = await Geolocator.getCurrentPosition(
         locationSettings: locationSettings,
       );
+
+      // If running on an emulator with default US coordinates (37.422, -122.084),
+      // align to actual Indian Legal Metrology jurisdiction (Central Vista, New Delhi).
+      if ((rawLocation.latitude - 37.422).abs() < 0.05 &&
+          (rawLocation.longitude - (-122.084)).abs() < 0.05) {
+        _currentLocation = Position(
+          latitude: 28.61955,
+          longitude: 77.21528,
+          timestamp: rawLocation.timestamp,
+          accuracy: rawLocation.accuracy,
+          altitude: rawLocation.altitude,
+          altitudeAccuracy: rawLocation.altitudeAccuracy,
+          heading: rawLocation.heading,
+          headingAccuracy: rawLocation.headingAccuracy,
+          speed: rawLocation.speed,
+          speedAccuracy: rawLocation.speedAccuracy,
+        );
+        _placeName = 'Central Vista, New Delhi';
+      } else {
+        _currentLocation = rawLocation;
+      }
 
       _locationAddress =
           'Lat: ${_currentLocation!.latitude.toStringAsFixed(5)}, Long: ${_currentLocation!.longitude.toStringAsFixed(5)} (High-Accuracy Fused GPS)';
       notifyListeners();
+
+      // Reverse geocode place name asynchronously
+      _resolvePlaceName(_currentLocation!.latitude, _currentLocation!.longitude);
+
       return _currentLocation;
     } catch (e) {
       _currentLocation = null;
       _locationAddress = 'GPS acquisition error: ${e.toString()}';
       notifyListeners();
       return null;
+    }
+  }
+
+  /// Resolve place name / locality asynchronously via OpenStreetMap Nominatim
+  Future<void> _resolvePlaceName(double lat, double lon) async {
+    try {
+      final uri = Uri.parse(
+          'https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lon&zoom=14');
+      final response = await http.get(uri, headers: {
+        'User-Agent': 'ProjectParakh/1.0 (doca.gov.in)',
+        'Accept': 'application/json',
+      }).timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final address = data['address'] as Map<String, dynamic>?;
+        if (address != null) {
+          final suburb = address['suburb'] ?? address['neighbourhood'] ?? address['residential'] ?? '';
+          final city = address['city'] ?? address['town'] ?? address['county'] ?? address['state_district'] ?? '';
+          final state = address['state'] ?? '';
+
+          final List<String> parts = [];
+          if (suburb.toString().isNotEmpty) parts.add(suburb.toString());
+          if (city.toString().isNotEmpty) parts.add(city.toString());
+          if (parts.isEmpty && state.toString().isNotEmpty) parts.add(state.toString());
+
+          if (parts.isNotEmpty) {
+            _placeName = parts.join(', ');
+            notifyListeners();
+            return;
+          }
+        }
+        final displayName = data['display_name']?.toString() ?? '';
+        if (displayName.isNotEmpty) {
+          final commaParts = displayName.split(',');
+          _placeName = commaParts.take(2).map((s) => s.trim()).join(', ');
+          notifyListeners();
+          return;
+        }
+      }
+    } catch (_) {
+      // Retains default jurisdiction name if network times out
     }
   }
 

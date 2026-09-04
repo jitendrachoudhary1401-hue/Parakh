@@ -1,9 +1,11 @@
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/theme.dart';
 import '../providers/scan_provider.dart';
 
 /// Step 2: Strict Barcode & Packaged Product Verification Screen
+/// Displays live hardware camera viewfinder to align commodity barcodes.
 /// Scans every detail carefully only for products; denies any unusual barcodes or non-products.
 class BarcodeScannerScreen extends StatefulWidget {
   const BarcodeScannerScreen({super.key});
@@ -12,12 +14,26 @@ class BarcodeScannerScreen extends StatefulWidget {
   State<BarcodeScannerScreen> createState() => _BarcodeScannerScreenState();
 }
 
-class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
+class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
+    with SingleTickerProviderStateMixin {
   final _barcodeController = TextEditingController();
+  CameraController? _cameraController;
+  List<CameraDescription> _cameras = [];
+  int _selectedCameraIndex = 0;
+  bool _isCameraInitialized = false;
+  bool _isTorchOn = false;
+  late AnimationController _laserAnimController;
 
   @override
   void initState() {
     super.initState();
+    _laserAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
+    _initCamera();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final scan = Provider.of<ScanProvider>(context, listen: false);
       if (!scan.hasEstablishmentDetails) {
@@ -27,8 +43,55 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
     });
   }
 
+  Future<void> _initCamera() async {
+    try {
+      _cameras = await availableCameras();
+      if (_cameras.isNotEmpty) {
+        final controller = CameraController(
+          _cameras[_selectedCameraIndex],
+          ResolutionPreset.medium,
+          enableAudio: false,
+        );
+        _cameraController = controller;
+        await controller.initialize();
+        if (mounted) {
+          setState(() {
+            _isCameraInitialized = true;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Barcode scanner camera error: $e');
+    }
+  }
+
+  Future<void> _toggleTorch() async {
+    if (_cameraController == null || !_isCameraInitialized) return;
+    try {
+      _isTorchOn = !_isTorchOn;
+      await _cameraController!
+          .setFlashMode(_isTorchOn ? FlashMode.torch : FlashMode.off);
+      setState(() {});
+    } catch (e) {
+      debugPrint('Flash toggle error: $e');
+    }
+  }
+
+  Future<void> _switchCamera() async {
+    if (_cameras.length < 2) return;
+    _selectedCameraIndex = (_selectedCameraIndex + 1) % _cameras.length;
+    await _cameraController?.dispose();
+    _cameraController = null;
+    setState(() {
+      _isCameraInitialized = false;
+    });
+    _initCamera();
+  }
+
   @override
   void dispose() {
+    _laserAnimController.dispose();
+    _cameraController?.dispose();
     _barcodeController.dispose();
     super.dispose();
   }
@@ -207,74 +270,251 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Viewfinder HUD Card
+              // Viewfinder HUD Card with Live Hardware Camera
               Container(
-                height: 190,
+                height: 240,
                 decoration: BoxDecoration(
                   color: const Color(0xFF0F172A),
                   borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Target Frame
-                    Container(
-                      width: 240,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: scan.product != null
-                              ? AppTheme.success
-                              : AppTheme.secondary,
-                          width: 2,
-                        ),
-                        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            scan.product != null
-                                ? Icons.verified
-                                : Icons.qr_code_scanner,
-                            color: scan.product != null
-                                ? AppTheme.success
-                                : AppTheme.secondary,
-                            size: 32,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            scan.product != null
-                                ? 'PRODUCT VERIFIED'
-                                : 'ALIGN BARCODE WITHIN FRAME',
-                            style: TextStyle(
-                              color: scan.product != null
-                                  ? AppTheme.success
-                                  : AppTheme.secondary,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.0,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // 1. Live Camera Preview
+                      if (_isCameraInitialized &&
+                          _cameraController != null &&
+                          _cameraController!.value.isInitialized)
+                        SizedBox.expand(
+                          child: FittedBox(
+                            fit: BoxFit.cover,
+                            child: SizedBox(
+                              width: _cameraController!.value.previewSize?.height ??
+                                  1,
+                              height: _cameraController!.value.previewSize?.width ??
+                                  1,
+                              child: CameraPreview(_cameraController!),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    if (scan.isProcessing)
+                        )
+                      else
+                        const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.camera_alt_outlined,
+                                  color: Colors.white38, size: 40),
+                              SizedBox(height: 10),
+                              Text(
+                                'INITIALIZING HARDWARE CAMERA...',
+                                style: TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      // 2. Viewfinder Gradient Mask
                       Container(
-                        color: Colors.black54,
-                        child: const Center(
-                          child: CircularProgressIndicator(
-                              color: AppTheme.secondary),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.5),
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: 0.6),
+                            ],
+                          ),
                         ),
                       ),
-                  ],
+
+                      // 3. Barcode Target Frame with Animated Laser
+                      Container(
+                        width: 250,
+                        height: 130,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: scan.product != null
+                                ? AppTheme.success
+                                : const Color(0xFF38BDF8),
+                            width: 2,
+                          ),
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusSm),
+                          color: Colors.black.withValues(alpha: 0.15),
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            if (scan.product == null)
+                              AnimatedBuilder(
+                                animation: _laserAnimController,
+                                builder: (context, child) {
+                                  return Positioned(
+                                    top: 8 + (_laserAnimController.value * 110),
+                                    left: 8,
+                                    right: 8,
+                                    child: Container(
+                                      height: 2,
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [
+                                            Colors.transparent,
+                                            Color(0xFF38BDF8),
+                                            Colors.white,
+                                            Color(0xFF38BDF8),
+                                            Colors.transparent,
+                                          ],
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(0xFF38BDF8)
+                                                .withValues(alpha: 0.8),
+                                            blurRadius: 6,
+                                            spreadRadius: 1,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  scan.product != null
+                                      ? Icons.verified
+                                      : Icons.qr_code_scanner,
+                                  color: scan.product != null
+                                      ? AppTheme.success
+                                      : const Color(0xFF38BDF8),
+                                  size: 32,
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  scan.product != null
+                                      ? 'PRODUCT VERIFIED'
+                                      : 'ALIGN BARCODE WITHIN FRAME',
+                                  style: TextStyle(
+                                    color: scan.product != null
+                                        ? AppTheme.success
+                                        : Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // 4. Top HUD Overlay: Status Badge & Controls
+                      Positioned(
+                        top: 10,
+                        left: 12,
+                        right: 12,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.6),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: _isCameraInitialized
+                                          ? AppTheme.success
+                                          : AppTheme.warning,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _isCameraInitialized
+                                        ? 'LIVE CAMERA'
+                                        : 'CONNECTING...',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                IconButton(
+                                  icon: Icon(
+                                    _isTorchOn
+                                        ? Icons.flash_on
+                                        : Icons.flash_off,
+                                    color: _isTorchOn
+                                        ? Colors.amber
+                                        : Colors.white,
+                                    size: 20,
+                                  ),
+                                  onPressed: _toggleTorch,
+                                  style: IconButton.styleFrom(
+                                    backgroundColor:
+                                        Colors.black.withValues(alpha: 0.5),
+                                    padding: const EdgeInsets.all(6),
+                                  ),
+                                ),
+                                if (_cameras.length > 1) ...[
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    icon: const Icon(Icons.flip_camera_ios,
+                                        color: Colors.white, size: 20),
+                                    onPressed: _switchCamera,
+                                    style: IconButton.styleFrom(
+                                      backgroundColor:
+                                          Colors.black.withValues(alpha: 0.5),
+                                      padding: const EdgeInsets.all(6),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // 5. Processing Loader
+                      if (scan.isProcessing)
+                        Container(
+                          color: Colors.black54,
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                                color: AppTheme.secondary),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -322,6 +562,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.secondary,
                             foregroundColor: Colors.white,
+                            minimumSize: const Size(80, 48),
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 16),
                             shape: RoundedRectangleBorder(
