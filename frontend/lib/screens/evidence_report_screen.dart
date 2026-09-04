@@ -45,11 +45,52 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final compliance =
           Provider.of<ComplianceProvider>(context, listen: false);
-      if (compliance.currentInspection != null &&
-          compliance.currentInspection!.blockchainReceipt == null) {
-        compliance.commitEvidenceToBlockchain(compliance.currentInspection!);
+      final record = compliance.currentInspection;
+      if (record != null) {
+        if (record.blockchainReceipt == null) {
+          compliance.commitEvidenceToBlockchain(record);
+        }
+        final st = record.status.toLowerCase();
+        if (st == 'unverified' || st.contains('pending')) {
+          setState(() {
+            _isSubmittedToNodal = true;
+          });
+        } else if (st.contains('accepted') || record.verifierDecision == 'ACCEPTED') {
+          setState(() {
+            _isSubmittedToNodal = true;
+            _isNodalVerified = true;
+            _nodalVerifiedTime = record.verifiedAt.isNotEmpty ? record.verifiedAt : 'Verified';
+          });
+        }
       }
     });
+  }
+
+  Future<void> _refreshInspectionStatus() async {
+    final compliance = Provider.of<ComplianceProvider>(context, listen: false);
+    final record = compliance.currentInspection;
+    if (record == null) return;
+    final updated = await compliance.fetchInspectionStatus(record.id);
+    if (updated != null && mounted) {
+      setState(() {
+        final st = updated.status.toLowerCase();
+        if (st == 'unverified') {
+          _isSubmittedToNodal = true;
+          _isNodalVerified = false;
+        } else if (st.contains('accepted') || updated.verifierDecision == 'ACCEPTED') {
+          _isSubmittedToNodal = true;
+          _isNodalVerified = true;
+          _nodalVerifiedTime = updated.verifiedAt.isNotEmpty ? updated.verifiedAt : 'Verified';
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Status Refreshed: ${updated.status.toUpperCase()}'),
+          backgroundColor: AppTheme.primary,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override
@@ -1082,6 +1123,11 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
     required dynamic record,
     required String currentUserRole,
   }) {
+    final currentStatus = record?.status.toLowerCase() ?? '';
+    final isUnverified = currentStatus == 'unverified' || (_isSubmittedToNodal && !_isNodalVerified && !currentStatus.contains('verified'));
+    final isVerifiedAccepted = currentStatus == 'verified_accepted' || _isNodalVerified || (record?.verifierDecision.toUpperCase() == 'ACCEPTED');
+    final isVerifiedRejected = currentStatus == 'verified_rejected' || (record?.verifierDecision.toUpperCase() == 'REJECTED');
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppTheme.marginMain),
       child: Column(
@@ -1180,47 +1226,161 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
             authorityName: 'Nodal Officer S. K. Sharma (nodal.officer@doca.gov.in)',
             timestamp: _nodalVerifiedTime ??
                 (_isSubmittedToNodal ? 'Queued in Nodal Review Desk' : 'Awaiting Dossier Submission'),
-            isCompleted: _isNodalVerified,
-            statusBadge: _isNodalVerified
-                ? 'VERIFIED'
-                : (_isSubmittedToNodal ? 'PENDING NODAL SCRUTINY' : 'AWAITING TRANSMISSION'),
-            badgeColor: _isNodalVerified
+            isCompleted: isVerifiedAccepted,
+            statusBadge: isVerifiedAccepted
+                ? 'VERIFIED (ACCEPTED)'
+                : (isVerifiedRejected
+                    ? 'VERIFIED (DECLINED)'
+                    : (isUnverified ? 'UNVERIFIED' : 'AWAITING TRANSMISSION')),
+            badgeColor: isVerifiedAccepted
                 ? AppTheme.success
-                : (_isSubmittedToNodal ? AppTheme.warning : AppTheme.textMuted),
+                : (isVerifiedRejected
+                    ? AppTheme.error
+                    : (isUnverified ? AppTheme.warning : AppTheme.textMuted)),
             icon: Icons.fact_check,
-            actionButton: _isSubmittedToNodal && !_isNodalVerified
+            actionButton: _isSubmittedToNodal
                 ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppTheme.successContainer.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                          border: Border.all(color: AppTheme.success.withValues(alpha: 0.3)),
+                      if (isUnverified) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.warningContainer.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                            border: Border.all(color: AppTheme.warning.withValues(alpha: 0.3)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.hourglass_top, color: AppTheme.warning, size: 18),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'STATUS: UNVERIFIED',
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.warning),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Dossier transmitted to Nodal Verifier queue. Awaiting official verification & statutory scrutiny by Nodal Officer S. K. Sharma.',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 8),
+                                      ),
+                                      onPressed: _refreshInspectionStatus,
+                                      icon: const Icon(Icons.sync, size: 14),
+                                      label: const Text('REFRESH STATUS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.primary,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(vertical: 8),
+                                      ),
+                                      onPressed: () => Navigator.pushNamed(context, '/nodal-verifier'),
+                                      icon: const Icon(Icons.rate_review, size: 14),
+                                      label: const Text('VERIFIER PORTAL', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.verified, color: AppTheme.success, size: 20),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                'Dossier successfully transmitted to Nodal Verifier S. K. Sharma.\nTracking Ref: ${_nodalSubmissionTxId ?? "DOCA-NDL-2026"}\nTime: ${_nodalSubmissionTime ?? "Just now"}',
+                      ] else if (isVerifiedAccepted) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.successContainer.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                            border: Border.all(color: AppTheme.success.withValues(alpha: 0.3)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.verified, color: AppTheme.success, size: 20),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'STATUS: VERIFIED (ACCEPTED)',
+                                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.success),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.secondary.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.send_rounded, size: 13, color: AppTheme.secondary),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'FORWARDED TO COMMISSIONER FOR DIGITAL SIGNATURE',
+                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.secondary),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if ((record?.verifierComment.isNotEmpty ?? false) || (_savedCommentText != null)) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Verifier Remarks: "${record?.verifierComment.isNotEmpty == true ? record!.verifierComment : "Statutory compliance verified and approved."}"',
+                                  style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: AppTheme.textPrimary, fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ] else if (isVerifiedRejected) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.errorContainer.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                            border: Border.all(color: AppTheme.error.withValues(alpha: 0.3)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.cancel, color: AppTheme.error, size: 20),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'STATUS: VERIFIED (DECLINED)',
+                                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.error),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Dossier rejected by Nodal Verifier: "${record?.verifierComment.isNotEmpty == true ? record!.verifierComment : "Insufficient evidence of violation."}"',
                                 style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (currentUserRole == 'admin' || currentUserRole.contains('admin')) ...[
-                        const SizedBox(height: 8),
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
-                            minimumSize: const Size(0, 40),
+                            ],
                           ),
-                          onPressed: _verifyByNodalOfficer,
-                          icon: const Icon(Icons.check_circle_outline, size: 16),
-                          label: const Text('NODAL VERIFIER: ENDORSE & APPROVE'),
                         ),
                       ],
                     ],

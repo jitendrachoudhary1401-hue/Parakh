@@ -16,6 +16,7 @@ import 'screens/establishment_intake_screen.dart';
 import 'screens/evidence_report_screen.dart';
 import 'screens/inspection_history_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/nodal_verifier_screen.dart';
 import 'screens/offline_sync_hub_screen.dart';
 import 'screens/profile_settings_screen.dart';
 import 'screens/splash_screen.dart';
@@ -63,6 +64,7 @@ class ParakhMobileApp extends StatelessWidget {
         '/history': (context) => const InspectionHistoryScreen(),
         '/sync-hub': (context) => const OfflineSyncHubScreen(),
         '/profile': (context) => const ProfileSettingsScreen(),
+        '/nodal-verifier': (context) => const NodalVerifierScreen(),
       },
     );
   }

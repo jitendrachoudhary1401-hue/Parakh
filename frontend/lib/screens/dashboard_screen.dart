@@ -237,6 +237,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 badgeColor: sync.pendingCount > 0 ? AppTheme.warningContainer : AppTheme.successContainer,
                 onTap: () => Navigator.pushNamed(context, '/sync-hub'),
               ),
+              const SizedBox(height: 10),
+              ActionTile(
+                title: 'Nodal Verifier Scrutiny Desk',
+                description: 'Examine field dossiers, add comments, and accept or reject with statutory backing',
+                icon: Icons.fact_check_outlined,
+                primaryColor: AppTheme.primary,
+                badgeText: 'Nodal Queue',
+                badgeColor: AppTheme.primaryContainer,
+                onTap: () => Navigator.pushNamed(context, '/nodal-verifier'),
+              ),
               const SizedBox(height: 24),
 
               // Recent Inspections Ledger Stream

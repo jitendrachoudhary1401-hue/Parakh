@@ -89,7 +89,49 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
+
+              // Quick Desk Access Card
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                  border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.fact_check, color: AppTheme.primary, size: 22),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Nodal Verifier Authority Desk',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                          ),
+                          Text(
+                            'Scrutinize dossiers, record comments, accept/reject',
+                            style: TextStyle(fontSize: 10, color: AppTheme.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        minimumSize: const Size(60, 32),
+                      ),
+                      onPressed: () => Navigator.pushNamed(context, '/nodal-verifier'),
+                      child: const Text('OPEN', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
 
               // Preferences Section
               Text(

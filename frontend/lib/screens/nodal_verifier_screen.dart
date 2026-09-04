@@ -389,7 +389,7 @@ class _NodalVerifierScreenState extends State<NodalVerifierScreen> {
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) => Container(
                                       height: 80,
-                                      color: AppTheme.surfaceVariant,
+                                      color: Colors.grey.shade200,
                                       child: const Center(
                                         child: Text('Evidence image attached locally by field inspector', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                                       ),
