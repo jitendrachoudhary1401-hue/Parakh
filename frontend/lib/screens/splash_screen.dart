@@ -23,6 +23,7 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
   // Location permission state
   bool _isLocationPermissionGranted = false;
   bool _isCheckingPermission = true;
+  bool _isRequestingPermission = false;
 
   @override
   void initState() {
@@ -51,7 +52,7 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
     try {
       LocationPermission permission = await Geolocator.checkPermission();
 
-      // If already granted, allow user to use device immediately
+      // If already granted, allow user to use app immediately
       if (permission == LocationPermission.always ||
           permission == LocationPermission.whileInUse) {
         if (!mounted) return;
@@ -79,6 +80,9 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
   }
 
   Future<void> _handlePermissionRequest() async {
+    if (_isRequestingPermission) return;
+    _isRequestingPermission = true;
+
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
@@ -90,8 +94,10 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
         permission = await Geolocator.requestPermission();
       } else if (permission == LocationPermission.deniedForever) {
         await Geolocator.openAppSettings();
-        return;
       }
+
+      // Re-verify after prompt or settings return
+      permission = await Geolocator.checkPermission();
 
       if (permission == LocationPermission.always ||
           permission == LocationPermission.whileInUse) {
@@ -114,6 +120,8 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
         _isLocationPermissionGranted = false;
         _isCheckingPermission = false;
       });
+    } finally {
+      _isRequestingPermission = false;
     }
   }
 
@@ -271,6 +279,26 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
                               ),
                             ),
                           ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _checkLocationPermission,
+                                icon: const Icon(Icons.refresh, size: 16),
+                                label: const Text('Re-check'),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: TextButton.icon(
+                                onPressed: () => Geolocator.openAppSettings(),
+                                icon: const Icon(Icons.settings, size: 16),
+                                label: const Text('App Settings'),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
