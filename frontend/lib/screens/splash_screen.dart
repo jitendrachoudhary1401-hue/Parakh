@@ -15,7 +15,7 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver {
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
   bool _hasNavigated = false;
@@ -27,8 +27,24 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkLocationPermission();
     _initVideoSplash();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _videoController?.removeListener(_videoListener);
+    _videoController?.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && !_isLocationPermissionGranted) {
+      _checkLocationPermission();
+    }
   }
 
   Future<void> _checkLocationPermission() async {
@@ -56,17 +72,11 @@ class _SplashScreenState extends State<SplashScreen> {
         });
       }
     } catch (_) {
-      _bypassLocationPermission();
+      setState(() {
+        _isLocationPermissionGranted = false;
+        _isCheckingPermission = false;
+      });
     }
-  }
-
-  void _bypassLocationPermission() {
-    if (!mounted) return;
-    setState(() {
-      _isLocationPermissionGranted = true;
-      _isCheckingPermission = false;
-    });
-    _navigateToNextScreen();
   }
 
   Future<void> _handlePermissionRequest() async {
@@ -83,19 +93,9 @@ class _SplashScreenState extends State<SplashScreen> {
         await Geolocator.openAppSettings();
       }
 
-      if (permission == LocationPermission.always ||
-          permission == LocationPermission.whileInUse) {
-        setState(() {
-          _isLocationPermissionGranted = true;
-          _isCheckingPermission = false;
-        });
-        _navigateToNextScreen();
-      } else {
-        // Fallback bypass so user is never stuck
-        _bypassLocationPermission();
-      }
+      await _checkLocationPermission();
     } catch (_) {
-      _bypassLocationPermission();
+      await _checkLocationPermission();
     }
   }
 
@@ -150,13 +150,6 @@ class _SplashScreenState extends State<SplashScreen> {
     } else {
       Navigator.pushReplacementNamed(context, '/login');
     }
-  }
-
-  @override
-  void dispose() {
-    _videoController?.removeListener(_videoListener);
-    _videoController?.dispose();
-    super.dispose();
   }
 
   @override
@@ -258,18 +251,6 @@ class _SplashScreenState extends State<SplashScreen> {
                                 borderRadius:
                                     BorderRadius.circular(AppTheme.radiusSm),
                               ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          width: double.infinity,
-                          child: TextButton.icon(
-                            onPressed: _bypassLocationPermission,
-                            icon: const Icon(Icons.my_location, size: 16),
-                            label: const Text('Continue with Default GPS (New Delhi HQ)'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppTheme.primary,
                             ),
                           ),
                         ),

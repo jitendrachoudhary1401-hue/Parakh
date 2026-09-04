@@ -58,44 +58,56 @@ class ScanProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Fetch Real-Time GPS Location with Automatic Fallback for DoCA New Delhi HQ
+  /// Fetch Real-Time GPS Location (Strict Device GPS)
   Future<Position?> fetchCurrentLocation({bool requestIfDenied = false}) async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (serviceEnabled) {
-        LocationPermission permission = await Geolocator.checkPermission();
-        if (permission == LocationPermission.denied && requestIfDenied) {
-          permission = await Geolocator.requestPermission();
-        }
+      if (!serviceEnabled) {
+        _currentLocation = null;
+        _locationAddress = 'Location services disabled';
+        notifyListeners();
+        return null;
+      }
 
-        if (permission == LocationPermission.always ||
-            permission == LocationPermission.whileInUse) {
-          _currentLocation = await Geolocator.getCurrentPosition(
-            locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-          );
-          _locationAddress = 'Lat: ${_currentLocation!.latitude.toStringAsFixed(4)}, Long: ${_currentLocation!.longitude.toStringAsFixed(4)} (GPS Lock)';
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        if (!requestIfDenied) return null;
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          _currentLocation = null;
+          _locationAddress = 'Location permission denied';
           notifyListeners();
-          return _currentLocation;
+          return null;
         }
       }
-    } catch (_) {}
 
-    // Fallback Mock Location (DoCA New Delhi HQ) to guarantee continuous enforcement operation
-    _currentLocation = Position(
-      longitude: 77.2090,
-      latitude: 28.6139,
-      timestamp: DateTime.now(),
-      accuracy: 5.0,
-      altitude: 216.0,
-      heading: 0.0,
-      speed: 0.0,
-      speedAccuracy: 0.0,
-      altitudeAccuracy: 1.0,
-      headingAccuracy: 1.0,
-    );
-    _locationAddress = 'Lat: 28.6139, Long: 77.2090 (DoCA HQ - Delhi Division)';
+      if (permission == LocationPermission.deniedForever) {
+        _currentLocation = null;
+        _locationAddress = 'Location permission denied';
+        notifyListeners();
+        return null;
+      }
+
+      if (permission == LocationPermission.always ||
+          permission == LocationPermission.whileInUse) {
+        _currentLocation = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        );
+        _locationAddress = 'Lat: ${_currentLocation!.latitude.toStringAsFixed(4)}, Long: ${_currentLocation!.longitude.toStringAsFixed(4)} (GPS Lock)';
+        notifyListeners();
+        return _currentLocation;
+      }
+    } catch (e) {
+      _currentLocation = null;
+      _locationAddress = 'GPS error: ${e.toString()}';
+      notifyListeners();
+      return null;
+    }
+
+    _currentLocation = null;
+    _locationAddress = 'Acquiring GPS location...';
     notifyListeners();
-    return _currentLocation;
+    return null;
   }
 
   /// Open Food Facts Barcode Lookup
