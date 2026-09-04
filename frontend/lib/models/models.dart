@@ -1,5 +1,5 @@
-/// User Role definition
-enum UserRole { inspector, admin, citizen }
+/// User Role definition matching statutory RBAC specifications
+enum UserRole { inspector, nodalOfficer, commissioner, admin, citizen }
 
 /// User Model
 class UserModel {
@@ -21,20 +21,54 @@ class UserModel {
     required this.token,
   });
 
+  bool get isInspector => role == UserRole.inspector;
+  bool get isNodalOfficer => role == UserRole.nodalOfficer;
+  bool get isCommissioner => role == UserRole.commissioner;
+  bool get isAdmin => role == UserRole.admin;
+  bool get isCitizen => role == UserRole.citizen;
+
   factory UserModel.fromJson(Map<String, dynamic> json, {String token = ''}) {
+    final rawRole = (json['role'] ?? '').toString().toLowerCase();
+    UserRole resolvedRole = UserRole.inspector;
+    if (rawRole == 'nodal_officer' || rawRole == 'nodal_verifier') {
+      resolvedRole = UserRole.nodalOfficer;
+    } else if (rawRole == 'food_commissioner' || rawRole == 'commissioner') {
+      resolvedRole = UserRole.commissioner;
+    } else if (rawRole == 'admin') {
+      resolvedRole = UserRole.admin;
+    } else if (rawRole == 'citizen') {
+      resolvedRole = UserRole.citizen;
+    }
+
     return UserModel(
       id: json['id'] ?? '',
       email: json['email'] ?? '',
       fullName: json['full_name'] ?? json['name'] ?? 'Enforcement Officer',
       officialId:
           json['official_id'] ?? json['badge_number'] ?? 'DOCA-INSP-2026',
-      role: (json['role'] == 'admin')
-          ? UserRole.admin
-          : (json['role'] == 'citizen')
-              ? UserRole.citizen
-              : UserRole.inspector,
+      role: resolvedRole,
       zone: json['zone'] ?? 'North Zone (New Delhi Division)',
       token: token,
+    );
+  }
+
+  UserModel copyWith({
+    String? id,
+    String? email,
+    String? fullName,
+    String? officialId,
+    UserRole? role,
+    String? zone,
+    String? token,
+  }) {
+    return UserModel(
+      id: id ?? this.id,
+      email: email ?? this.email,
+      fullName: fullName ?? this.fullName,
+      officialId: officialId ?? this.officialId,
+      role: role ?? this.role,
+      zone: zone ?? this.zone,
+      token: token ?? this.token,
     );
   }
 

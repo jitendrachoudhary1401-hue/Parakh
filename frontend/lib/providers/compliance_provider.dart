@@ -511,5 +511,96 @@ class ComplianceProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  /// Fetch all dossiers forwarded to Commissioner for digital signature
+  Future<List<InspectionRecord>> fetchPendingCommissionerInspections() async {
+    try {
+      final response = await _apiClient.get('/inspections/pending-commissioner');
+      if (response.success && response.data != null && response.data is List) {
+        final list = (response.data as List)
+            .map((item) => InspectionRecord.fromJson(item as Map<String, dynamic>))
+            .toList();
+        return list;
+      }
+    } catch (_) {}
+    return _inspectionHistory
+        .where((e) =>
+            e.status == 'verified_accepted' ||
+            e.commissionerStatus == 'FORWARDED_FOR_DIGITAL_SIGNATURE')
+        .toList();
+  }
+
+  /// Commissioner applies digital signature to the forwarded dossier
+  Future<bool> submitCommissionerSignature({
+    required String inspectionId,
+    required String commissionerName,
+    required String remarks,
+  }) async {
+    _isCommittingBlockchain = true;
+    _statusMessage = 'Applying Commissioner Digital Signature & issuing Notice...';
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.post(
+        '/inspections/$inspectionId/commissioner-sign',
+        body: {
+          'commissioner_name': commissionerName,
+          'remarks': remarks,
+        },
+      );
+
+      if (response.success) {
+        if (_currentInspection != null && _currentInspection!.id == inspectionId) {
+          _currentInspection = InspectionRecord(
+            id: _currentInspection!.id,
+            barcode: _currentInspection!.barcode,
+            productName: _currentInspection!.productName,
+            storeName: _currentInspection!.storeName,
+            shopOwnerName: _currentInspection!.shopOwnerName,
+            locationAddress: _currentInspection!.locationAddress,
+            latitude: _currentInspection!.latitude,
+            longitude: _currentInspection!.longitude,
+            timestamp: _currentInspection!.timestamp,
+            isCompliant: _currentInspection!.isCompliant,
+            imagePath: _currentInspection!.imagePath,
+            unwarpedImagePath: _currentInspection!.unwarpedImagePath,
+            extractedData: _currentInspection!.extractedData,
+            violations: _currentInspection!.violations,
+            blockchainReceipt: _currentInspection!.blockchainReceipt,
+            legalNoticePdfUrl: _currentInspection!.legalNoticePdfUrl,
+            isSynced: true,
+            inspectorRemarks: _currentInspection!.inspectorRemarks,
+            status: 'signed_notice_issued',
+            verifierComment: _currentInspection!.verifierComment,
+            verifierDecision: _currentInspection!.verifierDecision,
+            commissionerStatus: 'DIGITALLY_SIGNED_AND_ISSUED',
+            verifiedAt: _currentInspection!.verifiedAt,
+          );
+          await _storage.saveInspection(_currentInspection!);
+        }
+
+        final idx = _inspectionHistory.indexWhere((e) => e.id == inspectionId);
+        if (idx >= 0 && _currentInspection != null) {
+          _inspectionHistory[idx] = _currentInspection!;
+          await _storage.saveInspection(_currentInspection!);
+        }
+
+        _isCommittingBlockchain = false;
+        _statusMessage = null;
+        notifyListeners();
+        return true;
+      } else {
+        _isCommittingBlockchain = false;
+        _statusMessage = response.message ?? 'Failed to apply Digital Signature';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _isCommittingBlockchain = false;
+      _statusMessage = 'Commissioner Sign Error: ${e.toString()}';
+      notifyListeners();
+      return false;
+    }
+  }
 }
 

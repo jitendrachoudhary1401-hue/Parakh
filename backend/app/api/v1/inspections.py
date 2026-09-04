@@ -177,3 +177,39 @@ async def record_nodal_decision(
         message=f"Dossier successfully {decision_verb} by Nodal Verifier",
     )
 
+
+@router.get("/pending-commissioner")
+async def get_pending_commissioner(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all dossiers forwarded to Commissioner for digital signature."""
+    service = InspectionService(db)
+    items = await service.get_pending_commissioner()
+    return success_response(
+        data=[InspectionResponse.model_validate(i).model_dump() for i in items],
+        message=f"Found {len(items)} dossiers awaiting Commissioner digital signature",
+    )
+
+
+@router.post("/{inspection_id}/commissioner-sign")
+async def record_commissioner_signature(
+    inspection_id: UUID,
+    payload: Optional[Dict[str, Any]] = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Commissioner: Apply digital e-Signature and issue statutory enforcement notice."""
+    service = InspectionService(db)
+    comm_name = (payload or {}).get("commissioner_name") or current_user.full_name or "Dr. V. K. Verma"
+    remarks = (payload or {}).get("remarks") or "Digital signature applied. Statutory legal notice issued under Rule 32 of LM Rules, 2011."
+    updated = await service.record_commissioner_signature(
+        inspection_id=inspection_id,
+        commissioner_name=comm_name,
+        remarks=remarks,
+    )
+    return success_response(
+        data=InspectionResponse.model_validate(updated).model_dump(),
+        message="Statutory digital signature applied successfully. Notice issued.",
+    )
+

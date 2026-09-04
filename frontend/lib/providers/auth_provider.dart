@@ -37,6 +37,15 @@ class AuthProvider extends ChangeNotifier {
 
   void updateServerUrl(String url) => updateBaseUrl(url);
 
+  /// Switch active role perspective for RBAC dashboard view testing
+  void switchRole(UserRole newRole) {
+    if (_currentUser != null) {
+      _currentUser = _currentUser!.copyWith(role: newRole);
+      _storage.saveUser(_currentUser!);
+      notifyListeners();
+    }
+  }
+
   void _loadPersistedUser() {
     _currentUser = _storage.getUser();
     // Don't mark session as validated yet — must verify token against backend

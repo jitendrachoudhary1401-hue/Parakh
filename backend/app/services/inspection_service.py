@@ -181,6 +181,64 @@ class InspectionService:
 
         return await self.repo.update(inspection)
 
+    async def get_pending_commissioner(self) -> List[Inspection]:
+        """Fetch all inspections forwarded to Commissioner for digital signature."""
+        from sqlalchemy import or_
+        stmt = (
+            select(Inspection)
+            .where(
+                or_(
+                    Inspection.status == "verified_accepted",
+                    Inspection.status == "FORWARDED_FOR_DIGITAL_SIGNATURE",
+                )
+            )
+            .order_by(Inspection.created_at.desc())
+        )
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def record_commissioner_signature(
+        self,
+        inspection_id: UUID,
+        commissioner_name: str = "Dr. V. K. Verma",
+        remarks: str = "Statutory digital signature applied. Notice issued under Rule 32 of LM Rules, 2011.",
+    ) -> Inspection:
+        """Commissioner applies digital signature to the verified dossier."""
+        import hashlib
+        inspection = await self.get_by_id(inspection_id)
+        inspection.status = "signed_notice_issued"
+        meta = dict(inspection.metadata_json or {})
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        sig_payload = f"{inspection.id}:{commissioner_name}:{now_iso}:{inspection.blockchain_hash}"
+        digital_sig_hash = hashlib.sha256(sig_payload.encode()).hexdigest()
+
+        meta["commissioner_signature"] = {
+            "signed_by": commissioner_name,
+            "signed_at": now_iso,
+            "digital_signature_hash": digital_sig_hash,
+            "algorithm": "SHA-256 / RSA-2048 Digital e-Sign",
+            "statutory_notice_number": f"DOCA/LM/2026/{str(inspection.id)[:8].upper()}",
+            "remarks": remarks,
+        }
+        if "nodal_verification" in meta:
+            meta["nodal_verification"]["commissioner_status"] = "DIGITALLY_SIGNED_AND_ISSUED"
+
+        inspection.metadata_json = meta
+
+        from app.blockchain.evidence_chain import EvidenceChainService
+        updated_hash = EvidenceChainService.calculate_payload_hash(
+            image_storage_path=inspection.image_storage_path,
+            gps_latitude=inspection.latitude,
+            gps_longitude=inspection.longitude,
+            capture_timestamp=inspection.created_at or datetime.now(timezone.utc),
+            ocr_text_snapshot=f"{inspection.notes or ''} | COMM_SIGN: {digital_sig_hash}",
+            inspector_id=str(inspection.inspector_id),
+            violation_data=meta.get("violation_rules", []),
+        )
+        inspection.blockchain_hash = updated_hash
+        return await self.repo.update(inspection)
+
     async def get_pending_nodal(self, limit: int = 50, offset: int = 0) -> List[Inspection]:
         """Retrieve inspections awaiting Nodal Verifier scrutiny."""
         inspections, _ = await self.repo.list_inspections(

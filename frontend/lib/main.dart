@@ -11,6 +11,7 @@ import 'providers/sync_provider.dart';
 import 'screens/ai_review_screen.dart';
 import 'screens/ar_camera_screen.dart';
 import 'screens/barcode_scanner_screen.dart';
+import 'screens/commissioner_portal_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/establishment_intake_screen.dart';
 import 'screens/evidence_report_screen.dart';
@@ -65,6 +66,7 @@ class ParakhMobileApp extends StatelessWidget {
         '/sync-hub': (context) => const OfflineSyncHubScreen(),
         '/profile': (context) => const ProfileSettingsScreen(),
         '/nodal-verifier': (context) => const NodalVerifierScreen(),
+        '/commissioner-portal': (context) => const CommissionerPortalScreen(),
       },
     );
   }
