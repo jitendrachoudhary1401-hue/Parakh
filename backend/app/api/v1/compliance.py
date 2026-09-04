@@ -18,7 +18,26 @@ from app.db.postgres import get_db
 from app.models.user import User
 from app.repositories.inspection_repo import InspectionRepository
 
+import json
+from pathlib import Path
+
 router = APIRouter(prefix="/compliance", tags=["Compliance"])
+
+RULES_JSON_PATH = Path(__file__).resolve().parent.parent.parent / "rules" / "legal_metrology_rules.json"
+
+
+@router.get("/rules")
+async def get_legal_metrology_rules():
+    """Retrieve all statutory Legal Metrology rules from legal_metrology_rules.json for inspector reference."""
+    if not RULES_JSON_PATH.exists():
+        return success_response(data={"rules": [], "total": 0})
+    with open(RULES_JSON_PATH, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return success_response(data={
+        "metadata": data.get("metadata", {}),
+        "rules": data.get("rules", []),
+        "total": len(data.get("rules", [])),
+    })
 
 
 @router.get("/{inspection_id}")

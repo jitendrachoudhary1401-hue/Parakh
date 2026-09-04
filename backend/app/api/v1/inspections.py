@@ -21,6 +21,7 @@ from app.schemas.inspection import (
     InspectionResponse,
     InspectionSummary,
     InspectionUpdate,
+    NodalSubmissionPayload,
 )
 from app.services.inspection_service import InspectionService
 
@@ -114,4 +115,23 @@ async def update_inspection_comment(
     return success_response(
         data=InspectionResponse.model_validate(updated).model_dump(),
         message="Comment updated successfully",
+    )
+
+
+@router.post("/{inspection_id}/submit-nodal", dependencies=[Depends(get_current_inspector)])
+async def submit_inspection_to_nodal(
+    inspection_id: UUID,
+    payload: NodalSubmissionPayload,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Inspector: Transmit finalized inspection dossier (shop details, remarks, evidence photos,
+    statutory violation rules) to Nodal Verifier queue for legal scrutiny.
+    """
+    service = InspectionService(db)
+    updated = await service.submit_to_nodal(inspection_id, payload)
+    return success_response(
+        data=InspectionResponse.model_validate(updated).model_dump(),
+        message="Inspection dossier successfully transmitted to Nodal Verification Authority (S. K. Sharma)",
     )

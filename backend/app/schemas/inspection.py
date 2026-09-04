@@ -27,6 +27,16 @@ class InspectionUpdate(BaseModel):
     notes: Optional[str] = None
 
 
+class NodalSubmissionPayload(BaseModel):
+    """Payload sent by Field Inspector when transmitting report to Nodal Verifier."""
+    shop_name: Optional[str] = None
+    shop_owner_name: Optional[str] = None
+    shop_address: Optional[str] = None
+    notes: Optional[str] = None
+    violation_rules: Optional[List[Dict[str, Any]]] = None
+    evidence_images: Optional[List[str]] = None
+
+
 class InspectionResponse(BaseModel):
     """Inspection detail response."""
     inspection_id: UUID

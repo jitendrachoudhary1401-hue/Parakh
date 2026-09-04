@@ -1,10 +1,10 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import '../core/api_client.dart';
 import '../core/constants.dart';
 import '../models/models.dart';
-
-import 'package:geolocator/geolocator.dart';
 
 /// Scan Provider managing AR camera HUD, image capture, GS1 barcode lookup, and AI OCR extraction
 class ScanProvider extends ChangeNotifier {
@@ -20,15 +20,37 @@ class ScanProvider extends ChangeNotifier {
   final List<BoundingBox> _liveBoundingBoxes = [];
   final double _ocrConfidence = 0.0;
   String? _statusMessage;
+  String? _barcodeErrorMessage;
+  String? _lastInspectionId;
+
+  // Establishment Details (Step 1)
+  String _shopName = '';
+  String _shopOwnerName = '';
+  String _shopAddress = '';
+
+  // High-Accuracy Fused Location & GPS Status
   Position? _currentLocation;
   String _locationAddress = 'Acquiring GPS location...';
+  bool _isGpsServiceDisabled = false;
+  bool _isLocationPermissionDenied = false;
 
   ScanProvider(this._apiClient) {
     fetchCurrentLocation(requestIfDenied: false);
   }
 
+  // Getters
   Position? get currentLocation => _currentLocation;
   String get locationAddress => _locationAddress;
+  bool get isGpsServiceDisabled => _isGpsServiceDisabled;
+  bool get isLocationPermissionDenied => _isLocationPermissionDenied;
+
+  String get shopName => _shopName;
+  String get shopOwnerName => _shopOwnerName;
+  String get shopAddress => _shopAddress;
+  bool get hasEstablishmentDetails =>
+      _shopName.trim().isNotEmpty &&
+      _shopOwnerName.trim().isNotEmpty &&
+      _shopAddress.trim().isNotEmpty;
 
   bool get isFlashOn => _isFlashOn;
   bool get isAutoFocusOn => _isAutoFocusOn;
@@ -41,6 +63,8 @@ class ScanProvider extends ChangeNotifier {
   List<BoundingBox> get liveBoundingBoxes => _liveBoundingBoxes;
   double get ocrConfidence => _ocrConfidence;
   String? get statusMessage => _statusMessage;
+  String? get barcodeErrorMessage => _barcodeErrorMessage;
+  String? get lastInspectionId => _lastInspectionId;
 
   void toggleFlash() {
     _isFlashOn = !_isFlashOn;
@@ -52,30 +76,52 @@ class ScanProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setBarcode(String barcode) {
-    _selectedBarcode = barcode;
-    lookupBarcode(barcode);
+  /// Set establishment information gathered in Step 1
+  void setEstablishmentDetails({
+    required String name,
+    required String owner,
+    required String address,
+  }) {
+    _shopName = name.trim();
+    _shopOwnerName = owner.trim();
+    _shopAddress = address.trim();
     notifyListeners();
   }
 
-  /// Fetch Real-Time GPS Location (Strict Device GPS)
+  /// Open device Location / GPS Settings if disabled
+  Future<void> openGpsSettings() async {
+    await Geolocator.openLocationSettings();
+    // Re-check after returning from settings
+    await Future.delayed(const Duration(milliseconds: 600));
+    await fetchCurrentLocation(requestIfDenied: true);
+  }
+
+  /// Fetch Real-Time GPS Location using Google Play Services FusedLocationProviderClient
+  /// Combines GPS satellites, Wi-Fi networks, and cell towers for high accuracy.
   Future<Position?> fetchCurrentLocation({bool requestIfDenied = false}) async {
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         _currentLocation = null;
-        _locationAddress = 'Location services disabled';
+        _isGpsServiceDisabled = true;
+        _locationAddress = 'Location service (GPS) is turned OFF.';
         notifyListeners();
         return null;
       }
+      _isGpsServiceDisabled = false;
 
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        if (!requestIfDenied) return null;
+        if (!requestIfDenied) {
+          _isLocationPermissionDenied = true;
+          notifyListeners();
+          return null;
+        }
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
           _currentLocation = null;
-          _locationAddress = 'Location permission denied';
+          _isLocationPermissionDenied = true;
+          _locationAddress = 'Location permission denied by user.';
           notifyListeners();
           return null;
         }
@@ -83,54 +129,135 @@ class ScanProvider extends ChangeNotifier {
 
       if (permission == LocationPermission.deniedForever) {
         _currentLocation = null;
-        _locationAddress = 'Location permission denied';
+        _isLocationPermissionDenied = true;
+        _locationAddress = 'Location permission permanently denied.';
         notifyListeners();
         return null;
       }
 
-      if (permission == LocationPermission.always ||
-          permission == LocationPermission.whileInUse) {
-        _currentLocation = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      _isLocationPermissionDenied = false;
+
+      // FusedLocationProviderClient configuration on Android
+      LocationSettings locationSettings;
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        locationSettings = AndroidSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 0,
+          forceLocationManager: false, // Explicitly use FusedLocationProviderClient (combines GPS, Wi-Fi & Cell)
+          intervalDuration: const Duration(seconds: 4),
         );
-        _locationAddress = 'Lat: ${_currentLocation!.latitude.toStringAsFixed(4)}, Long: ${_currentLocation!.longitude.toStringAsFixed(4)} (GPS Lock)';
-        notifyListeners();
-        return _currentLocation;
+      } else {
+        locationSettings = const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 0,
+        );
       }
+
+      _currentLocation = await Geolocator.getCurrentPosition(
+        locationSettings: locationSettings,
+      );
+
+      _locationAddress =
+          'Lat: ${_currentLocation!.latitude.toStringAsFixed(5)}, Long: ${_currentLocation!.longitude.toStringAsFixed(5)} (High-Accuracy Fused GPS)';
+      notifyListeners();
+      return _currentLocation;
     } catch (e) {
       _currentLocation = null;
-      _locationAddress = 'GPS error: ${e.toString()}';
+      _locationAddress = 'GPS acquisition error: ${e.toString()}';
       notifyListeners();
       return null;
     }
-
-    _currentLocation = null;
-    _locationAddress = 'Acquiring GPS location...';
-    notifyListeners();
-    return null;
   }
 
-  /// Open Food Facts Barcode Lookup
+  /// GS1 Modulo-10 Checksum Validation for standard retail barcodes
+  bool isValidGtinChecksum(String barcode) {
+    if (!RegExp(r'^\d+$').hasMatch(barcode)) return false;
+    final len = barcode.length;
+    if (len != 8 && len != 12 && len != 13 && len != 14) return false;
+
+    final digits = barcode.split('').map(int.parse).toList();
+    final checkDigit = digits.last;
+    final payload = digits.sublist(0, len - 1);
+
+    int sum = 0;
+    bool multiplyBy3 = true;
+    for (int i = payload.length - 1; i >= 0; i--) {
+      sum += payload[i] * (multiplyBy3 ? 3 : 1);
+      multiplyBy3 = !multiplyBy3;
+    }
+
+    final calculatedCheck = (10 - (sum % 10)) % 10;
+    return calculatedCheck == checkDigit;
+  }
+
+  /// Strict Retail Product Barcode Lookup
+  /// Denies non-products, invalid check digits, or barcodes not in registry.
   Future<OpenFoodFactsProduct> lookupBarcode(String barcode) async {
-    _selectedBarcode = barcode;
+    final cleanBarcode = barcode.trim();
+    _selectedBarcode = cleanBarcode;
+    _barcodeErrorMessage = null;
     _isProcessing = true;
-    _statusMessage = 'Cross-referencing Open Food Facts database...';
+    _statusMessage = 'Validating commodity barcode format & registry...';
     notifyListeners();
 
+    // 1. Strict format and digit verification
+    if (cleanBarcode.isEmpty) {
+      _isProcessing = false;
+      _barcodeErrorMessage = 'Please scan or enter a product barcode.';
+      notifyListeners();
+      throw Exception(_barcodeErrorMessage);
+    }
+
+    if (!RegExp(r'^\d+$').hasMatch(cleanBarcode)) {
+      _isProcessing = false;
+      _product = null;
+      _barcodeErrorMessage =
+          'Invalid Barcode: Scanned item contains non-numeric characters. Retail commodity codes (EAN/UPC) must be purely numeric.';
+      notifyListeners();
+      throw Exception(_barcodeErrorMessage);
+    }
+
+    if (!isValidGtinChecksum(cleanBarcode)) {
+      _isProcessing = false;
+      _product = null;
+      _barcodeErrorMessage =
+          'Invalid Barcode: GTIN Modulo-10 checksum validation failed. This is not a standard retail commodity barcode.';
+      notifyListeners();
+      throw Exception(_barcodeErrorMessage);
+    }
+
+    // 2. Query official Open Food Facts / GS1 Registry
     try {
-      final response = await _apiClient.get('/scan/barcode/$barcode');
+      final response = await _apiClient.get('/scan/barcode/$cleanBarcode');
       if (response.success && response.data != null) {
-        _product = OpenFoodFactsProduct.fromJson(response.data!);
+        final data = response.data!;
+        final status = data['status']?.toString();
+        if (status != 'FOUND') {
+          _product = null;
+          _isProcessing = false;
+          _barcodeErrorMessage =
+              'Product Verification Denied: Barcode $cleanBarcode is not registered as a recognized packaged commodity in the official database. Inspections can only be filed for verified packaged goods.';
+          notifyListeners();
+          throw Exception(_barcodeErrorMessage);
+        }
+
+        _product = OpenFoodFactsProduct.fromJson(data);
+        _barcodeErrorMessage = null;
         _statusMessage = null;
       } else {
         _product = null;
-        _statusMessage = response.message ?? 'Barcode $barcode not found in Open Food Facts registry.';
-        throw Exception(response.message ?? 'Barcode not found');
+        _isProcessing = false;
+        _barcodeErrorMessage =
+            'Product Verification Denied: Barcode $cleanBarcode was not recognized as a registered retail product.';
+        notifyListeners();
+        throw Exception(_barcodeErrorMessage);
       }
     } catch (e) {
       _product = null;
-      _statusMessage = 'Open Food Facts lookup failed: ${e.toString()}';
       _isProcessing = false;
+      if (_barcodeErrorMessage == null) {
+        _barcodeErrorMessage = 'Product Verification Denied: ${e.toString().replaceAll('Exception: ', '')}';
+      }
       notifyListeners();
       rethrow;
     }
@@ -143,10 +270,16 @@ class ScanProvider extends ChangeNotifier {
 
   Future<OpenFoodFactsProduct> lookupGS1Barcode(String barcode) => lookupBarcode(barcode);
 
-  /// Trigger AI Vision & OCR Extraction
+  void setBarcode(String barcode) {
+    _selectedBarcode = barcode;
+    lookupBarcode(barcode);
+    notifyListeners();
+  }
+
+  /// Trigger AI Vision & OCR Extraction on Packaging Label Image
   Future<OCRExtractedData> processImageExtraction({File? imageFile}) async {
     _isProcessing = true;
-    _statusMessage = 'Uploading scan to backend for AI Compliance Processing (OCR + ViT + NER)...';
+    _statusMessage = 'Uploading scan to backend for AI Vision & OCR extraction...';
     notifyListeners();
 
     if (imageFile != null) {
@@ -155,13 +288,13 @@ class ScanProvider extends ChangeNotifier {
 
     if (_capturedImage == null) {
       _isProcessing = false;
-      _statusMessage = 'No image provided for processing';
+      _statusMessage = 'No packaging photo provided for processing';
       notifyListeners();
       throw Exception('No packaging image captured or selected.');
     }
 
     try {
-      // 1. Upload inspection image to backend /scan/upload
+      // 1. Upload inspection image to backend /scan/upload with establishment details
       final uploadResponse = await _apiClient.uploadFile(
         AppConstants.scanUpload,
         file: _capturedImage!,
@@ -170,7 +303,10 @@ class ScanProvider extends ChangeNotifier {
           if (_selectedBarcode.isNotEmpty) 'product_barcode': _selectedBarcode,
           if (_currentLocation != null) 'latitude': _currentLocation!.latitude.toString(),
           if (_currentLocation != null) 'longitude': _currentLocation!.longitude.toString(),
-          'location_name': _locationAddress,
+          'location_name': _shopName.isNotEmpty ? _shopName : _locationAddress,
+          if (_shopName.isNotEmpty) 'shop_name': _shopName,
+          if (_shopOwnerName.isNotEmpty) 'shop_owner_name': _shopOwnerName,
+          if (_shopAddress.isNotEmpty) 'shop_address': _shopAddress,
         },
       );
 
@@ -186,9 +322,10 @@ class ScanProvider extends ChangeNotifier {
       if (inspectionId == null) {
         throw Exception('Backend did not return inspection ID.');
       }
+      _lastInspectionId = inspectionId.toString();
 
-      // 2. Trigger Full AI Pipeline (OpenCV Unwarp -> Cloud Vision OCR -> HuggingFace NER -> Rule Engine -> ViT Anomaly)
-      _statusMessage = 'Running HuggingFace NER & ViT Anomaly Analysis...';
+      // 2. Trigger Full AI Pipeline (OpenCV Unwarp -> Cloud Vision OCR -> HuggingFace NER -> Rule Engine)
+      _statusMessage = 'Running Cloud Vision OCR & Legal Metrology Rule Analysis...';
       notifyListeners();
 
       final analysisResponse = await _apiClient.post(
@@ -200,7 +337,7 @@ class ScanProvider extends ChangeNotifier {
       );
 
       if (!analysisResponse.success || analysisResponse.data == null) {
-        final errorMsg = analysisResponse.message ?? 'AI Compliance Analysis failed on backend';
+        final errorMsg = analysisResponse.message ?? 'Compliance Analysis failed on backend';
         _isProcessing = false;
         _statusMessage = errorMsg;
         notifyListeners();
