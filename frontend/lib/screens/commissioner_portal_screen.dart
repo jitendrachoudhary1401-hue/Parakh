@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/role_guard.dart';
 import '../core/theme.dart';
 import '../models/models.dart';
 import '../providers/compliance_provider.dart';
@@ -25,6 +26,12 @@ class _CommissionerPortalScreenState extends State<CommissionerPortalScreen> {
   @override
   void initState() {
     super.initState();
+    RoleGuard.enforceAccess(
+      context,
+      allowedRoles: [UserRole.commissioner, UserRole.admin],
+      featureTitle: 'Digital Signature & Notice Portal',
+      authorizedRoleName: 'Legal Metrology Commissioner',
+    );
     _loadPending();
   }
 
@@ -423,7 +430,7 @@ class _CommissionerPortalScreenState extends State<CommissionerPortalScreen> {
                                                 size: 16, color: AppTheme.error),
                                             Expanded(
                                               child: Text(
-                                                '${v.ruleId}: ${v.message}',
+                                                '${v.ruleCode}: ${v.description}',
                                                 style: const TextStyle(
                                                     fontSize: 11,
                                                     color: AppTheme.error,

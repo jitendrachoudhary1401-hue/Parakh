@@ -91,7 +91,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
               ),
               const SizedBox(height: 12),
 
-              // Quick Desk Access Card
+              // Role Authorization Badge Card
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -101,32 +101,33 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.fact_check, color: AppTheme.primary, size: 22),
+                    const Icon(Icons.security, color: AppTheme.primary, size: 22),
                     const SizedBox(width: 10),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Nodal Verifier Authority Desk',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                            'Active Jurisdiction: ${(user?.role.name ?? "inspector").toUpperCase()}',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                           ),
-                          Text(
-                            'Scrutinize dossiers, record comments, accept/reject',
+                          const Text(
+                            'Statutory Legal Metrology (Packaged Commodities) Grid',
                             style: TextStyle(fontSize: 10, color: AppTheme.textMuted),
                           ),
                         ],
                       ),
                     ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        minimumSize: const Size(60, 32),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.success.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(4),
                       ),
-                      onPressed: () => Navigator.pushNamed(context, '/nodal-verifier'),
-                      child: const Text('OPEN', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                      child: const Text(
+                        'AUTHORIZED',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.success),
+                      ),
                     ),
                   ],
                 ),

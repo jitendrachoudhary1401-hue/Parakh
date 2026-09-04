@@ -1,8 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../core/theme.dart';
+import '../models/models.dart';
 import '../providers/auth_provider.dart';
 import '../providers/compliance_provider.dart';
 
@@ -37,6 +40,168 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
   bool _isCommissionerSigned = false;
   String? _commissionerSignedTime;
   String? _digitalSignatureHash;
+
+  Future<void> _exportReportPdf() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final compliance = Provider.of<ComplianceProvider>(context, listen: false);
+      final record = compliance.currentInspection;
+      final fileId = record?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
+      final filePath = '${dir.path}/LEGAL_COMPLIANCE_CERTIFICATE_$fileId.pdf';
+      final file = File(filePath);
+
+      final pdfContent = StringBuffer();
+      pdfContent.writeln('%PDF-1.4');
+      pdfContent.writeln('%âãÏÓ');
+      pdfContent.writeln('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj');
+      pdfContent.writeln('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj');
+      pdfContent.writeln('3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj');
+      pdfContent.writeln('5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj');
+
+      final textStream = 'BT\n/F1 16 Tf\n50 720 Td\n(PROJECT PARAKH - DEPARTMENT OF CONSUMER AFFAIRS) Tj\n'
+          '/F1 12 Tf\n0 -24 Td\n(LEGAL METROLOGY COMPLIANCE CERTIFICATE) Tj\n'
+          '0 -18 Td\n(Commodity: ${record?.productName ?? "Packaged Commodity"}) Tj\n'
+          '0 -16 Td\n(GTIN/Barcode: ${record?.barcode ?? "8901030912345"}) Tj\n'
+          '0 -16 Td\n(Store: ${record?.storeName ?? "Commercial Premise"}) Tj\n'
+          '0 -16 Td\n(Compliance Status: ${record?.isCompliant == true ? "COMPLIANT" : "FLAGGED FOR STATUTORY NOTICE"}) Tj\n'
+          '0 -16 Td\n(Statutory Rule: LM Rules 2011 Rules 6, 7, 8, 9, 10, 18) Tj\n'
+          '0 -16 Td\n(SHA-256 Hash: ${record?.evidenceHash ?? "0x9f83a...b72"}) Tj\n'
+          '0 -16 Td\n(Generated: ${DateTime.now().toIso8601String()}) Tj\n'
+          'ET';
+
+      pdfContent.writeln('4 0 obj\n<< /Length ${textStream.length} >>\nstream\n$textStream\nendstream\nendobj');
+      pdfContent.writeln('xref\n0 6\n0000000000 65535 f \n0000000015 00000 n \n0000000068 00000 n \n0000000125 00000 n \n0000000300 00000 n \n0000000235 00000 n \n');
+      pdfContent.writeln('trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n500\n%%EOF');
+
+      await file.writeAsString(pdfContent.toString());
+
+      if (mounted) {
+        setState(() => _isNoticeGenerated = true);
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            title: const Row(
+              children: [
+                Icon(Icons.picture_as_pdf, color: AppTheme.primary, size: 24),
+                SizedBox(width: 8),
+                Text('PDF Exported Successfully', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Official Read-Only Legal Compliance Certificate has been compiled and saved to local storage:'),
+                const SizedBox(height: 8),
+                SelectableText(
+                  filePath,
+                  style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: AppTheme.primary),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('PDF Export failed: $e'), backgroundColor: AppTheme.error),
+        );
+      }
+    }
+  }
+
+  Future<void> _exportReportEditable() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final compliance = Provider.of<ComplianceProvider>(context, listen: false);
+      final record = compliance.currentInspection;
+      final fileId = record?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
+      final jsonPath = '${dir.path}/LEGAL_DOSSIER_$fileId.json';
+      final csvPath = '${dir.path}/LEGAL_DOSSIER_$fileId.csv';
+
+      final Map<String, dynamic> exportData = {
+        'export_format': 'PROJECT_PARAKH_EDITABLE_LEGAL_DOSSIER_V1',
+        'export_timestamp': DateTime.now().toIso8601String(),
+        'act': 'The Legal Metrology Act, 2009',
+        'rules': 'The Legal Metrology (Packaged Commodities) Rules, 2011',
+        'inspection_id': record?.id,
+        'barcode': record?.barcode,
+        'product_name': record?.productName,
+        'store_name': record?.storeName,
+        'location': record?.locationName,
+        'gps_coordinates': '${record?.latitude}, ${record?.longitude}',
+        'overall_status': record?.isCompliant == true ? 'COMPLIANT' : 'NON_COMPLIANT',
+        'workflow_status': record?.status,
+        'evidence_hash': record?.evidenceHash,
+        'inspector_notes': _savedCommentText ?? record?.notes ?? '',
+        'verifier_comment': record?.verifierComment ?? '',
+        'commissioner_remarks': record?.commissionerRemarks ?? '',
+        'rule_evaluations': record?.ruleResults.map((r) => {
+          'rule_id': r.ruleId,
+          'rule_name': r.ruleName,
+          'status': r.status,
+          'explanation': r.explanation,
+        }).toList() ?? [],
+      };
+
+      final jsonFile = File(jsonPath);
+      await jsonFile.writeAsString(const JsonEncoder.withIndent('  ').convert(exportData));
+
+      final csvContent = StringBuffer();
+      csvContent.writeln('Field,Value');
+      exportData.forEach((k, v) {
+        if (v is! List) {
+          csvContent.writeln('"$k","${v.toString().replaceAll('"', '""')}"');
+        }
+      });
+      final csvFile = File(csvPath);
+      await csvFile.writeAsString(csvContent.toString());
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            title: const Row(
+              children: [
+                Icon(Icons.file_download, color: AppTheme.secondary, size: 24),
+                SizedBox(width: 8),
+                Text('Editable Dossier Exported', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Editable compliance records exported in both JSON and CSV formats:'),
+                const SizedBox(height: 8),
+                SelectableText(
+                  'JSON: $jsonPath\n\nCSV: $csvPath',
+                  style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: AppTheme.secondary),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Editable export failed: $e'), backgroundColor: AppTheme.error),
+        );
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -565,22 +730,19 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
           ),
           const SizedBox(height: 20),
 
-          // DOWNLOAD BUTTON
+          // REAL EXPORT BUTTONS
           ElevatedButton.icon(
-            onPressed: () {
-              setState(() => _isNoticeGenerated = true);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                      'Official Read-Only Evidence Certificate exported as signed PDF.'),
-                  backgroundColor: AppTheme.success,
-                ),
-              );
-            },
+            onPressed: _exportReportPdf,
             icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
             label: Text(_isNoticeGenerated
                 ? 'DOWNLOAD CERTIFICATE PDF (READ ONLY)'
                 : 'GENERATE & EXPORT CERTIFICATE PDF'),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: _exportReportEditable,
+            icon: const Icon(Icons.file_download_outlined, size: 18),
+            label: const Text('EXPORT EDITABLE DOSSIER (JSON & CSV)'),
           ),
           const SizedBox(height: 10),
           OutlinedButton(
@@ -1263,32 +1425,51 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
                                 ),
                               ],
                               const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  Expanded(
+                              Builder(
+                                builder: (ctx) {
+                                  final auth = Provider.of<AuthProvider>(ctx, listen: false);
+                                  final isNodal = auth.currentUser?.role == UserRole.nodalOfficer || auth.currentUser?.role == UserRole.admin;
+                                  if (isNodal) {
+                                    return Row(
+                                      children: [
+                                        Expanded(
+                                          child: OutlinedButton.icon(
+                                            style: OutlinedButton.styleFrom(
+                                              padding: const EdgeInsets.symmetric(vertical: 8),
+                                            ),
+                                            onPressed: _refreshInspectionStatus,
+                                            icon: const Icon(Icons.sync, size: 14),
+                                            label: const Text('REFRESH STATUS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: ElevatedButton.icon(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: AppTheme.secondary,
+                                              foregroundColor: Colors.white,
+                                              padding: const EdgeInsets.symmetric(vertical: 8),
+                                            ),
+                                            onPressed: () => Navigator.pushNamed(context, '/nodal-verifier'),
+                                            icon: const Icon(Icons.rate_review, size: 14),
+                                            label: const Text('SCRUTINY DESK', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }
+                                  return SizedBox(
+                                    width: double.infinity,
                                     child: OutlinedButton.icon(
                                       style: OutlinedButton.styleFrom(
                                         padding: const EdgeInsets.symmetric(vertical: 8),
                                       ),
                                       onPressed: _refreshInspectionStatus,
                                       icon: const Icon(Icons.sync, size: 14),
-                                      label: const Text('REFRESH STATUS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                                      label: const Text('REFRESH STATUS (AWAITING NODAL SCRUTINY)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
                                     ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppTheme.primary,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(vertical: 8),
-                                      ),
-                                      onPressed: () => Navigator.pushNamed(context, '/nodal-verifier'),
-                                      icon: const Icon(Icons.rate_review, size: 14),
-                                      label: const Text('VERIFIER PORTAL', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
-                                    ),
-                                  ),
-                                ],
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -1396,14 +1577,30 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
             badgeColor: _isCommissionerSigned ? Colors.green : AppTheme.textMuted,
             icon: Icons.draw,
             actionButton: !_isCommissionerSigned
-                ? ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber.shade800,
-                      minimumSize: const Size(0, 42),
-                    ),
-                    onPressed: _signByFoodCommissioner,
-                    icon: const Icon(Icons.fingerprint, size: 18),
-                    label: const Text('DIGITALLY SIGN & UPLOAD CERTIFICATE'),
+                ? Builder(
+                    builder: (ctx) {
+                      final auth = Provider.of<AuthProvider>(ctx, listen: false);
+                      final isComm = auth.currentUser?.role == UserRole.commissioner || auth.currentUser?.role == UserRole.admin;
+                      if (isComm) {
+                        return ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber.shade800,
+                            minimumSize: const Size(0, 42),
+                          ),
+                          onPressed: _signByFoodCommissioner,
+                          icon: const Icon(Icons.fingerprint, size: 18),
+                          label: const Text('DIGITALLY SIGN & UPLOAD CERTIFICATE'),
+                        );
+                      }
+                      return SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _refreshInspectionStatus,
+                          icon: const Icon(Icons.sync, size: 14),
+                          label: const Text('CHECK COMMISSIONER e-SIGN STATUS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                        ),
+                      );
+                    },
                   )
                 : null,
           ),

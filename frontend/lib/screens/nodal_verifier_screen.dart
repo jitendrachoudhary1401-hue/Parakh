@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/role_guard.dart';
 import '../core/theme.dart';
 import '../models/models.dart';
 import '../providers/auth_provider.dart';
@@ -29,6 +30,12 @@ class _NodalVerifierScreenState extends State<NodalVerifierScreen> {
   @override
   void initState() {
     super.initState();
+    RoleGuard.enforceAccess(
+      context,
+      allowedRoles: [UserRole.nodalOfficer, UserRole.admin],
+      featureTitle: 'Field Dossier Scrutiny Desk',
+      authorizedRoleName: 'Nodal Verifier Authority (Nodal Officers)',
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadPendingDossiers();
     });

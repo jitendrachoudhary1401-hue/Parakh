@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/role_guard.dart';
 import '../core/theme.dart';
+import '../models/models.dart';
 import '../providers/scan_provider.dart';
 
 /// Step 1: Establishment Intake Screen
@@ -22,6 +24,12 @@ class _EstablishmentIntakeScreenState extends State<EstablishmentIntakeScreen> {
   @override
   void initState() {
     super.initState();
+    RoleGuard.enforceAccess(
+      context,
+      allowedRoles: [UserRole.inspector, UserRole.admin],
+      featureTitle: 'Commercial Premise & Establishment Intake',
+      authorizedRoleName: 'Field Enforcement Inspectors',
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final scan = Provider.of<ScanProvider>(context, listen: false);
       // Pre-fill if already set in provider
