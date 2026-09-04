@@ -15,6 +15,7 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   final bool _biometricEnabled = true;
+  bool _isSessionValidated = false;
 
   AuthProvider(this._apiClient, this._storage) {
     _loadPersistedUser();
@@ -23,7 +24,7 @@ class AuthProvider extends ChangeNotifier {
   ApiClient get apiClient => _apiClient;
   StorageService get storage => _storage;
   UserModel? get currentUser => _currentUser;
-  bool get isAuthenticated => _currentUser != null && _storage.getToken() != null;
+  bool get isAuthenticated => _currentUser != null && _storage.getToken() != null && _isSessionValidated;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get biometricEnabled => _biometricEnabled;
@@ -38,6 +39,43 @@ class AuthProvider extends ChangeNotifier {
 
   void _loadPersistedUser() {
     _currentUser = _storage.getUser();
+    // Don't mark session as validated yet — must verify token against backend
+    _isSessionValidated = false;
+    notifyListeners();
+  }
+
+  /// Validate the stored token against the backend.
+  /// Returns true if the token is valid and the session is still active.
+  Future<bool> validateSession() async {
+    final token = _storage.getToken();
+    if (token == null || _currentUser == null) {
+      _isSessionValidated = false;
+      return false;
+    }
+
+    try {
+      // Attempt a lightweight authenticated request to verify the token
+      final response = await _apiClient.get('/health');
+      if (response.statusCode == 401) {
+        // Token is invalid/expired — clear stale auth
+        await _clearStaleAuth();
+        return false;
+      }
+      // Token is valid
+      _isSessionValidated = true;
+      notifyListeners();
+      return true;
+    } catch (_) {
+      // Network error — don't clear auth, just mark as not validated
+      _isSessionValidated = false;
+      return false;
+    }
+  }
+
+  Future<void> _clearStaleAuth() async {
+    _currentUser = null;
+    _isSessionValidated = false;
+    await _storage.clearAuth();
     notifyListeners();
   }
 
@@ -45,7 +83,6 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> login({
     required String officialId,
     required String password,
-    required String otp,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -62,19 +99,13 @@ class AuthProvider extends ChangeNotifier {
 
       if (response.success && response.data != null) {
         final token = response.data!['access_token'] ?? response.data!['token'];
-        final userData = response.data!['user'] ?? {
-          'id': 'insp_01',
-          'official_id': officialId,
-          'email': officialId.contains('@') ? officialId : '$officialId@doca.gov.in',
-          'full_name': 'Inspector Rajesh Kumar (Legal Metrology)',
-          'role': 'inspector',
-          'zone': 'North Zone (New Delhi Division)',
-        };
+        final userData = response.data!['user'];
 
-        if (token != null) {
+        if (token != null && userData != null && userData is Map<String, dynamic>) {
           _currentUser = UserModel.fromJson(userData, token: token);
           await _storage.saveToken(token);
           await _storage.saveUser(_currentUser!);
+          _isSessionValidated = true;
           _isLoading = false;
           notifyListeners();
           return true;
@@ -94,10 +125,21 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Real Biometric Hardware Quick Unlock (Fingerprint / Face ID)
+  /// Biometric only works if the user has already logged in with valid credentials
+  /// and has a valid token stored. It does NOT auto-login with any credentials.
   Future<bool> unlockWithBiometrics() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
+
+    // Biometric unlock requires a prior successful login session
+    final token = _storage.getToken();
+    if (token == null || _currentUser == null) {
+      _errorMessage = 'Please log in with your credentials first before using biometric unlock.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
 
     try {
       final bool canAuthenticateWithBiometrics = await _localAuth.canCheckBiometrics;
@@ -120,18 +162,13 @@ class AuthProvider extends ChangeNotifier {
       );
 
       if (didAuthenticate) {
-        if (_currentUser == null) {
-          _currentUser = UserModel(
-            id: 'insp_doca_2026',
-            email: 'officer.rajesh@doca.gov.in',
-            fullName: 'Inspector Rajesh Kumar (DoCA Field)',
-            officialId: 'DOCA-INSP-2026',
-            role: UserRole.inspector,
-            zone: 'North Zone (New Delhi Division)',
-            token: 'jwt_biometric_token',
-          );
-          await _storage.saveToken('jwt_biometric_token');
-          await _storage.saveUser(_currentUser!);
+        // Verify the stored token is still valid on the backend
+        final isValid = await validateSession();
+        if (!isValid) {
+          _errorMessage = 'Session expired. Please log in with your credentials again.';
+          _isLoading = false;
+          notifyListeners();
+          return false;
         }
         _isLoading = false;
         notifyListeners();
@@ -149,6 +186,7 @@ class AuthProvider extends ChangeNotifier {
   /// Logout
   Future<void> logout() async {
     _currentUser = null;
+    _isSessionValidated = false;
     await _storage.clearAuth();
     notifyListeners();
   }

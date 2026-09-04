@@ -20,8 +20,11 @@ try:
     from jose import JWTError, jwt
 except ImportError:
     import jwt
-    class JWTError(Exception):
-        pass
+    try:
+        from jwt.exceptions import PyJWTError as JWTError
+    except ImportError:
+        class JWTError(Exception):
+            pass
 
 import hashlib
 import hmac
@@ -156,7 +159,7 @@ def decode_token(token: str) -> dict[str, Any]:
             algorithms=[settings.jwt_algorithm],
         )
         return payload
-    except JWTError as exc:
+    except (JWTError, Exception) as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",

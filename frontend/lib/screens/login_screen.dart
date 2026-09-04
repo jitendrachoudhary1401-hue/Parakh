@@ -15,16 +15,13 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _officialIdController = TextEditingController(text: 'DOCA-INSP-2026');
-  final _passwordController = TextEditingController(text: 'Inspector@2026');
-  final _otpController = TextEditingController(text: '492810');
+  final _passwordController = TextEditingController(text: 'password123');
   bool _obscurePassword = true;
-  final bool _isOtpSent = true;
 
   @override
   void dispose() {
     _officialIdController.dispose();
     _passwordController.dispose();
-    _otpController.dispose();
     super.dispose();
   }
 
@@ -35,7 +32,6 @@ class _LoginScreenState extends State<LoginScreen> {
     final success = await auth.login(
       officialId: _officialIdController.text.trim(),
       password: _passwordController.text.trim(),
-      otp: _otpController.text.trim(),
     );
 
     if (success && mounted) {
@@ -166,31 +162,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     validator: (val) => val == null || val.length < 4
                         ? 'Password must be at least 4 chars'
-                        : null,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 2FA OTP Input
-                  Text(
-                    'GOVERNMENT 2FA OTP',
-                    style: Theme.of(context).textTheme.labelSmall,
-                  ),
-                  const SizedBox(height: 6),
-                  TextFormField(
-                    controller: _otpController,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      hintText: '6-digit OTP code',
-                      prefixIcon: const Icon(Icons.security_outlined,
-                          size: 20, color: AppTheme.secondary),
-                      suffixText: _isOtpSent ? 'Resend (52s)' : 'Get OTP',
-                      suffixStyle: const TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.primary,
-                          fontWeight: FontWeight.w600),
-                    ),
-                    validator: (val) => val == null || val.length < 4
-                        ? 'Enter valid OTP'
                         : null,
                   ),
                   const SizedBox(height: 24),

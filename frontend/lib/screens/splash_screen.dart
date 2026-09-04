@@ -162,7 +162,7 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
     });
   }
 
-  void _navigateToNextScreen() {
+  Future<void> _navigateToNextScreen() async {
     if (_hasNavigated || !mounted) return;
     _hasNavigated = true;
 
@@ -171,9 +171,18 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
     } catch (_) {}
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    if (auth.isAuthenticated) {
-      Navigator.pushReplacementNamed(context, '/dashboard');
-    } else {
+
+    // If there's a cached user + token, validate it against the backend
+    if (auth.currentUser != null && auth.storage.getToken() != null) {
+      final isValid = await auth.validateSession();
+      if (isValid && mounted) {
+        Navigator.pushReplacementNamed(context, '/dashboard');
+        return;
+      }
+    }
+
+    // No valid session — route to login
+    if (mounted) {
       Navigator.pushReplacementNamed(context, '/login');
     }
   }
