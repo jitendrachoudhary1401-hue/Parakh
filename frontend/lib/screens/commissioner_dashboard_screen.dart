@@ -519,7 +519,7 @@ class _CommissionerDashboardScreenState
                 const SizedBox(height: 6),
                 const StatusPill(
                   label: 'ACCEPTED BY NODAL • AWAITING e-SIGN',
-                  type: StatusPillType.success,
+                  isCompliant: true,
                 ),
               ],
             ),
