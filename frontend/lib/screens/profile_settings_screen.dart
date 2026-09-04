@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../core/constants.dart';
 import '../core/theme.dart';
 import '../providers/auth_provider.dart';
 
@@ -14,8 +13,14 @@ class ProfileSettingsScreen extends StatefulWidget {
 
 class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   String _selectedLanguage = 'English';
-  final _serverUrlController =
-      TextEditingController(text: AppConstants.defaultApiBaseUrl);
+  late TextEditingController _serverUrlController;
+
+  @override
+  void initState() {
+    super.initState();
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    _serverUrlController = TextEditingController(text: auth.apiClient.baseUrl);
+  }
 
   @override
   void dispose() {
@@ -190,10 +195,27 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                       style: const TextStyle(
                           fontSize: 12, fontFamily: 'monospace'),
                       decoration: const InputDecoration(
-                        hintText: 'http://192.168.43.59:8000/api/v1',
+                        hintText: 'http://172.17.12.24:8000/api/v1',
                         prefixIcon: Icon(Icons.dns_outlined,
                             size: 18, color: AppTheme.secondary),
                       ),
+                    ),
+                    const SizedBox(height: 10),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        final newUrl = _serverUrlController.text.trim();
+                        if (newUrl.isNotEmpty) {
+                          auth.updateServerUrl(newUrl);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Server Gateway URL updated to: $newUrl'),
+                              backgroundColor: AppTheme.success,
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.save, size: 16),
+                      label: const Text('UPDATE GATEWAY URL'),
                     ),
                     const SizedBox(height: 10),
                     const Text(

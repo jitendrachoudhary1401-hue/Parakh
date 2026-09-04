@@ -56,29 +56,47 @@ class _SplashScreenState extends State<SplashScreen> {
         });
       }
     } catch (_) {
-      setState(() {
-        _isLocationPermissionGranted = false;
-        _isCheckingPermission = false;
-      });
-      // Always allow navigation if exception occurs during permission check
-      _navigateToNextScreen();
+      _bypassLocationPermission();
     }
   }
 
-  Future<void> _handlePermissionRequest() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      await Geolocator.openLocationSettings();
-    }
+  void _bypassLocationPermission() {
+    if (!mounted) return;
+    setState(() {
+      _isLocationPermissionGranted = true;
+      _isCheckingPermission = false;
+    });
+    _navigateToNextScreen();
+  }
 
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.deniedForever) {
-      await Geolocator.openAppSettings();
-    } else {
-      await Geolocator.requestPermission();
+  Future<void> _handlePermissionRequest() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        await Geolocator.openLocationSettings();
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      } else if (permission == LocationPermission.deniedForever) {
+        await Geolocator.openAppSettings();
+      }
+
+      if (permission == LocationPermission.always ||
+          permission == LocationPermission.whileInUse) {
+        setState(() {
+          _isLocationPermissionGranted = true;
+          _isCheckingPermission = false;
+        });
+        _navigateToNextScreen();
+      } else {
+        // Fallback bypass so user is never stuck
+        _bypassLocationPermission();
+      }
+    } catch (_) {
+      _bypassLocationPermission();
     }
-    // Re-check after returning and proceed
-    await _checkLocationPermission();
   }
 
   Future<void> _initVideoSplash() async {
@@ -240,6 +258,18 @@ class _SplashScreenState extends State<SplashScreen> {
                                 borderRadius:
                                     BorderRadius.circular(AppTheme.radiusSm),
                               ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: TextButton.icon(
+                            onPressed: _bypassLocationPermission,
+                            icon: const Icon(Icons.my_location, size: 16),
+                            label: const Text('Continue with Default GPS (New Delhi HQ)'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppTheme.primary,
                             ),
                           ),
                         ),

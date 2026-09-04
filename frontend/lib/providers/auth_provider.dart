@@ -20,11 +20,21 @@ class AuthProvider extends ChangeNotifier {
     _loadPersistedUser();
   }
 
+  ApiClient get apiClient => _apiClient;
+  StorageService get storage => _storage;
   UserModel? get currentUser => _currentUser;
   bool get isAuthenticated => _currentUser != null && _storage.getToken() != null;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get biometricEnabled => _biometricEnabled;
+
+  void updateBaseUrl(String url) {
+    _apiClient.updateBaseUrl(url);
+    _storage.setCustomApiUrl(url);
+    notifyListeners();
+  }
+
+  void updateServerUrl(String url) => updateBaseUrl(url);
 
   void _loadPersistedUser() {
     _currentUser = _storage.getUser();
