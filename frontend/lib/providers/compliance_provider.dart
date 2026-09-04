@@ -13,16 +13,19 @@ class ComplianceProvider extends ChangeNotifier {
 
   InspectionRecord? _currentInspection;
   List<InspectionRecord> _inspectionHistory = [];
+  List<Map<String, dynamic>> _statutoryRules = [];
   bool _isEvaluating = false;
   bool _isCommittingBlockchain = false;
   String? _statusMessage;
 
   ComplianceProvider(this._apiClient, this._storage) {
     _loadHistory();
+    fetchStatutoryRules();
   }
 
   InspectionRecord? get currentInspection => _currentInspection;
   List<InspectionRecord> get inspectionHistory => _inspectionHistory;
+  List<Map<String, dynamic>> get statutoryRules => _statutoryRules;
   bool get isEvaluating => _isEvaluating;
   bool get isCommittingBlockchain => _isCommittingBlockchain;
   String? get statusMessage => _statusMessage;
@@ -32,109 +35,210 @@ class ComplianceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Fetch all 12 statutory rules from backend legal_metrology_rules.json
+  Future<List<Map<String, dynamic>>> fetchStatutoryRules() async {
+    try {
+      final response = await _apiClient.get('/compliance/rules');
+      if (response.success && response.data != null && response.data!['rules'] != null) {
+        _statutoryRules = List<Map<String, dynamic>>.from(response.data!['rules']);
+        notifyListeners();
+        return _statutoryRules;
+      }
+    } catch (_) {}
+    return _statutoryRules;
+  }
+
   /// Run Rule Engine against extracted OCR/NLP data
   Future<InspectionRecord> evaluateCompliance({
+    String? inspectionId,
     required OCRExtractedData extracted,
     required GS1Product gs1,
     required String storeName,
+    String shopOwnerName = '',
     required String locationAddress,
+    double latitude = 28.6139,
+    double longitude = 77.2090,
+    String imagePath = '',
+    String unwarpedImagePath = '',
     bool isOffline = false,
   }) async {
     _isEvaluating = true;
     _statusMessage =
-        'Validating extracted data against Legal Metrology Rules, 2011...';
+        'Evaluating extracted packaging labels against Legal Metrology Rules, 2011...';
     notifyListeners();
 
-    await Future.delayed(const Duration(milliseconds: 900));
+    await Future.delayed(const Duration(milliseconds: 600));
 
     final List<RuleViolation> violations = [];
 
-    // Rule 1: MRP Check
+    // Rule 1: MRP Check (Rule 6(1)(e))
     if (extracted.mrp.isEmpty ||
-        !extracted.mrp.contains('₹') && !extracted.mrp.contains('Rs')) {
+        (!extracted.mrp.contains('₹') && !extracted.mrp.contains('Rs'))) {
       violations.add(RuleViolation(
-        ruleCode: 'RULE_MRP',
-        ruleName: 'Rule 6(1)(e): MRP Declaration',
-        description: 'Missing or malformed Maximum Retail Price declaration.',
-        severity: 'High',
+        ruleCode: 'LM-006',
+        ruleName: 'Rule 6(1)(e): Maximum Retail Price (MRP) Declaration',
+        description:
+            'Missing or non-standard Maximum Retail Price declaration (mandatory "inclusive of all taxes" format).',
+        severity: 'Critical',
         isPassed: false,
       ));
     }
 
-    // Rule 2: Net Quantity Check
+    // Rule 2: Net Quantity Check (Rule 6(1)(c))
     if (extracted.netQuantity.isEmpty) {
       violations.add(RuleViolation(
-        ruleCode: 'RULE_NET_QTY',
-        ruleName: 'Rule 6(1)(f): Net Quantity Unit',
-        description: 'Net Quantity not declared in prescribed standard units.',
-        severity: 'High',
+        ruleCode: 'LM-003',
+        ruleName: 'Rule 6(1)(c): Net Quantity Declaration & Units',
+        description:
+            'Net Quantity not declared in standard units of weight, measure, or number (g, kg, ml, l).',
+        severity: 'Critical',
         isPassed: false,
       ));
     }
 
-    // Rule 3: Date Check
+    // Rule 3: Date Check (Rule 6(1)(d))
     if (extracted.mfgDate.isEmpty) {
       violations.add(RuleViolation(
-        ruleCode: 'RULE_DATE',
-        ruleName: 'Rule 6(1)(d): Month & Year of Mfg/Packaging',
-        description: 'Mandatory month and year of manufacture is missing.',
-        severity: 'Medium',
-        isPassed: false,
-      ));
-    }
-
-    // Rule 4: Consumer Care
-    if (extracted.consumerCareEmail.isEmpty ||
-        extracted.consumerCarePhone.isEmpty) {
-      violations.add(RuleViolation(
-        ruleCode: 'RULE_CONSUMER_CARE',
-        ruleName: 'Rule 6(1)(h): Consumer Care Details',
+        ruleCode: 'LM-004',
+        ruleName: 'Rule 6(1)(d): Month & Year of Manufacture / Packaging',
         description:
-            'Incomplete consumer grievance contact details (Mandatory phone and email address required).',
+            'Mandatory month and year of manufacture or pre-packaging is absent on the principal display panel.',
         severity: 'High',
         isPassed: false,
       ));
     }
 
-    // Rule 5: Open Food Facts Product Registry Cross-check
-    if (gs1.gtin.isEmpty) {
+    // Rule 4: Manufacturer / Packer Name & Address (Rule 6(1)(a))
+    if (extracted.manufacturerName.isEmpty) {
       violations.add(RuleViolation(
-        ruleCode: 'RULE_OPENFOODFACTS',
-        ruleName: 'Open Food Facts Registry Check',
+        ruleCode: 'LM-001',
+        ruleName: 'Rule 6(1)(a): Complete Manufacturer / Packer Details',
         description:
-            'Manufacturer barcode mismatch or missing in official Open Food Facts registry.',
+            'Absence of complete name and geographical address of the manufacturer or packer.',
+        severity: 'Critical',
+        isPassed: false,
+      ));
+    }
+
+    // Rule 5: Consumer Care (Rule 6(1)(h))
+    if (extracted.consumerCareEmail.isEmpty && extracted.consumerCarePhone.isEmpty) {
+      violations.add(RuleViolation(
+        ruleCode: 'LM-008',
+        ruleName: 'Rule 6(1)(h): Mandatory Consumer Care Details',
+        description:
+            'Incomplete consumer grievance contact details (telephone number and email address required).',
         severity: 'High',
         isPassed: false,
       ));
     }
 
     final isPassed = violations.isEmpty;
-    final inspectionId =
-        'INSP-${DateTime.now().year}-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    final realId = (inspectionId != null && inspectionId.isNotEmpty)
+        ? inspectionId
+        : 'INSP-${DateTime.now().year}-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
 
     _currentInspection = InspectionRecord(
-      id: inspectionId,
+      id: realId,
       barcode: extracted.barcode.isNotEmpty ? extracted.barcode : gs1.gtin,
       productName: gs1.productName,
       storeName: storeName,
+      shopOwnerName: shopOwnerName,
       locationAddress: locationAddress,
-      latitude: 28.6139,
-      longitude: 77.2090,
+      latitude: latitude,
+      longitude: longitude,
       timestamp: DateTime.now(),
       isCompliant: isPassed,
-      imagePath: '',
+      imagePath: imagePath,
+      unwarpedImagePath: unwarpedImagePath,
       extractedData: extracted,
       violations: violations,
       isSynced: !isOffline,
+      status: isPassed ? 'COMPLIANT' : 'VIOLATION',
     );
 
     await _storage.saveInspection(_currentInspection!);
+    _inspectionHistory.removeWhere((e) => e.id == realId);
     _inspectionHistory.insert(0, _currentInspection!);
 
     _isEvaluating = false;
     _statusMessage = null;
     notifyListeners();
     return _currentInspection!;
+  }
+
+  /// Submit Finalized Dossier directly to Nodal Verifier
+  Future<bool> submitToNodalVerifier({
+    required String inspectionId,
+    required String shopName,
+    required String shopOwnerName,
+    required String shopAddress,
+    required String inspectorNotes,
+    required List<Map<String, dynamic>> violationRules,
+    List<String>? evidenceImages,
+  }) async {
+    _isCommittingBlockchain = true;
+    _statusMessage =
+        'Transmitting inspection dossier to Nodal Verification Authority (S. K. Sharma)...';
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.post(
+        '/inspections/$inspectionId/submit-nodal',
+        body: {
+          'shop_name': shopName,
+          'shop_owner_name': shopOwnerName,
+          'shop_address': shopAddress,
+          'notes': inspectorNotes,
+          'violation_rules': violationRules,
+          if (evidenceImages != null && evidenceImages.isNotEmpty)
+            'evidence_images': evidenceImages,
+        },
+      );
+
+      if (response.success) {
+        if (_currentInspection != null && _currentInspection!.id == inspectionId) {
+          _currentInspection = InspectionRecord(
+            id: _currentInspection!.id,
+            barcode: _currentInspection!.barcode,
+            productName: _currentInspection!.productName,
+            storeName: shopName.isNotEmpty ? shopName : _currentInspection!.storeName,
+            shopOwnerName: shopOwnerName.isNotEmpty ? shopOwnerName : _currentInspection!.shopOwnerName,
+            locationAddress: shopAddress.isNotEmpty ? shopAddress : _currentInspection!.locationAddress,
+            latitude: _currentInspection!.latitude,
+            longitude: _currentInspection!.longitude,
+            timestamp: _currentInspection!.timestamp,
+            isCompliant: _currentInspection!.isCompliant,
+            imagePath: _currentInspection!.imagePath,
+            unwarpedImagePath: _currentInspection!.unwarpedImagePath,
+            extractedData: _currentInspection!.extractedData,
+            violations: _currentInspection!.violations,
+            blockchainReceipt: _currentInspection!.blockchainReceipt,
+            legalNoticePdfUrl: _currentInspection!.legalNoticePdfUrl,
+            isSynced: true,
+            inspectorRemarks: inspectorNotes,
+            status: 'PENDING_NODAL_VERIFICATION',
+          );
+          await _storage.saveInspection(_currentInspection!);
+          final idx = _inspectionHistory.indexWhere((e) => e.id == inspectionId);
+          if (idx >= 0) _inspectionHistory[idx] = _currentInspection!;
+        }
+
+        _isCommittingBlockchain = false;
+        _statusMessage = null;
+        notifyListeners();
+        return true;
+      } else {
+        _isCommittingBlockchain = false;
+        _statusMessage = response.message ?? 'Failed to submit to Nodal Verifier';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _isCommittingBlockchain = false;
+      _statusMessage = 'Nodal Submission Error: ${e.toString()}';
+      notifyListeners();
+      return false;
+    }
   }
 
   void setInspectionSynced(String id, {required bool isSynced}) {
@@ -146,24 +250,28 @@ class ComplianceProvider extends ChangeNotifier {
         barcode: old.barcode,
         productName: old.productName,
         storeName: old.storeName,
+        shopOwnerName: old.shopOwnerName,
         locationAddress: old.locationAddress,
         latitude: old.latitude,
         longitude: old.longitude,
         timestamp: old.timestamp,
         isCompliant: old.isCompliant,
         imagePath: old.imagePath,
+        unwarpedImagePath: old.unwarpedImagePath,
         extractedData: old.extractedData,
         violations: old.violations,
         blockchainReceipt: old.blockchainReceipt,
         legalNoticePdfUrl: old.legalNoticePdfUrl,
         isSynced: isSynced,
+        inspectorRemarks: old.inspectorRemarks,
+        status: old.status,
       );
       _storage.saveInspection(_inspectionHistory[index]);
       notifyListeners();
     }
   }
 
-  /// Commit SHA-256 Tamper-Proof Evidence to Hyperledger Fabric
+  /// Commit SHA-256 Tamper-Proof Evidence to Ledger
   Future<BlockchainReceipt> commitEvidenceToBlockchain(
       InspectionRecord record) async {
     _isCommittingBlockchain = true;
@@ -171,7 +279,6 @@ class ComplianceProvider extends ChangeNotifier {
         'Anchoring cryptographic SHA-256 hash to Hyperledger Fabric...';
     notifyListeners();
 
-    // Compute deterministic SHA-256 hash of (InspectionId + Timestamp + Barcode + Violations)
     final payload =
         '${record.id}|${record.timestamp.toIso8601String()}|${record.barcode}|${record.violations.length}';
     final bytes = utf8.encode(payload);
@@ -217,17 +324,21 @@ class ComplianceProvider extends ChangeNotifier {
         barcode: _currentInspection!.barcode,
         productName: _currentInspection!.productName,
         storeName: _currentInspection!.storeName,
+        shopOwnerName: _currentInspection!.shopOwnerName,
         locationAddress: _currentInspection!.locationAddress,
         latitude: _currentInspection!.latitude,
         longitude: _currentInspection!.longitude,
         timestamp: _currentInspection!.timestamp,
         isCompliant: _currentInspection!.isCompliant,
         imagePath: _currentInspection!.imagePath,
+        unwarpedImagePath: _currentInspection!.unwarpedImagePath,
         extractedData: _currentInspection!.extractedData,
         violations: _currentInspection!.violations,
         blockchainReceipt: receipt,
         legalNoticePdfUrl: 'https://doca.gov.in/notices/LEGAL-NOTICE-$id.pdf',
         isSynced: true,
+        inspectorRemarks: _currentInspection!.inspectorRemarks,
+        status: _currentInspection!.status,
       );
       _storage.saveInspection(_currentInspection!);
     }
@@ -246,17 +357,21 @@ class ComplianceProvider extends ChangeNotifier {
         barcode: _currentInspection!.barcode,
         productName: _currentInspection!.productName,
         storeName: _currentInspection!.storeName,
+        shopOwnerName: _currentInspection!.shopOwnerName,
         locationAddress: _currentInspection!.locationAddress,
         latitude: _currentInspection!.latitude,
         longitude: _currentInspection!.longitude,
         timestamp: _currentInspection!.timestamp,
         isCompliant: _currentInspection!.isCompliant,
         imagePath: _currentInspection!.imagePath,
+        unwarpedImagePath: _currentInspection!.unwarpedImagePath,
         extractedData: _currentInspection!.extractedData,
         violations: _currentInspection!.violations,
         blockchainReceipt: _currentInspection!.blockchainReceipt,
         legalNoticePdfUrl: _currentInspection!.legalNoticePdfUrl,
         isSynced: _currentInspection!.isSynced,
+        inspectorRemarks: notes,
+        status: _currentInspection!.status,
       );
       _storage.saveInspection(_currentInspection!);
     }

@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../core/api_client.dart';
 import '../core/constants.dart';
@@ -255,9 +254,8 @@ class ScanProvider extends ChangeNotifier {
     } catch (e) {
       _product = null;
       _isProcessing = false;
-      if (_barcodeErrorMessage == null) {
-        _barcodeErrorMessage = 'Product Verification Denied: ${e.toString().replaceAll('Exception: ', '')}';
-      }
+      _barcodeErrorMessage ??=
+          'Product Verification Denied: ${e.toString().replaceAll('Exception: ', '')}';
       notifyListeners();
       rethrow;
     }

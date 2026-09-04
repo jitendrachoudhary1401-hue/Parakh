@@ -213,19 +213,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 8),
               ActionTile(
-                title: 'New AR Packaging Scan',
-                description: 'Live camera overlay with green/red AR bounding boxes',
+                title: 'New Inspection & Packaging Scan',
+                description: 'Record establishment details then verify commodity & packaging',
                 icon: Icons.camera_alt_outlined,
                 primaryColor: AppTheme.primary,
-                onTap: () => Navigator.pushNamed(context, '/ar-camera'),
+                onTap: () => Navigator.pushNamed(context, '/establishment-intake'),
               ),
               const SizedBox(height: 10),
               ActionTile(
                 title: 'Open Food Facts Barcode Lookup',
-                description: 'Quick barcode reader to verify registered manufacturer',
+                description: 'Step 1: Establishment intake -> Step 2: Barcode registry verification',
                 icon: Icons.qr_code_scanner,
                 primaryColor: AppTheme.secondary,
-                onTap: () => Navigator.pushNamed(context, '/barcode-scanner'),
+                onTap: () => Navigator.pushNamed(context, '/establishment-intake'),
               ),
               const SizedBox(height: 10),
               ActionTile(
@@ -360,7 +360,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         currentIndex: _currentNavIndex,
         onTap: (index) {
           setState(() => _currentNavIndex = index);
-          if (index == 1) Navigator.pushNamed(context, '/ar-camera');
+          if (index == 1) Navigator.pushNamed(context, '/establishment-intake');
           if (index == 2) Navigator.pushNamed(context, '/history');
           if (index == 3) Navigator.pushNamed(context, '/sync-hub');
           if (index == 4) Navigator.pushNamed(context, '/profile');

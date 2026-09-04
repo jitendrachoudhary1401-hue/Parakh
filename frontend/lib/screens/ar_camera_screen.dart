@@ -58,6 +58,17 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
     final compliance = Provider.of<ComplianceProvider>(context, listen: false);
     final sync = Provider.of<SyncProvider>(context, listen: false);
 
+    if (scan.product == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please verify a valid product barcode in Step 2 first.'),
+          backgroundColor: AppTheme.warning,
+        ),
+      );
+      Navigator.pushReplacementNamed(context, '/barcode-scanner');
+      return;
+    }
+
     if (_isCameraInitialized &&
         _cameraController != null &&
         _cameraController!.value.isInitialized) {
@@ -72,21 +83,18 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
     }
 
     final extracted = scan.extractedData ?? OCRExtractedData.empty();
-    final gs1 = scan.gs1Product ??
-        GS1Product(
-          gtin: scan.selectedBarcode,
-          productName: 'Nutri-Crisp Multi-Grain Flakes',
-          registeredCompany: 'Hindustan Consumer Foods Pvt Ltd',
-          companyAddress: 'Okhla Phase III, New Delhi',
-          brand: 'Nutri-Crisp',
-          isVerified: true,
-        );
+    final gs1 = scan.product!;
 
     final record = await compliance.evaluateCompliance(
+      inspectionId: scan.lastInspectionId,
       extracted: extracted,
       gs1: gs1,
-      storeName: 'Reliance Retail Superstore, Sector 18',
-      locationAddress: scan.locationAddress.isNotEmpty ? scan.locationAddress : 'Sector 18, Noida, NCR Division',
+      storeName: scan.shopName.isNotEmpty ? scan.shopName : 'Commercial Establishment',
+      shopOwnerName: scan.shopOwnerName,
+      locationAddress: scan.shopAddress.isNotEmpty ? scan.shopAddress : scan.locationAddress,
+      latitude: scan.currentLocation?.latitude ?? 28.6139,
+      longitude: scan.currentLocation?.longitude ?? 77.2090,
+      imagePath: scan.capturedImage?.path ?? '',
       isOffline: !sync.isOnline,
     );
 
@@ -104,6 +112,17 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
     final compliance = Provider.of<ComplianceProvider>(context, listen: false);
     final sync = Provider.of<SyncProvider>(context, listen: false);
 
+    if (scan.product == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please verify a valid product barcode in Step 2 first.'),
+          backgroundColor: AppTheme.warning,
+        ),
+      );
+      Navigator.pushReplacementNamed(context, '/barcode-scanner');
+      return;
+    }
+
     final result = await FilePicker.platform.pickFiles(type: FileType.image);
     if (result != null && result.files.single.path != null) {
       final file = File(result.files.single.path!);
@@ -111,21 +130,18 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
       await scan.processImageExtraction(imageFile: file);
 
       final extracted = scan.extractedData ?? OCRExtractedData.empty();
-      final gs1 = scan.gs1Product ??
-          GS1Product(
-            gtin: scan.selectedBarcode,
-            productName: 'Nutri-Crisp Multi-Grain Flakes',
-            registeredCompany: 'Hindustan Consumer Foods Pvt Ltd',
-            companyAddress: 'Okhla Phase III, New Delhi',
-            brand: 'Nutri-Crisp',
-            isVerified: true,
-          );
+      final gs1 = scan.product!;
 
       final record = await compliance.evaluateCompliance(
+        inspectionId: scan.lastInspectionId,
         extracted: extracted,
         gs1: gs1,
-        storeName: 'Reliance Retail Superstore, Sector 18',
-        locationAddress: scan.locationAddress.isNotEmpty ? scan.locationAddress : 'Sector 18, Noida, NCR Division',
+        storeName: scan.shopName.isNotEmpty ? scan.shopName : 'Commercial Establishment',
+        shopOwnerName: scan.shopOwnerName,
+        locationAddress: scan.shopAddress.isNotEmpty ? scan.shopAddress : scan.locationAddress,
+        latitude: scan.currentLocation?.latitude ?? 28.6139,
+        longitude: scan.currentLocation?.longitude ?? 77.2090,
+        imagePath: file.path,
         isOffline: !sync.isOnline,
       );
 
@@ -136,8 +152,6 @@ class _ArCameraScreenState extends State<ArCameraScreen> {
       if (mounted) {
         Navigator.pushNamed(context, '/evidence-report');
       }
-    } else {
-      _handleCapture();
     }
   }
 

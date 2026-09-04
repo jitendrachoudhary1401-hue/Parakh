@@ -43,7 +43,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
       await scan.lookupBarcode(barcode);
     } catch (e) {
       if (!mounted) return;
-      _showRejectionDialog(scan.barcodeErrorMessage ?? e.toString().replaceAll('Exception: ', ''));
+      _showRejectionDialog(scan.barcodeErrorMessage ??
+          e.toString().replaceAll('Exception: ', ''));
     }
   }
 
@@ -54,8 +55,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Icon(Icons.cancel, color: AppTheme.error, size: 28),
             SizedBox(width: 10),
             Expanded(
@@ -79,7 +80,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
               decoration: BoxDecoration(
                 color: AppTheme.errorContainer,
                 borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                border: Border.all(color: AppTheme.error.withOpacity(0.3)),
+                border:
+                    Border.all(color: AppTheme.error.withValues(alpha: 0.3)),
               ),
               child: Text(
                 reason,
@@ -122,7 +124,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
     if (scan.product == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please verify a valid product barcode before proceeding.'),
+          content:
+              Text('Please verify a valid product barcode before proceeding.'),
           backgroundColor: AppTheme.warning,
         ),
       );
@@ -161,10 +164,11 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppTheme.primary.withOpacity(0.1),
+                        color: AppTheme.primary.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.store, color: AppTheme.primary, size: 20),
+                      child: const Icon(Icons.store,
+                          color: AppTheme.primary, size: 20),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -172,7 +176,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            scan.shopName.isNotEmpty ? scan.shopName : 'Establishment Details',
+                            scan.shopName.isNotEmpty
+                                ? scan.shopName
+                                : 'Establishment Details',
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -191,8 +197,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () => Navigator.pushReplacementNamed(context, '/establishment-intake'),
-                      child: const Text('Change', style: TextStyle(fontSize: 12)),
+                      onPressed: () => Navigator.pushReplacementNamed(
+                          context, '/establishment-intake'),
+                      child:
+                          const Text('Change', style: TextStyle(fontSize: 12)),
                     ),
                   ],
                 ),
@@ -207,7 +215,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                   borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
+                      color: Colors.black.withValues(alpha: 0.15),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -222,7 +230,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                       height: 120,
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: scan.product != null ? AppTheme.success : AppTheme.secondary,
+                          color: scan.product != null
+                              ? AppTheme.success
+                              : AppTheme.secondary,
                           width: 2,
                         ),
                         borderRadius: BorderRadius.circular(AppTheme.radiusSm),
@@ -231,8 +241,12 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            scan.product != null ? Icons.verified : Icons.qr_code_scanner,
-                            color: scan.product != null ? AppTheme.success : AppTheme.secondary,
+                            scan.product != null
+                                ? Icons.verified
+                                : Icons.qr_code_scanner,
+                            color: scan.product != null
+                                ? AppTheme.success
+                                : AppTheme.secondary,
                             size: 32,
                           ),
                           const SizedBox(height: 6),
@@ -241,7 +255,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                                 ? 'PRODUCT VERIFIED'
                                 : 'ALIGN BARCODE WITHIN FRAME',
                             style: TextStyle(
-                              color: scan.product != null ? AppTheme.success : AppTheme.secondary,
+                              color: scan.product != null
+                                  ? AppTheme.success
+                                  : AppTheme.secondary,
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 1.0,
@@ -254,7 +270,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                       Container(
                         color: Colors.black54,
                         child: const Center(
-                          child: CircularProgressIndicator(color: AppTheme.secondary),
+                          child: CircularProgressIndicator(
+                              color: AppTheme.secondary),
                         ),
                       ),
                   ],
@@ -290,10 +307,12 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                             controller: _barcodeController,
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(
-                              hintText: 'Enter or scan 8, 12, 13, 14 digit GTIN',
+                              hintText:
+                                  'Enter or scan 8, 12, 13, 14 digit GTIN',
                               prefixIcon: Icon(Icons.barcode_reader),
                               border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 12),
                             ),
                             onSubmitted: (_) => _onVerifyBarcode(),
                           ),
@@ -303,13 +322,17 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.secondary,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 16),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                              borderRadius:
+                                  BorderRadius.circular(AppTheme.radiusSm),
                             ),
                           ),
-                          onPressed: scan.isProcessing ? null : _onVerifyBarcode,
-                          child: const Text('VERIFY', style: TextStyle(fontWeight: FontWeight.w700)),
+                          onPressed:
+                              scan.isProcessing ? null : _onVerifyBarcode,
+                          child: const Text('VERIFY',
+                              style: TextStyle(fontWeight: FontWeight.w700)),
                         ),
                       ],
                     ),
@@ -317,7 +340,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                       const SizedBox(height: 8),
                       Text(
                         scan.statusMessage!,
-                        style: const TextStyle(fontSize: 12, color: AppTheme.primary),
+                        style: const TextStyle(
+                            fontSize: 12, color: AppTheme.primary),
                       ),
                     ],
                   ],
@@ -330,16 +354,18 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppTheme.successContainer.withOpacity(0.5),
+                    color: AppTheme.successContainer.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                    border: Border.all(color: AppTheme.success.withOpacity(0.4)),
+                    border: Border.all(
+                        color: AppTheme.success.withValues(alpha: 0.4)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: const [
-                          Icon(Icons.check_circle, color: AppTheme.success, size: 20),
+                      const Row(
+                        children: [
+                          Icon(Icons.check_circle,
+                              color: AppTheme.success, size: 20),
                           SizedBox(width: 8),
                           Text(
                             'COMMODITY VERIFIED IN REGISTRY',
@@ -364,18 +390,21 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                       if (scan.product!.brand.isNotEmpty)
                         Text(
                           'Brand: ${scan.product!.brand}',
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600),
                         ),
                       const SizedBox(height: 4),
                       Text(
                         'Manufacturer: ${scan.product!.registeredCompany}',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                        style: const TextStyle(
+                            fontSize: 12, color: AppTheme.textMuted),
                       ),
                       if (scan.product!.companyAddress.isNotEmpty) ...[
                         const SizedBox(height: 2),
                         Text(
                           'Address: ${scan.product!.companyAddress}',
-                          style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                          style: const TextStyle(
+                              fontSize: 11, color: AppTheme.textMuted),
                         ),
                       ],
                       const SizedBox(height: 4),
@@ -403,9 +432,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                     ),
                   ),
                   onPressed: _proceedToPackagingScan,
-                  child: Row(
+                  child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
+                    children: [
                       Text(
                         'CAPTURE PACKAGING & VERIFY LABELS (STEP 3)',
                         style: TextStyle(

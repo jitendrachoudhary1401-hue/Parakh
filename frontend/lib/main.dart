@@ -12,6 +12,7 @@ import 'screens/ai_review_screen.dart';
 import 'screens/ar_camera_screen.dart';
 import 'screens/barcode_scanner_screen.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/establishment_intake_screen.dart';
 import 'screens/evidence_report_screen.dart';
 import 'screens/inspection_history_screen.dart';
 import 'screens/login_screen.dart';
@@ -53,6 +54,7 @@ class ParakhMobileApp extends StatelessWidget {
         '/': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
         '/dashboard': (context) => const DashboardScreen(),
+        '/establishment-intake': (context) => const EstablishmentIntakeScreen(),
         '/ar-camera': (context) => const ArCameraScreen(),
         '/barcode-scanner': (context) => const BarcodeScannerScreen(),
         '/ai-review': (context) => const AiReviewScreen(),

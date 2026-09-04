@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/theme.dart';
@@ -21,6 +23,14 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
   bool _isNoticeGenerated = false;
   bool _isSavingComment = false;
   String? _savedCommentText;
+
+  // Real Nodal Submission & Statutory Rules State
+  final Set<String> _selectedRuleIds = {'LM-001', 'LM-003', 'LM-006'};
+  final List<String> _additionalEvidencePhotos = [];
+  bool _isSubmittingToNodal = false;
+  bool _isSubmittedToNodal = false;
+  String? _nodalSubmissionTime;
+  String? _nodalSubmissionTxId;
 
   bool _isNodalVerified = false;
   String? _nodalVerifiedTime;
@@ -87,6 +97,77 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
               ? 'Inspector comment saved & synced to central ledger.'
               : 'Comment saved locally.'),
           backgroundColor: AppTheme.success,
+        ),
+      );
+    }
+  }
+
+  Future<void> _attachEvidencePhoto() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image);
+    if (result != null && result.files.single.path != null) {
+      setState(() {
+        _additionalEvidencePhotos.add(result.files.single.path!);
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Secondary evidence photograph attached to dossier.'),
+            backgroundColor: AppTheme.success,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _submitDossierToNodal() async {
+    final compliance = Provider.of<ComplianceProvider>(context, listen: false);
+    final record = compliance.currentInspection;
+    if (record == null) return;
+
+    final comment = _commentController.text.trim();
+    if (comment.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter Inspector remarks/observations in Tab 2 before submitting.'),
+          backgroundColor: AppTheme.warning,
+        ),
+      );
+      _tabController.animateTo(1);
+      return;
+    }
+
+    setState(() => _isSubmittingToNodal = true);
+
+    final List<Map<String, dynamic>> selectedRules = compliance.statutoryRules
+        .where((r) => _selectedRuleIds.contains(r['rule_id']))
+        .toList();
+
+    final success = await compliance.submitToNodalVerifier(
+      inspectionId: record.id,
+      shopName: record.storeName,
+      shopOwnerName: record.shopOwnerName,
+      shopAddress: record.locationAddress,
+      inspectorNotes: comment,
+      violationRules: selectedRules,
+      evidenceImages: _additionalEvidencePhotos,
+    );
+
+    setState(() {
+      _isSubmittingToNodal = false;
+      if (success) {
+        _isSubmittedToNodal = true;
+        _nodalSubmissionTime = DateTime.now().toIso8601String().split('.')[0].replaceAll('T', ' ');
+        _nodalSubmissionTxId = 'DOCA-NDL-VERIF-${DateTime.now().millisecondsSinceEpoch}';
+      }
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success
+              ? 'Dossier transmitted to Nodal Verifier S. K. Sharma (nodal.officer@doca.gov.in).'
+              : 'Failed to transmit dossier to Nodal Verifier.'),
+          backgroundColor: success ? AppTheme.success : AppTheme.error,
         ),
       );
     }
@@ -492,6 +573,7 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
     required String inspectorName,
     required String inspectorBadge,
   }) {
+    final compliance = Provider.of<ComplianceProvider>(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppTheme.marginMain),
       child: Column(
@@ -685,7 +767,7 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
                       (_commentController.text.isNotEmpty
                           ? _commentController.text
                           : (record?.extractedData != null && !record.isCompliant
-                              ? 'Statutory non-compliance detected: Mandatory Consumer Care contact details missing. Notice prepared for dispatch.'
+                              ? 'Statutory non-compliance detected: Mandatory consumer care / Net quantity details non-compliant. Forwarding to Nodal Verification Authority.'
                               : 'Standard routine inspection completed. All primary declarations verified against Legal Metrology Rules, 2011.')),
                   style: const TextStyle(
                       fontSize: 12, height: 1.4, color: AppTheme.textPrimary),
@@ -693,11 +775,237 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
               ],
             ),
           ),
-          const SizedBox(height: 20),
-          OutlinedButton(
-            onPressed: () =>
-                Navigator.pushReplacementNamed(context, '/dashboard'),
-            child: const Text('RETURN TO DASHBOARD'),
+          const SizedBox(height: 24),
+
+          // EVIDENCE PHOTOGRAPHS & PHYSICAL PROOF
+          Text(
+            'ATTACHED EVIDENCE PHOTOGRAPHS',
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+              border: Border.all(color: AppTheme.outline),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Packaging photos and close-ups of statutory non-compliances:',
+                  style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    if (record?.imagePath != null && (record!.imagePath as String).isNotEmpty)
+                      Container(
+                        width: 90,
+                        height: 90,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                          border: Border.all(color: AppTheme.primary, width: 1.5),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.file(
+                              File(record!.imagePath),
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Center(
+                                child: Icon(Icons.broken_image, size: 28, color: AppTheme.textMuted),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              child: Container(
+                                color: Colors.black54,
+                                padding: const EdgeInsets.symmetric(vertical: 2),
+                                child: const Text(
+                                  'PRIMARY',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ..._additionalEvidencePhotos.map(
+                      (photoPath) => Container(
+                        width: 90,
+                        height: 90,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                          border: Border.all(color: AppTheme.secondary, width: 1.5),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.file(
+                              File(photoPath),
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Center(
+                                child: Icon(Icons.broken_image, size: 28, color: AppTheme.textMuted),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              child: Container(
+                                color: Colors.black54,
+                                padding: const EdgeInsets.symmetric(vertical: 2),
+                                child: const Text(
+                                  'EVIDENCE',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _attachEvidencePhoto,
+                  icon: const Icon(Icons.add_a_photo, size: 16),
+                  label: const Text('ATTACH SECONDARY EVIDENCE PHOTO'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // STATUTORY VIOLATION RULES SELECTION (legal_metrology_rules.json)
+          Text(
+            'STATUTORY VIOLATION RULES (LEGAL METROLOGY ACT, 2009)',
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+              border: Border.all(color: AppTheme.outline),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Select statutory clauses violated by this pre-packaged commodity under Packaged Commodities Rules, 2011:',
+                  style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                ),
+                const SizedBox(height: 12),
+                if (compliance.statutoryRules.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    child: Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                else
+                  ...compliance.statutoryRules.map((rule) {
+                    final ruleId = rule['rule_id']?.toString() ?? '';
+                    final ruleNum = rule['rule_number']?.toString() ?? '';
+                    final ruleTitle = rule['rule_title']?.toString() ?? '';
+                    final severity = rule['severity']?.toString() ?? 'HIGH';
+                    final actSection = rule['legal_consequences']?['act_section']?.toString() ?? 'Section 36(1)';
+                    final isSelected = _selectedRuleIds.contains(ruleId);
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppTheme.errorContainer.withOpacity(0.3) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                        border: Border.all(
+                          color: isSelected ? AppTheme.error.withOpacity(0.5) : AppTheme.outline.withOpacity(0.4),
+                        ),
+                      ),
+                      child: CheckboxListTile(
+                        value: isSelected,
+                        activeColor: AppTheme.error,
+                        dense: true,
+                        title: Row(
+                          children: [
+                            Text(
+                              '$ruleId • Rule $ruleNum',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.primary,
+                              ),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: severity == 'CRITICAL' ? AppTheme.error : AppTheme.secondary,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                severity,
+                                style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                          ],
+                        ),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                ruleTitle,
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '$actSection — ${rule["legal_consequences"]?["penalty_structure"]?["first_offence"] ?? ""}',
+                                style: const TextStyle(fontSize: 10, color: AppTheme.textMuted),
+                              ),
+                            ],
+                          ),
+                        ),
+                        onChanged: (bool? val) {
+                          setState(() {
+                            if (val == true) {
+                              _selectedRuleIds.add(ruleId);
+                            } else {
+                              _selectedRuleIds.remove(ruleId);
+                            }
+                          });
+                        },
+                      ),
+                    );
+                  }),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Forward to Tab 3 Action Button
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+            onPressed: () => _tabController.animateTo(2),
+            icon: const Icon(Icons.arrow_forward),
+            label: const Text('PROCEED TO NODAL TRANSMISSION (TAB 3)'),
           ),
           const SizedBox(height: 20),
         ],
@@ -825,20 +1133,41 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
           ),
           const SizedBox(height: 20),
 
-          // PIPELINE TIMELINE STEP 1: INSPECTOR CREATION
+          // PIPELINE TIMELINE STEP 1: INSPECTOR CREATION & TRANSMISSION
           _buildTimelineNode(
             context,
             stepNumber: '1',
             title: 'FIELD INSPECTION & REPORT CREATION',
-            subtitle: 'Created & Submitted by Legal Metrology Inspector',
+            subtitle: 'Created & Compiled by Legal Metrology Inspector',
             authorityName: 'Inspector Rajesh Kumar (ID: DOCA-INSP-2026)',
-            timestamp: record?.timestamp != null
-                ? record!.timestamp.toString().split('.')[0]
-                : DateTime.now().toString().split('.')[0],
-            isCompleted: true,
-            statusBadge: 'SUBMITTED',
-            badgeColor: AppTheme.primary,
+            timestamp: _nodalSubmissionTime ??
+                (record?.timestamp != null
+                    ? record!.timestamp.toString().split('.')[0]
+                    : DateTime.now().toString().split('.')[0]),
+            isCompleted: _isSubmittedToNodal,
+            statusBadge: _isSubmittedToNodal ? 'TRANSMITTED TO NODAL' : 'READY TO TRANSMIT',
+            badgeColor: _isSubmittedToNodal ? AppTheme.success : AppTheme.primary,
             icon: Icons.assignment_turned_in,
+            actionButton: !_isSubmittedToNodal
+                ? ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(0, 46),
+                    ),
+                    onPressed: _isSubmittingToNodal ? null : _submitDossierToNodal,
+                    icon: _isSubmittingToNodal
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.send_and_archive, size: 18),
+                    label: Text(_isSubmittingToNodal
+                        ? 'TRANSMITTING TO NODAL VERIFIER...'
+                        : 'TRANSMIT DOSSIER TO NODAL VERIFIER (OFFICIAL SUBMISSION)'),
+                  )
+                : null,
           ),
           const SizedBox(height: 16),
 
@@ -846,23 +1175,55 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
           _buildTimelineNode(
             context,
             stepNumber: '2',
-            title: 'NODAL OFFICER VERIFICATION',
-            subtitle: 'Review legal metrology findings & endorse report accuracy',
-            authorityName: 'Nodal Officer S. K. Sharma (Central HQ Division)',
-            timestamp: _nodalVerifiedTime ?? 'Awaiting Nodal Review',
+            title: 'NODAL OFFICER VERIFICATION AUTHORITY',
+            subtitle: 'Review legal metrology findings & statutory violation rules in central queue',
+            authorityName: 'Nodal Officer S. K. Sharma (nodal.officer@doca.gov.in)',
+            timestamp: _nodalVerifiedTime ??
+                (_isSubmittedToNodal ? 'Queued in Nodal Review Desk' : 'Awaiting Dossier Submission'),
             isCompleted: _isNodalVerified,
-            statusBadge: _isNodalVerified ? 'VERIFIED' : 'PENDING REVIEW',
-            badgeColor: _isNodalVerified ? AppTheme.success : AppTheme.warning,
+            statusBadge: _isNodalVerified
+                ? 'VERIFIED'
+                : (_isSubmittedToNodal ? 'PENDING NODAL SCRUTINY' : 'AWAITING TRANSMISSION'),
+            badgeColor: _isNodalVerified
+                ? AppTheme.success
+                : (_isSubmittedToNodal ? AppTheme.warning : AppTheme.textMuted),
             icon: Icons.fact_check,
-            actionButton: !_isNodalVerified
-                ? ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
-                      minimumSize: const Size(0, 42),
-                    ),
-                    onPressed: _verifyByNodalOfficer,
-                    icon: const Icon(Icons.check_circle_outline, size: 18),
-                    label: const Text('VERIFY & FORWARD TO FOOD COMMISSIONER'),
+            actionButton: _isSubmittedToNodal && !_isNodalVerified
+                ? Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.successContainer.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                          border: Border.all(color: AppTheme.success.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.verified, color: AppTheme.success, size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Dossier successfully transmitted to Nodal Verifier S. K. Sharma.\nTracking Ref: ${_nodalSubmissionTxId ?? "DOCA-NDL-2026"}\nTime: ${_nodalSubmissionTime ?? "Just now"}',
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (currentUserRole == 'admin' || currentUserRole.contains('admin')) ...[
+                        const SizedBox(height: 8),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            minimumSize: const Size(0, 40),
+                          ),
+                          onPressed: _verifyByNodalOfficer,
+                          icon: const Icon(Icons.check_circle_outline, size: 16),
+                          label: const Text('NODAL VERIFIER: ENDORSE & APPROVE'),
+                        ),
+                      ],
+                    ],
                   )
                 : null,
           ),
