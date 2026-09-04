@@ -117,7 +117,7 @@ class Settings(BaseSettings):
     # --- File Upload ---
     max_upload_size_mb: int = 25
     allowed_image_types: str = "image/jpeg,image/png,image/webp"
-    min_image_resolution: int = 640
+    min_image_resolution: int = 200
 
     # --- AI / ML ---
     ner_model_name: str = "dslim/bert-base-NER"
