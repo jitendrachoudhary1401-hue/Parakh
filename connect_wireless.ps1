@@ -48,7 +48,8 @@ foreach ($serial in $deviceSerials) {
     Write-Host "  $res1" -ForegroundColor Green
 
     Write-Host "[Test 2: Via Wireless Wi-Fi LAN ($wifiIp)]:" -ForegroundColor White
-    $res2 = & adb -s $serial shell curl -s "http://${wifiIp}:8000/api/v1/health"
+    $wifiUrl = 'http://' + $wifiIp + ':8000/api/v1/health'
+    $res2 = & adb -s $serial shell curl -s $wifiUrl
     Write-Host "  $res2" -ForegroundColor Green
     Write-Host ""
 }
