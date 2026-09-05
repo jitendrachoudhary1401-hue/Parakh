@@ -94,6 +94,71 @@ async def get_pending_nodal_inspections(
     )
 
 
+@router.get("/metrics/nodal")
+async def get_nodal_metrics(
+    db: AsyncSession = Depends(get_db),
+):
+    """Real-time scrutiny counts for Nodal Verifier Authority dashboard."""
+    from sqlalchemy import select
+    from app.models.inspection import Inspection
+
+    stmt = select(Inspection)
+    result = await db.execute(stmt)
+    inspections = result.scalars().all()
+
+    waiting = 0
+    accepted = 0
+    denied = 0
+
+    for i in inspections:
+        meta = i.metadata_json or {}
+        dec = (meta.get("nodal_verification") or {}).get("decision", "").upper()
+        comm_status = (meta.get("nodal_verification") or {}).get("commissioner_status", "").upper()
+        if (
+            dec in ("ACCEPTED", "ACCEPT", "APPROVE", "APPROVED")
+            or i.status in ("verified_accepted", "signed_notice_issued")
+            or comm_status in ("FORWARDED_FOR_DIGITAL_SIGNATURE", "DIGITALLY_SIGNED_AND_ISSUED")
+        ):
+            accepted += 1
+        elif dec in ("REJECTED", "REJECT", "DENIED", "DENY") or i.status in ("verified_rejected", "rejected"):
+            denied += 1
+        else:
+            waiting += 1
+
+    return success_response(
+        data={
+            "waiting": waiting,
+            "accepted": accepted,
+            "denied": denied,
+            "total": len(inspections),
+        },
+        message="Live Nodal Scrutiny workspace metrics calculated successfully",
+    )
+
+
+@router.get("/{inspection_id}/image")
+async def get_inspection_image(
+    inspection_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve packaging evidence photo captured during AR scan."""
+    from fastapi.responses import Response
+    from fastapi import HTTPException
+    from app.storage import get_storage_backend
+
+    service = InspectionService(db)
+    inspection = await service.get_by_id(inspection_id)
+    if not inspection.image_storage_path:
+        raise HTTPException(status_code=404, detail="No evidence image attached to inspection")
+
+    storage = get_storage_backend()
+    try:
+        image_bytes = await storage.download_file(inspection.image_storage_path)
+        return Response(content=image_bytes, media_type="image/jpeg")
+    except Exception:
+        raise HTTPException(status_code=404, detail="Evidence photo not found in storage")
+
+
 @router.get("/{inspection_id}")
 async def get_inspection(
     inspection_id: UUID,
