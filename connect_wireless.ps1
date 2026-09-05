@@ -1,18 +1,21 @@
 Write-Host "========================================================" -ForegroundColor Cyan
-Write-Host " Project PARAKH — Wireless Device Connection Assistant" -ForegroundColor Cyan
+Write-Host " Project PARAKH - Wireless Device Connection Assistant" -ForegroundColor Cyan
 Write-Host "========================================================" -ForegroundColor Cyan
 Write-Host ""
 
 # 1. Get connected ADB devices
 Write-Host "[1/3] Checking connected ADB devices..." -ForegroundColor Yellow
-$lines = adb devices
-$lines | ForEach-Object { Write-Host "  $_" }
+$rawDevices = adb devices
+$rawDevices | ForEach-Object { Write-Host "  $_" }
 Write-Host ""
 
 $deviceSerials = @()
-foreach ($line in $lines) {
-    if ($line -match "^(.+?)\s+device$") {
-        $deviceSerials += $matches[1].Trim()
+foreach ($line in $rawDevices) {
+    if ($line.EndsWith("device") -and -not $line.StartsWith("List of")) {
+        $parts = $line -split "\t"
+        if ($parts.Length -ge 1) {
+            $deviceSerials += $parts[0].Trim()
+        }
     }
 }
 
@@ -34,20 +37,24 @@ if ($deviceSerials.Count -eq 0) {
 }
 Write-Host ""
 
+Write-Host "[3/3] Active Network Gateways:" -ForegroundColor Yellow
 Write-Host "  - Localhost / ADB Reverse: http://127.0.0.1:8000/api/v1" -ForegroundColor White
-Write-Host ("  - Wireless Wi-Fi LAN IP:   http://" + $wifiIp + ":8000/api/v1") -ForegroundColor White
+$wifiGateway = "  - Wireless Wi-Fi LAN IP:   http://" + $wifiIp + ":8000/api/v1"
+Write-Host $wifiGateway -ForegroundColor White
 Write-Host ""
 
 # 4. Test connectivity from attached devices
 Write-Host "Testing device connectivity to backend..." -ForegroundColor Yellow
 foreach ($serial in $deviceSerials) {
-    Write-Host "--- Device [$serial] ---" -ForegroundColor Cyan
+    $deviceHeader = "--- Device [" + $serial + "] ---"
+    Write-Host $deviceHeader -ForegroundColor Cyan
     Write-Host "[Test 1: Via ADB Reverse (127.0.0.1)]:" -ForegroundColor White
     $res1 = & adb -s $serial shell curl -s http://127.0.0.1:8000/api/v1/health
     Write-Host "  $res1" -ForegroundColor Green
 
-    Write-Host "[Test 2: Via Wireless Wi-Fi LAN ($wifiIp)]:" -ForegroundColor White
-    $wifiUrl = 'http://' + $wifiIp + ':8000/api/v1/health'
+    $wifiTestHeader = "[Test 2: Via Wireless Wi-Fi LAN (" + $wifiIp + ")]:"
+    Write-Host $wifiTestHeader -ForegroundColor White
+    $wifiUrl = "http://" + $wifiIp + ":8000/api/v1/health"
     $res2 = & adb -s $serial shell curl -s $wifiUrl
     Write-Host "  $res2" -ForegroundColor Green
     Write-Host ""
