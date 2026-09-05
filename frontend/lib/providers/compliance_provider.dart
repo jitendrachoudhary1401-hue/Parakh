@@ -669,6 +669,9 @@ class ComplianceProvider extends ChangeNotifier {
           await _storage.saveInspection(_currentInspection!);
         }
 
+        await fetchNodalMetrics();
+        await fetchCitizenVerifiedReports();
+
         _isCommittingBlockchain = false;
         _statusMessage = null;
         notifyListeners();
