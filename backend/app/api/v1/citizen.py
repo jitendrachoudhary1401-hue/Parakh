@@ -22,9 +22,47 @@ from app.schemas.citizen import (
     CitizenReportStatus,
     CitizenReportTriageRequest,
 )
+from app.schemas.inspection import InspectionResponse
 from app.services.citizen_service import CitizenService
 
 router = APIRouter(prefix="/citizen", tags=["Citizen Crowdsourcing"])
+
+
+@router.get("/verified-reports")
+async def get_citizen_verified_reports(
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Statutory Citizen Endpoint:
+    Retrieve only authenticated and verified packaging reports (accepted by Nodal Verifier, signed by Commissioner, or fully compliant).
+    """
+    from sqlalchemy import select, desc
+    from app.models.inspection import Inspection
+
+    stmt = select(Inspection).order_by(desc(Inspection.created_at)).limit(100)
+    result = await db.execute(stmt)
+    all_inspections = result.scalars().all()
+
+    verified = []
+    for i in all_inspections:
+        meta = i.metadata_json or {}
+        nodal_meta = meta.get("nodal_verification") or {}
+        dec = nodal_meta.get("decision", "").upper()
+        comm_status = nodal_meta.get("commissioner_status", "").upper()
+
+        if (
+            dec in ("ACCEPTED", "ACCEPT", "APPROVE", "APPROVED")
+            or i.status in ("verified_accepted", "signed_notice_issued")
+            or comm_status in ("FORWARDED_FOR_DIGITAL_SIGNATURE", "DIGITALLY_SIGNED_AND_ISSUED")
+            or i.overall_result == "compliant"
+        ):
+            verified.append(InspectionResponse.model_validate(i).model_dump())
+
+    return success_response(
+        data=verified,
+        message=f"Retrieved {len(verified)} verified reports for citizens",
+    )
+
 
 
 @router.post("/reports")

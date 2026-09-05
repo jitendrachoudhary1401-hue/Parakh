@@ -18,9 +18,22 @@ class ComplianceProvider extends ChangeNotifier {
   bool _isCommittingBlockchain = false;
   String? _statusMessage;
 
+  // Real-time Nodal Scrutiny Metrics
+  int _nodalWaitingCount = 0;
+  int _nodalAcceptedCount = 0;
+  int _nodalDeniedCount = 0;
+  int _nodalTotalCount = 0;
+  bool _isLoadingNodalMetrics = false;
+
+  // Citizen Verified Reports
+  List<InspectionRecord> _citizenVerifiedReports = [];
+  bool _isLoadingCitizenReports = false;
+
   ComplianceProvider(this._apiClient, this._storage) {
     _loadHistory();
     fetchStatutoryRules();
+    fetchNodalMetrics();
+    fetchCitizenVerifiedReports();
   }
 
   InspectionRecord? get currentInspection => _currentInspection;
@@ -30,10 +43,58 @@ class ComplianceProvider extends ChangeNotifier {
   bool get isCommittingBlockchain => _isCommittingBlockchain;
   String? get statusMessage => _statusMessage;
 
+  int get nodalWaitingCount => _nodalWaitingCount;
+  int get nodalAcceptedCount => _nodalAcceptedCount;
+  int get nodalDeniedCount => _nodalDeniedCount;
+  int get nodalTotalCount => _nodalTotalCount;
+  bool get isLoadingNodalMetrics => _isLoadingNodalMetrics;
+
+  List<InspectionRecord> get citizenVerifiedReports => _citizenVerifiedReports;
+  bool get isLoadingCitizenReports => _isLoadingCitizenReports;
+
   void _loadHistory() {
     _inspectionHistory = _storage.getInspections();
     notifyListeners();
   }
+
+  /// Real-time Nodal Metrics directly from Backend Database
+  Future<void> fetchNodalMetrics() async {
+    _isLoadingNodalMetrics = true;
+    notifyListeners();
+    try {
+      final response = await _apiClient.get('/inspections/metrics/nodal');
+      if (response.success && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
+        _nodalWaitingCount = data['waiting'] ?? 0;
+        _nodalAcceptedCount = data['accepted'] ?? 0;
+        _nodalDeniedCount = data['denied'] ?? 0;
+        _nodalTotalCount = data['total'] ?? 0;
+      }
+    } catch (_) {}
+    _isLoadingNodalMetrics = false;
+    notifyListeners();
+  }
+
+  /// Fetch only statutory verified and accepted reports for citizens
+  Future<List<InspectionRecord>> fetchCitizenVerifiedReports() async {
+    _isLoadingCitizenReports = true;
+    notifyListeners();
+    try {
+      final response = await _apiClient.get('/citizen/verified-reports');
+      if (response.success && response.data != null && response.data is List) {
+        _citizenVerifiedReports = (response.data as List)
+            .map((item) => InspectionRecord.fromJson(item as Map<String, dynamic>))
+            .toList();
+        _isLoadingCitizenReports = false;
+        notifyListeners();
+        return _citizenVerifiedReports;
+      }
+    } catch (_) {}
+    _isLoadingCitizenReports = false;
+    notifyListeners();
+    return _citizenVerifiedReports;
+  }
+
 
   /// Fetch all 12 statutory rules from backend legal_metrology_rules.json
   Future<List<Map<String, dynamic>>> fetchStatutoryRules() async {
@@ -493,6 +554,9 @@ class ComplianceProvider extends ChangeNotifier {
           _inspectionHistory[idx] = _currentInspection!;
           await _storage.saveInspection(_currentInspection!);
         }
+
+        await fetchNodalMetrics();
+        await fetchCitizenVerifiedReports();
 
         _isCommittingBlockchain = false;
         _statusMessage = null;
