@@ -145,7 +145,7 @@ class ApiClient {
       if (e is SocketException) {
         final switched = await _trySwitchGateway();
         if (switched) {
-          return get(endpoint, queryParams: queryParams);
+          return await get(endpoint, queryParams: queryParams);
         }
       }
       return _handleException(e);
@@ -184,7 +184,7 @@ class ApiClient {
       if (e is SocketException) {
         final switched = await _trySwitchGateway();
         if (switched) {
-          return post(endpoint, body: body);
+          return await post(endpoint, body: body);
         }
       }
       return _handleException(e);
@@ -223,7 +223,7 @@ class ApiClient {
       if (e is SocketException) {
         final switched = await _trySwitchGateway();
         if (switched) {
-          return patch(endpoint, body: body);
+          return await patch(endpoint, body: body);
         }
       }
       return _handleException(e);
@@ -254,7 +254,7 @@ class ApiClient {
       if (response.statusCode == 401 && !endpoint.contains('/auth/')) {
         final refreshed = await tryRefreshToken();
         if (refreshed) {
-          return uploadFile(endpoint, file: file, fieldName: fieldName, extraFields: extraFields);
+          return await uploadFile(endpoint, file: file, fieldName: fieldName, extraFields: extraFields);
         }
       }
 
@@ -263,7 +263,7 @@ class ApiClient {
       if (e is SocketException) {
         final switched = await _trySwitchGateway();
         if (switched) {
-          return uploadFile(endpoint, file: file, fieldName: fieldName, extraFields: extraFields);
+          return await uploadFile(endpoint, file: file, fieldName: fieldName, extraFields: extraFields);
         }
       }
       return _handleException(e);

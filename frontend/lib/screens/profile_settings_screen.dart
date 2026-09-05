@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/constants.dart';
 import '../core/theme.dart';
 import '../providers/auth_provider.dart';
 
@@ -240,22 +241,104 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        final newUrl = _serverUrlController.text.trim();
-                        if (newUrl.isNotEmpty) {
-                          auth.updateServerUrl(newUrl);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  'Server Gateway URL updated to: $newUrl'),
-                              backgroundColor: AppTheme.success,
-                            ),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.save, size: 16),
-                      label: const Text('UPDATE GATEWAY URL'),
+                    const Text(
+                      'QUICK PRESETS',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        ActionChip(
+                          avatar: const Icon(Icons.wifi, size: 14, color: AppTheme.success),
+                          label: const Text('Wi-Fi Wireless (172.23.51.59)', style: TextStyle(fontSize: 11)),
+                          onPressed: () {
+                            _serverUrlController.text = AppConstants.wifiLanApiUrl;
+                            auth.updateServerUrl(AppConstants.wifiLanApiUrl);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Switched to Wi-Fi Wireless: http://172.23.51.59:8000/api/v1'),
+                                backgroundColor: AppTheme.success,
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          },
+                        ),
+                        ActionChip(
+                          avatar: const Icon(Icons.usb, size: 14, color: AppTheme.primary),
+                          label: const Text('ADB Reverse (127.0.0.1)', style: TextStyle(fontSize: 11)),
+                          onPressed: () {
+                            _serverUrlController.text = AppConstants.defaultApiBaseUrl;
+                            auth.updateServerUrl(AppConstants.defaultApiBaseUrl);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Switched to ADB Reverse: http://127.0.0.1:8000/api/v1'),
+                                backgroundColor: AppTheme.primary,
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              final newUrl = _serverUrlController.text.trim();
+                              if (newUrl.isNotEmpty) {
+                                auth.updateServerUrl(newUrl);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        'Server Gateway URL updated to: $newUrl'),
+                                    backgroundColor: AppTheme.success,
+                                  ),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.save, size: 16),
+                            label: const Text('SAVE GATEWAY'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final messenger = ScaffoldMessenger.of(context);
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('Pinging backend server...'),
+                                duration: Duration(seconds: 1),
+                              ),
+                            );
+                            final resp = await auth.apiClient.get(AppConstants.healthCheck);
+                            if (resp.success) {
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('Backend Connected! Status: Healthy'),
+                                  backgroundColor: AppTheme.success,
+                                ),
+                              );
+                            } else {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('Connection Failed: ${resp.message}'),
+                                  backgroundColor: AppTheme.error,
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.network_check, size: 16),
+                          label: const Text('TEST PING'),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 10),
                     const Text(
