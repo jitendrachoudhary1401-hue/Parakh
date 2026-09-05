@@ -62,15 +62,14 @@ async def upload_inspection_image(
     inspector_id = UUID(user_payload["sub"])
 
     scan_service = ScanService(db)
-    inspection = await scan_service.process_image_upload(
-        file_bytes=file_bytes,
-        filename=file.filename or "capture.jpg",
-        content_type=file.content_type or "image/jpeg",
+    inspection = await scan_service.handle_image_upload(
         inspector_id=inspector_id,
+        file_bytes=file_bytes,
+        filename=file.filename or "upload.jpg",
         product_barcode=product_barcode,
         latitude=latitude,
         longitude=longitude,
-        location_name=location_name,
+        location_name=shop_name or location_name,
         notes=notes,
         shop_name=shop_name,
         shop_owner_name=shop_owner_name,
@@ -78,33 +77,26 @@ async def upload_inspection_image(
     )
 
     audit = AuditService(db)
-    await audit.log_action(
-        actor_id=inspector_id,
-        actor_role=user_payload.get("role", "inspector"),
-        action="SCAN_UPLOAD",
-        entity_type="inspection",
-        entity_id=inspection.id,
-        new_state={
-            "inspection_id": str(inspection.id),
-            "image_path": inspection.image_path,
-            "product_barcode": inspection.product_barcode,
-            "latitude": str(inspection.latitude) if inspection.latitude else None,
-            "longitude": str(inspection.longitude) if inspection.longitude else None,
-            "shop_name": inspection.shop_name,
-            "shop_owner_name": inspection.shop_owner_name,
-            "shop_address": inspection.shop_address,
-        },
+    await audit.log_event(
+        action="INSPECTION_IMAGE_UPLOADED",
+        user_id=inspector_id,
+        user_email=user_payload.get("email"),
+        user_role=user_payload.get("role"),
+        resource_type="inspection",
+        resource_id=str(inspection.inspection_id),
+        details={"barcode": product_barcode, "storage_path": inspection.image_storage_path},
+        ip_address=request.client.host if request.client else None,
     )
 
     return success_response(
         data={
-            "inspection_id": str(inspection.id),
+            "inspection_id": str(inspection.inspection_id),
             "status": inspection.status,
-            "image_path": inspection.image_path,
+            "image_storage_path": inspection.image_storage_path,
             "product_barcode": inspection.product_barcode,
-            "shop_name": inspection.shop_name,
-            "shop_owner_name": inspection.shop_owner_name,
-            "shop_address": inspection.shop_address,
+            "shop_name": shop_name,
+            "shop_owner_name": shop_owner_name,
+            "shop_address": shop_address,
             "created_at": inspection.created_at.isoformat(),
         },
         message="Inspection image received and verified",

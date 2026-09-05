@@ -87,7 +87,7 @@ class ApiClient {
             headers: _headers(),
             body: body != null ? jsonEncode(body) : null,
           )
-          .timeout(const Duration(seconds: 20));
+          .timeout(const Duration(seconds: 60));
       return _handleResponse(response);
     } catch (e) {
       return _handleException(e);

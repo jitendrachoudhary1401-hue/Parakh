@@ -85,28 +85,31 @@ class NLPExtractor:
         ],
     }
 
+    _shared_ner_pipeline = None
+
     def __init__(self):
-        self._ner_pipeline = None
+        self._ner_pipeline = NLPExtractor._shared_ner_pipeline
 
     def _load_ner_pipeline(self):
         """Load the HuggingFace NER pipeline. Raises RuntimeError on failure, no mock fallback."""
-        if self._ner_pipeline is None:
+        if NLPExtractor._shared_ner_pipeline is None:
             from transformers import pipeline
             from app.config import get_settings
 
             settings = get_settings()
             try:
-                self._ner_pipeline = pipeline(
+                NLPExtractor._shared_ner_pipeline = pipeline(
                     "ner",
                     model=settings.ner_model_name,
                     aggregation_strategy="simple",
                 )
-                logger.info("NER model loaded: %s", settings.ner_model_name)
+                logger.info("NER model loaded into shared cache: %s", settings.ner_model_name)
             except Exception as exc:
                 logger.error("Failed to load HuggingFace NER model (%s): %s", settings.ner_model_name, exc)
                 raise RuntimeError(
                     f"HuggingFace NER model '{settings.ner_model_name}' failed to load: {exc}"
                 ) from exc
+        self._ner_pipeline = NLPExtractor._shared_ner_pipeline
 
     async def extract_entities(self, text: str) -> NLPExtractionResult:
         """

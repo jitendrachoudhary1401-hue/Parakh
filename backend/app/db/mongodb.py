@@ -25,6 +25,9 @@ class MongoDB:
         kwargs = {}
         if "mongodb+srv://" in settings.mongodb_url or "ssl=true" in settings.mongodb_url.lower() or "tls=true" in settings.mongodb_url.lower():
             kwargs["tlsCAFile"] = certifi.where()
+        kwargs["serverSelectionTimeoutMS"] = 2500
+        kwargs["connectTimeoutMS"] = 2500
+        kwargs["socketTimeoutMS"] = 3000
         cls.client = AsyncIOMotorClient(settings.mongodb_url, **kwargs)
         cls.database = cls.client[settings.mongodb_database]
 

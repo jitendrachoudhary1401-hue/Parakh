@@ -47,27 +47,32 @@ class AnomalyDetector:
 
     ANOMALY_THRESHOLD = 0.6
 
+    _shared_model = None
+    _shared_feature_extractor = None
+
     def __init__(self):
-        self._model = None
-        self._feature_extractor = None
+        self._model = AnomalyDetector._shared_model
+        self._feature_extractor = AnomalyDetector._shared_feature_extractor
 
     def _load_model(self):
         """Load the HuggingFace ViT model. Raises RuntimeError on failure, no mock fallback."""
-        if self._model is None:
+        if AnomalyDetector._shared_model is None or AnomalyDetector._shared_feature_extractor is None:
             from transformers import AutoImageProcessor, ViTForImageClassification
             from app.config import get_settings
 
             settings = get_settings()
             model_name = settings.vit_model_name
             try:
-                self._feature_extractor = AutoImageProcessor.from_pretrained(model_name)
-                self._model = ViTForImageClassification.from_pretrained(model_name)
-                logger.info("ViT model loaded: %s", model_name)
+                AnomalyDetector._shared_feature_extractor = AutoImageProcessor.from_pretrained(model_name)
+                AnomalyDetector._shared_model = ViTForImageClassification.from_pretrained(model_name)
+                logger.info("ViT model loaded into shared cache: %s", model_name)
             except Exception as exc:
                 logger.error("Failed to load HuggingFace ViT model (%s): %s", model_name, exc)
                 raise RuntimeError(
                     f"HuggingFace ViT model '{model_name}' failed to load: {exc}"
                 ) from exc
+        self._model = AnomalyDetector._shared_model
+        self._feature_extractor = AnomalyDetector._shared_feature_extractor
 
     async def detect_anomalies(self, image: np.ndarray) -> AnomalyDetectionResult:
         """
