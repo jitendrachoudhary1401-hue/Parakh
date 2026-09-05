@@ -105,6 +105,21 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
     try {
       await scan.lookupBarcode(barcode);
+      if (!mounted) return;
+      if (scan.product != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Verified: ${scan.product!.productName}. Proceeding to AR Hub...'),
+            backgroundColor: AppTheme.success,
+            duration: const Duration(milliseconds: 900),
+          ),
+        );
+        Future.delayed(const Duration(milliseconds: 600), () {
+          if (mounted) {
+            _proceedToPackagingScan();
+          }
+        });
+      }
     } catch (e) {
       if (!mounted) return;
       _showRejectionDialog(scan.barcodeErrorMessage ??
@@ -136,10 +151,16 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         _barcodeController.text = detectedBarcode;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Barcode detected & verified: $detectedBarcode'),
+            content: Text('Barcode detected & verified: $detectedBarcode. Proceeding to AR Hub...'),
             backgroundColor: AppTheme.success,
+            duration: const Duration(milliseconds: 900),
           ),
         );
+        Future.delayed(const Duration(milliseconds: 600), () {
+          if (mounted) {
+            _proceedToPackagingScan();
+          }
+        });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -279,6 +300,44 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         title: const Text('Product Barcode Verification'),
         elevation: 0,
       ),
+      bottomNavigationBar: scan.product != null
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                    ),
+                  ),
+                  onPressed: _proceedToPackagingScan,
+                  icon: const Icon(Icons.view_in_ar, size: 22),
+                  label: const Text(
+                    'PROCEED TO AR HUB & PACKAGING SCAN (STEP 3) ➔',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+            )
+          : null,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppTheme.marginMain),

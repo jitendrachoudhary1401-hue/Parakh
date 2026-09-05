@@ -18,8 +18,8 @@ class ScanProvider extends ChangeNotifier {
   File? _capturedImage;
   OpenFoodFactsProduct? _product;
   OCRExtractedData? _extractedData;
-  final List<BoundingBox> _liveBoundingBoxes = [];
-  final double _ocrConfidence = 0.0;
+  List<BoundingBox> _liveBoundingBoxes = [];
+  double _ocrConfidence = 0.0;
   String? _statusMessage;
   String? _barcodeErrorMessage;
   String? _lastInspectionId;
@@ -80,6 +80,16 @@ class ScanProvider extends ChangeNotifier {
 
   void toggleAutoFocus() {
     _isAutoFocusOn = !_isAutoFocusOn;
+    notifyListeners();
+  }
+
+  void setOcrConfidence(double val) {
+    _ocrConfidence = val.clamp(0.0, 1.0);
+    notifyListeners();
+  }
+
+  void setLiveBoundingBoxes(List<BoundingBox> boxes) {
+    _liveBoundingBoxes = boxes;
     notifyListeners();
   }
 
@@ -460,6 +470,12 @@ class ScanProvider extends ChangeNotifier {
       }
 
       _extractedData = OCRExtractedData.fromJson(analysisResponse.data!);
+      if (_extractedData!.confidenceScore > 0) {
+        _ocrConfidence = _extractedData!.confidenceScore;
+      }
+      if (_extractedData!.boundingBoxes.isNotEmpty) {
+        _liveBoundingBoxes = _extractedData!.boundingBoxes;
+      }
       _isProcessing = false;
       _statusMessage = null;
       notifyListeners();
