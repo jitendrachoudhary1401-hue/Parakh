@@ -9,29 +9,22 @@ from __future__ import annotations
 
 from app.config import get_settings
 
-try:
-    from slowapi import Limiter
-    from slowapi.util import get_remote_address
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
-    def _key_func(request):
-        return get_remote_address(request)
 
-    settings = get_settings()
-    storage_uri = "memory://"
+def _key_func(request):
+    return get_remote_address(request)
 
-    limiter = Limiter(
-        key_func=_key_func,
-        default_limits=["60/minute"],
-        storage_uri=storage_uri,
-    )
-except ImportError:
-    class DummyLimiter:
-        def limit(self, *args, **kwargs):
-            def decorator(func):
-                return func
-            return decorator
 
-    limiter = DummyLimiter()
+settings = get_settings()
+storage_uri = "memory://"
+
+limiter = Limiter(
+    key_func=_key_func,
+    default_limits=["60/minute"],
+    storage_uri=storage_uri,
+)
 
 
 def get_rate_limit_string(endpoint_type: str) -> str:

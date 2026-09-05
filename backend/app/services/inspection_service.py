@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
 
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
@@ -183,7 +184,6 @@ class InspectionService:
 
     async def get_pending_commissioner(self) -> List[Inspection]:
         """Fetch all inspections forwarded to Commissioner for digital signature."""
-        from sqlalchemy import or_
         stmt = (
             select(Inspection)
             .where(

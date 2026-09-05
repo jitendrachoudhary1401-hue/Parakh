@@ -12,12 +12,8 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-try:
-    from slowapi.errors import RateLimitExceeded
-    from slowapi.middleware import SlowAPIMiddleware
-except ImportError:
-    RateLimitExceeded = Exception
-    SlowAPIMiddleware = None
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.v1.health import router as health_router
 from app.api.v1.router import api_v1_router
@@ -80,8 +76,7 @@ def create_app() -> FastAPI:
 
     # Attach SlowAPI rate limiter state
     app.state.limiter = limiter
-    if SlowAPIMiddleware is not None:
-        app.add_middleware(SlowAPIMiddleware)
+    app.add_middleware(SlowAPIMiddleware)
 
     # Configure middleware (CORS, secure headers, request logging)
     setup_middleware(app)

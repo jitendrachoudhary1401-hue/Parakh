@@ -19,9 +19,13 @@ class MongoDB:
 
     @classmethod
     def connect(cls) -> None:
-        """Initialise the Motor async client."""
+        """Initialise the Motor async client for MongoDB Atlas Cloud."""
+        import certifi
         settings = get_settings()
-        cls.client = AsyncIOMotorClient(settings.mongodb_url)
+        kwargs = {}
+        if "mongodb+srv://" in settings.mongodb_url or "ssl=true" in settings.mongodb_url.lower() or "tls=true" in settings.mongodb_url.lower():
+            kwargs["tlsCAFile"] = certifi.where()
+        cls.client = AsyncIOMotorClient(settings.mongodb_url, **kwargs)
         cls.database = cls.client[settings.mongodb_database]
 
     @classmethod

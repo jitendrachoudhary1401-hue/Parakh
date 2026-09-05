@@ -6,7 +6,7 @@ Create, retrieve, search, filter, update authorized status, and history.
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
