@@ -94,6 +94,21 @@ async def get_pending_nodal_inspections(
     )
 
 
+@router.get("/pending-commissioner")
+async def get_pending_commissioner(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all dossiers forwarded to Commissioner for digital signature."""
+    service = InspectionService(db)
+    items = await service.get_pending_commissioner()
+    return success_response(
+        data=[InspectionResponse.model_validate(i).model_dump() for i in items],
+        message=f"Found {len(items)} dossiers awaiting Commissioner digital signature",
+    )
+
+
+
 @router.get("/metrics/nodal")
 async def get_nodal_metrics(
     db: AsyncSession = Depends(get_db),
@@ -242,19 +257,6 @@ async def record_nodal_decision(
         message=f"Dossier successfully {decision_verb} by Nodal Verifier",
     )
 
-
-@router.get("/pending-commissioner")
-async def get_pending_commissioner(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """List all dossiers forwarded to Commissioner for digital signature."""
-    service = InspectionService(db)
-    items = await service.get_pending_commissioner()
-    return success_response(
-        data=[InspectionResponse.model_validate(i).model_dump() for i in items],
-        message=f"Found {len(items)} dossiers awaiting Commissioner digital signature",
-    )
 
 
 @router.post("/{inspection_id}/commissioner-sign")
