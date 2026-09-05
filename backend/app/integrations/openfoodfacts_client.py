@@ -87,7 +87,7 @@ class OpenFoodFactsClient:
         url = f"{self.api_url}/product/{digits_only}.json"
 
         try:
-            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+            async with httpx.AsyncClient(timeout=3.0, follow_redirects=True) as client:
                 logger.info("Querying Open Food Facts API for barcode: %s", digits_only)
                 response = await client.get(url, headers=headers)
 

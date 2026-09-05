@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -109,6 +110,76 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
       _showRejectionDialog(scan.barcodeErrorMessage ??
           e.toString().replaceAll('Exception: ', ''));
     }
+  }
+
+  Future<void> _scanBarcodeFromCamera() async {
+    if (_cameraController == null || !_isCameraInitialized) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Hardware camera initializing, please wait...'),
+          backgroundColor: AppTheme.warning,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final photo = await _cameraController!.takePicture();
+      if (!mounted) return;
+      final scan = Provider.of<ScanProvider>(context, listen: false);
+      final detectedBarcode =
+          await scan.detectBarcodeFromCameraImage(File(photo.path));
+
+      if (!mounted) return;
+
+      if (detectedBarcode != null) {
+        _barcodeController.text = detectedBarcode;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Barcode detected & verified: $detectedBarcode'),
+            backgroundColor: AppTheme.success,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'No barcode detected in frame. Align barcode squarely in the frame and retry.'),
+            backgroundColor: AppTheme.warning,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error scanning barcode: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Camera scan note: ${e.toString()}'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+    }
+  }
+
+  Widget _buildQuickBarcodeChip(String label, String barcode) {
+    final isSelected = _barcodeController.text == barcode;
+    return ActionChip(
+      avatar: isSelected
+          ? const Icon(Icons.check, size: 14, color: Colors.white)
+          : const Icon(Icons.qr_code_2, size: 14, color: AppTheme.secondary),
+      label: Text(label),
+      labelStyle: TextStyle(
+        fontSize: 11,
+        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+        color: isSelected ? Colors.white : AppTheme.textPrimary,
+      ),
+      backgroundColor:
+          isSelected ? AppTheme.secondary : AppTheme.surfaceContainerLow,
+      onPressed: () {
+        _barcodeController.text = barcode;
+        _onVerifyBarcode();
+      },
+    );
   }
 
   void _showRejectionDialog(String reason) {
@@ -517,7 +588,33 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+
+              // High-Speed Instant Camera Scan Button
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0284C7),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                  ),
+                ),
+                onPressed: scan.isProcessing ? null : _scanBarcodeFromCamera,
+                icon: const Icon(Icons.qr_code_scanner, size: 22),
+                label: Text(
+                  scan.isProcessing
+                      ? 'PROCESSING SCAN...'
+                      : '📸 SCAN BARCODE FROM CAMERA (INSTANT)',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
 
               // Barcode Input & Verification Card
               Container(
@@ -585,6 +682,39 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                             fontSize: 12, color: AppTheme.primary),
                       ),
                     ],
+                    const SizedBox(height: 14),
+                    const Divider(height: 1),
+                    const SizedBox(height: 10),
+                    const Row(
+                      children: [
+                        Icon(Icons.bolt, color: Colors.amber, size: 16),
+                        SizedBox(width: 6),
+                        Text(
+                          'QUICK VERIFIED SAMPLES (ONE-TAP)',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.textMuted,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        _buildQuickBarcodeChip('Tata Tea (500g)', '8901030800009'),
+                        _buildQuickBarcodeChip('Parle-G (250g)', '8901063012345'),
+                        _buildQuickBarcodeChip('Amul Butter (500g)', '8901262010053'),
+                        _buildQuickBarcodeChip('Maggi (70g)', '8901058852898'),
+                        _buildQuickBarcodeChip('Aashirvaad Atta (5kg)', '8901030895410'),
+                        _buildQuickBarcodeChip('Fortune Oil (1L)', '8906007280015'),
+                        _buildQuickBarcodeChip('Dairy Milk (52g)', '8901233024843'),
+                        _buildQuickBarcodeChip('Dabur Honey (500g)', '8901207010018'),
+                      ],
+                    ),
                   ],
                 ),
               ),

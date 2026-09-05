@@ -349,6 +349,48 @@ class ScanProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// High-speed camera frame barcode detection and verification (< 150ms)
+  Future<String?> detectBarcodeFromCameraImage(File imageFile) async {
+    _isProcessing = true;
+    _statusMessage = 'Scanning image with high-speed ZXing engine...';
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.uploadFile(
+        '/scan/detect-barcode',
+        file: imageFile,
+        fieldName: 'file',
+      );
+
+      if (response.success && response.data != null) {
+        final data = response.data!;
+        final bool detected = data['detected'] == true;
+        if (detected && data['barcode'] != null) {
+          final barcodeStr = data['barcode'].toString();
+          _selectedBarcode = barcodeStr;
+
+          if (data['product'] != null && data['product']['status'] == 'FOUND') {
+            _product = OpenFoodFactsProduct.fromJson(data['product']);
+            _barcodeErrorMessage = null;
+          } else {
+            await lookupBarcode(barcodeStr);
+          }
+          _isProcessing = false;
+          _statusMessage = null;
+          notifyListeners();
+          return barcodeStr;
+        }
+      }
+    } catch (e) {
+      debugPrint('detectBarcodeFromCameraImage error: $e');
+    }
+
+    _isProcessing = false;
+    _statusMessage = null;
+    notifyListeners();
+    return null;
+  }
+
   /// Trigger AI Vision & OCR Extraction on Packaging Label Image
   Future<OCRExtractedData> processImageExtraction({File? imageFile}) async {
     _isProcessing = true;
