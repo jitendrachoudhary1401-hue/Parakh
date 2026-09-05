@@ -50,11 +50,11 @@ class NLPExtractor:
     # Enhanced Regex patterns for Indian product label entities (§17 Legal Metrology Rules)
     PATTERNS: Dict[str, List[re.Pattern]] = {
         "MRP": [
-            re.compile(r"(?:M\.?R\.?P\.?|Max\.?\s*Retail\s*Price|Maximum\s+Retail\s+Price)\s*[:\-]?\s*(?:Rs\.?|₹|INR)?\s*(\d+[\.,]?\d*)(?:\s*(?:Incl|Inclusive|\/|\n|$))?", re.IGNORECASE),
-            re.compile(r"(?:Rs\.?|₹|INR)\s*(\d+[\.,]?\d*)", re.IGNORECASE),
+            re.compile(r"(?:M\.?[RP]\.?P?\.?|Max\.?\s*Retail\s*Price|Maximum\s+Retail\s+Price)\s*[:\.\-]?\s*(?:Rs\.?|₹|INR)?\s*(\d+[\.,]?\d*)", re.IGNORECASE),
+            re.compile(r"(?:Rs\.?|₹|INR)\s*(\d+[\.,]?\d*)(?!\s*(?:per|perg|\/)\s*[gkml])", re.IGNORECASE),
         ],
         "NET_QUANTITY": [
-            re.compile(r"(?:Net\s+(?:Wt\.?|Weight|Qty\.?|Quantity|Content|Vol\.?|Volume))\s*[:\-]?\s*(\d+[\.,]?\d*\s*(?:g|gm|gms|kg|ml|l|ltr|litre|litres|cc|oz|n|pcs?|units?))\b", re.IGNORECASE),
+            re.compile(r"(?:Net\s*(?:Wt\.?|Weight|Qty\.?|Quantity|Quantty|Content|Vol\.?|Volume)?)\s*[:\-]?\s*(\d+[\.,]?\d*\s*(?:g|gm|gms|kg|ml|l|ltr|litre|litres|cc|oz|n|pcs?|units?))\b", re.IGNORECASE),
             re.compile(r"\b(\d+[\.,]?\d*\s*(?:g|gm|gms|kg|ml|l|ltr|litre|litres|cc|n|pcs|units))\b", re.IGNORECASE),
         ],
         "MFG_DATE": [

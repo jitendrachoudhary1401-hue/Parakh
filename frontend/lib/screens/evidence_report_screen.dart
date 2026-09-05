@@ -620,16 +620,45 @@ class _EvidenceReportScreenState extends State<EvidenceReportScreen>
                 ]),
                 const SizedBox(height: 8),
                 _buildGridRow([
-                  _buildDetailItem('Declared MRP', extracted?.mrp.isNotEmpty == true ? extracted.mrp : '₹ 45.00 (Incl. of taxes)'),
-                  _buildDetailItem('Declared Net Qty', extracted?.netQuantity.isNotEmpty == true ? extracted.netQuantity : '200 g'),
+                  _buildDetailItem(
+                    'Declared MRP',
+                    extracted?.mrp.isNotEmpty == true && extracted!.mrp != '₹ 0.00'
+                        ? (extracted.mrp.startsWith('₹') ? extracted.mrp : '₹ ${extracted.mrp}')
+                        : 'Not Detected on Scanned Panel',
+                  ),
+                  _buildDetailItem(
+                    'Declared Net Qty',
+                    extracted?.netQuantity.isNotEmpty == true
+                        ? extracted!.netQuantity
+                        : 'Not Detected on Scanned Panel',
+                  ),
                 ]),
                 const SizedBox(height: 8),
                 _buildGridRow([
-                  _buildDetailItem('Month & Year of Mfg', extracted?.mfgDate.isNotEmpty == true ? extracted.mfgDate : '04/2026'),
-                  _buildDetailItem('Consumer Care', extracted?.consumerCarePhone.isNotEmpty == true ? extracted.consumerCarePhone : '1800-11-2026'),
+                  _buildDetailItem(
+                    'Month & Year of Mfg',
+                    extracted?.mfgDate.isNotEmpty == true
+                        ? extracted!.mfgDate
+                        : 'Not Detected on Scanned Panel',
+                  ),
+                  _buildDetailItem(
+                    'Consumer Care',
+                    extracted?.consumerCarePhone.isNotEmpty == true
+                        ? extracted!.consumerCarePhone
+                        : (extracted?.consumerCareEmail.isNotEmpty == true
+                            ? extracted!.consumerCareEmail
+                            : 'Not Detected on Scanned Panel'),
+                  ),
                 ]),
                 const SizedBox(height: 8),
-                _buildDetailItem('Manufacturer / Packer', extracted?.manufacturerName.isNotEmpty == true ? '${extracted.manufacturerName}, ${extracted.manufacturerAddress}' : 'Hindustan Foods Ltd, Industrial Area, New Delhi'),
+                _buildDetailItem(
+                  'Manufacturer / Packer',
+                  extracted?.manufacturerName.isNotEmpty == true
+                      ? (extracted?.manufacturerAddress.isNotEmpty == true
+                          ? '${extracted!.manufacturerName}, ${extracted!.manufacturerAddress}'
+                          : extracted!.manufacturerName)
+                      : 'Not Detected on Scanned Panel',
+                ),
 
                 const Divider(height: 24),
 

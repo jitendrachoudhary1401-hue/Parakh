@@ -97,5 +97,9 @@ class Inspection(Base):
         "LegalNotice", back_populates="inspection", lazy="selectin",
     )
 
+    @property
+    def id(self) -> uuid.UUID:
+        return self.inspection_id
+
     def __repr__(self) -> str:
         return f"<Inspection {self.inspection_id} status={self.status}>"

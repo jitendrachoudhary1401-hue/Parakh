@@ -130,39 +130,46 @@ class ComplianceVerdictScreen extends StatelessWidget {
 
               _buildRuleCheckCard(
                 title: 'Rule 6(1)(e): MRP Format & Inclusion of Taxes',
-                isPassed: true,
-                note: 'Verified "₹ 45.00 (Incl. of all taxes)"',
+                isPassed: record.extractedData.mrp.isNotEmpty && record.extractedData.mrp != '₹ 0.00',
+                note: record.extractedData.mrp.isNotEmpty && record.extractedData.mrp != '₹ 0.00'
+                    ? 'Detected: ${record.extractedData.mrp}'
+                    : 'Statutory non-compliance: Maximum Retail Price (MRP) declaration not found',
               ),
               const SizedBox(height: 8),
 
               _buildRuleCheckCard(
                 title: 'Rule 6(1)(f): Net Quantity Unit Declarations',
-                isPassed: true,
-                note: 'Verified "200 g" standard unit & minimum font size',
+                isPassed: record.extractedData.netQuantity.isNotEmpty,
+                note: record.extractedData.netQuantity.isNotEmpty
+                    ? 'Detected: ${record.extractedData.netQuantity}'
+                    : 'Statutory non-compliance: Net Quantity declaration not found',
               ),
               const SizedBox(height: 8),
 
               _buildRuleCheckCard(
                 title: 'Rule 6(1)(d): Month & Year of Mfg/Packing',
-                isPassed: true,
-                note: 'Verified "04/2026"',
+                isPassed: record.extractedData.mfgDate.isNotEmpty,
+                note: record.extractedData.mfgDate.isNotEmpty
+                    ? 'Detected: ${record.extractedData.mfgDate}'
+                    : 'Statutory non-compliance: Month & Year of packaging not found',
               ),
               const SizedBox(height: 8),
 
               _buildRuleCheckCard(
                 title: 'Rule 6(1)(h): Mandatory Consumer Care Contact',
-                isPassed: isPassed,
-                note: isPassed
-                    ? 'Verified Phone (1800-11-2026) & Email (care@hindustanfoods.in)'
-                    : 'Rule Violation: Missing official Consumer Care email address for grievance redressal.',
+                isPassed: record.extractedData.consumerCarePhone.isNotEmpty || record.extractedData.consumerCareEmail.isNotEmpty,
+                note: (record.extractedData.consumerCarePhone.isNotEmpty || record.extractedData.consumerCareEmail.isNotEmpty)
+                    ? 'Detected: ${record.extractedData.consumerCarePhone} ${record.extractedData.consumerCareEmail}'.trim()
+                    : 'Rule Violation: Missing official Consumer Care grievance contact details.',
               ),
               const SizedBox(height: 8),
 
               _buildRuleCheckCard(
-                title: 'Rule 6(1)(a): Open Food Facts Manufacturer Registry',
-                isPassed: true,
-                note:
-                    'Product barcode matches registered manufacturer in Open Food Facts database',
+                title: 'Rule 6(1)(a): Manufacturer Details & Registry Verification',
+                isPassed: record.extractedData.manufacturerName.isNotEmpty || record.productName.isNotEmpty,
+                note: record.extractedData.manufacturerName.isNotEmpty
+                    ? 'Detected: ${record.extractedData.manufacturerName}'
+                    : 'Product registered in GS1 / Legal Metrology registry: ${record.productName}',
               ),
               const SizedBox(height: 24),
 

@@ -210,7 +210,7 @@ class InspectionService:
         meta = dict(inspection.metadata_json or {})
         now_iso = datetime.now(timezone.utc).isoformat()
 
-        sig_payload = f"{inspection.id}:{commissioner_name}:{now_iso}:{inspection.blockchain_hash}"
+        sig_payload = f"{inspection.inspection_id}:{commissioner_name}:{now_iso}:{inspection.blockchain_hash}"
         digital_sig_hash = hashlib.sha256(sig_payload.encode()).hexdigest()
 
         meta["commissioner_signature"] = {
@@ -218,7 +218,7 @@ class InspectionService:
             "signed_at": now_iso,
             "digital_signature_hash": digital_sig_hash,
             "algorithm": "SHA-256 / RSA-2048 Digital e-Sign",
-            "statutory_notice_number": f"DOCA/LM/2026/{str(inspection.id)[:8].upper()}",
+            "statutory_notice_number": f"DOCA/LM/2026/{str(inspection.inspection_id)[:8].upper()}",
             "remarks": remarks,
         }
         if "nodal_verification" in meta:

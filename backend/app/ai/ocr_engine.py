@@ -50,10 +50,75 @@ class OCRResult:
 
 
 class OCREngine:
-    """Google Cloud Vision OCR integration."""
+    """Google Cloud Vision OCR integration with high-speed RapidOCR ONNX fallback."""
+
+    _shared_rapid_ocr = None
 
     def __init__(self):
         self._client = None
+
+    @classmethod
+    def _get_rapid_ocr(cls):
+        if cls._shared_rapid_ocr is None:
+            from rapidocr_onnxruntime import RapidOCR
+            cls._shared_rapid_ocr = RapidOCR()
+        return cls._shared_rapid_ocr
+
+    def _extract_with_rapidocr(self, image_bytes: bytes) -> OCRResult:
+        try:
+            import cv2
+            import numpy as np
+
+            ocr = self._get_rapid_ocr()
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if img is None:
+                return OCRResult(success=False, error_message="Failed to decode image bytes for RapidOCR")
+
+            results, _ = ocr(img)
+            if not results:
+                return OCRResult(success=True, raw_text="", confidence=0.0)
+
+            h, w = img.shape[:2]
+            words = []
+            text_lines = []
+            confidences = []
+
+            for item in results:
+                box_pts, text, score_val = item[0], item[1], float(item[2])
+                text_lines.append(text)
+                confidences.append(score_val)
+
+                xs = [pt[0] for pt in box_pts]
+                ys = [pt[1] for pt in box_pts]
+                min_x, max_x = max(0.0, min(xs)), min(float(w), max(xs))
+                min_y, max_y = max(0.0, min(ys)), min(float(h), max(ys))
+
+                words.append(OCRWord(
+                    text=text,
+                    confidence=score_val,
+                    bounding_box=BoundingBox(
+                        x=min_x / w if w > 0 else 0.0,
+                        y=min_y / h if h > 0 else 0.0,
+                        width=(max_x - min_x) / w if w > 0 else 0.0,
+                        height=(max_y - min_y) / h if h > 0 else 0.0,
+                    )
+                ))
+
+            full_text = "\n".join(text_lines)
+            avg_conf = sum(confidences) / len(confidences) if confidences else 0.0
+            logger.info("RapidOCR deep learning engine extracted %d lines (confidence=%.2f)", len(text_lines), avg_conf)
+            return OCRResult(
+                success=True,
+                raw_text=full_text,
+                words=words,
+                paragraphs=text_lines,
+                language="en",
+                confidence=avg_conf,
+            )
+        except Exception as exc:
+            logger.exception("RapidOCR execution failed: %s", exc)
+            return OCRResult(success=False, error_message=f"RapidOCR failed: {exc}")
 
     def _get_client(self):
         """Lazy-initialize the Vision API client using configured credentials or API key."""
@@ -132,11 +197,8 @@ class OCREngine:
                 response = client.text_detection(image=image)
 
             if response.error.message:
-                logger.error("Cloud Vision API error: %s", response.error.message)
-                return OCRResult(
-                    success=False,
-                    error_message=f"Cloud Vision error: {response.error.message}",
-                )
+                logger.warning("Cloud Vision API error (%s). Falling back to RapidOCR...", response.error.message)
+                return self._extract_with_rapidocr(image_bytes)
 
             # Extract full text
             full_text = ""
@@ -227,18 +289,11 @@ class OCREngine:
             )
 
         except ImportError:
-            logger.error("google-cloud-vision package not installed")
-            return OCRResult(
-                success=False,
-                error_message="OCR service not configured (google-cloud-vision package not installed)",
-            )
-
+            logger.warning("google-cloud-vision package not installed. Using RapidOCR engine...")
+            return self._extract_with_rapidocr(image_bytes)
         except Exception as exc:
-            logger.exception("OCR extraction failed: %s", exc)
-            return OCRResult(
-                success=False,
-                error_message=f"OCR service unavailable: {str(exc)}",
-            )
+            logger.warning("Google Cloud Vision unavailable (%s). Falling back to RapidOCR ONNX engine...", exc)
+            return self._extract_with_rapidocr(image_bytes)
 
     async def extract_text_from_ndarray(self, img: np.ndarray) -> OCRResult:
         """
