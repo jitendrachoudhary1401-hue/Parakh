@@ -234,7 +234,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                       style: const TextStyle(
                           fontSize: 12, fontFamily: 'monospace'),
                       decoration: const InputDecoration(
-                        hintText: 'http://172.17.12.24:8000/api/v1',
+                        hintText: 'http://172.23.51.59:8000/api/v1',
                         prefixIcon: Icon(Icons.dns_outlined,
                             size: 18, color: AppTheme.secondary),
                       ),
