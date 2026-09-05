@@ -42,6 +42,8 @@ class ApiClient {
     return AppConstants.localhostApiUrl;
   }
 
+  static String get defaultBaseUrl => _resolveDefaultBaseUrl();
+
   void updateBaseUrl(String url) {
     _baseUrl = url;
   }

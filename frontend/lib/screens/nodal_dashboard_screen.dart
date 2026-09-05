@@ -27,6 +27,16 @@ class NodalDashboardScreen extends StatefulWidget {
 class _NodalDashboardScreenState extends State<NodalDashboardScreen> {
   int _currentNavIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final compliance = Provider.of<ComplianceProvider>(context, listen: false);
+      compliance.fetchNodalMetrics();
+      compliance.fetchPendingNodalInspections();
+    });
+  }
+
   void _showRoleSwitchModal(BuildContext context, AuthProvider auth) {
     showModalBottomSheet(
       context: context,
@@ -167,15 +177,9 @@ class _NodalDashboardScreenState extends State<NodalDashboardScreen> {
     final compliance = Provider.of<ComplianceProvider>(context);
 
     final history = compliance.inspectionHistory;
-    final pendingScrutiny = history
-        .where((e) =>
-            e.status == 'unverified' ||
-            e.status == 'pending_nodal_verification')
-        .length;
-    final acceptedCount =
-        history.where((e) => e.status == 'verified_accepted').length;
-    final rejectedCount =
-        history.where((e) => e.status == 'verified_rejected').length;
+    final pendingScrutiny = compliance.nodalWaitingCount;
+    final acceptedCount = compliance.nodalAcceptedCount;
+    final rejectedCount = compliance.nodalDeniedCount;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -250,9 +254,15 @@ class _NodalDashboardScreenState extends State<NodalDashboardScreen> {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppTheme.marginMain, vertical: 16),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            await compliance.fetchNodalMetrics();
+            await compliance.fetchPendingNodalInspections();
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.marginMain, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -459,6 +469,7 @@ class _NodalDashboardScreenState extends State<NodalDashboardScreen> {
           ),
         ),
       ),
+    ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentNavIndex.clamp(0, 2),
         onTap: (index) {

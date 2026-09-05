@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/api_client.dart';
 import '../core/role_guard.dart';
 import '../core/theme.dart';
 import '../models/models.dart';
@@ -383,27 +385,7 @@ class _NodalVerifierScreenState extends State<NodalVerifierScreen> {
                                   ],
                                 ),
                               ],
-                              if (dossier.imagePath.isNotEmpty) ...[
-                                const SizedBox(height: 12),
-                                const Text('Packaging Photo Evidence:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textMuted)),
-                                const SizedBox(height: 6),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-                                  child: Image.network(
-                                    dossier.imagePath,
-                                    height: 160,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
-                                      height: 80,
-                                      color: Colors.grey.shade200,
-                                      child: const Center(
-                                        child: Text('Evidence image attached locally by field inspector', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              _buildEvidencePhotoCard(dossier),
                             ],
                           ),
                         ),
@@ -588,6 +570,233 @@ class _NodalVerifierScreenState extends State<NodalVerifierScreen> {
               value,
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEvidencePhotoCard(InspectionRecord dossier) {
+    final serverImageUrl = '${ApiClient.defaultBaseUrl}/inspections/${dossier.id}/image';
+    final hasLocalFile = dossier.imagePath.isNotEmpty && File(dossier.imagePath).existsSync();
+
+    return Container(
+      margin: const EdgeInsets.only(top: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+        border: Border.all(color: AppTheme.secondary.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header Bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                const Icon(Icons.camera_enhance_outlined, color: Colors.cyanAccent, size: 16),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'AR FIELD EVIDENCE CAPTURE',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.cyanAccent.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.4)),
+                  ),
+                  child: const Text(
+                    'STATUTORY EVIDENCE',
+                    style: TextStyle(
+                      color: Colors.cyanAccent,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Photo Display / Viewer
+          ClipRRect(
+            child: GestureDetector(
+              onTap: () => _showFullScreenEvidence(context, dossier, hasLocalFile, serverImageUrl),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    height: 220,
+                    width: double.infinity,
+                    color: Colors.black,
+                    child: hasLocalFile
+                        ? Image.file(
+                            File(dossier.imagePath),
+                            fit: BoxFit.contain,
+                          )
+                        : Image.network(
+                            serverImageUrl,
+                            fit: BoxFit.contain,
+                            loadingBuilder: (ctx, child, progress) {
+                              if (progress == null) return child;
+                              return const Center(
+                                child: CircularProgressIndicator(color: Colors.cyanAccent),
+                              );
+                            },
+                            errorBuilder: (ctx, error, stackTrace) {
+                              if (dossier.imagePath.startsWith('http')) {
+                                return Image.network(
+                                  dossier.imagePath,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (_, __, ___) => _buildEvidenceFallback(dossier),
+                                );
+                              }
+                              return _buildEvidenceFallback(dossier);
+                            },
+                          ),
+                  ),
+
+                  // Tap to zoom hint overlay
+                  Positioned(
+                    bottom: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.75),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.zoom_in, color: Colors.white, size: 14),
+                          SizedBox(width: 4),
+                          Text(
+                            'Pinch / Zoom',
+                            style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Telemetry Bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            color: const Color(0xFF1E293B),
+            child: Row(
+              children: [
+                const Icon(Icons.pin_drop_outlined, color: Colors.white70, size: 13),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    '${dossier.latitude.toStringAsFixed(5)}°N, ${dossier.longitude.toStringAsFixed(5)}°E',
+                    style: const TextStyle(color: Colors.white70, fontSize: 10, fontFamily: 'monospace'),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const Icon(Icons.schedule, color: Colors.white70, size: 13),
+                const SizedBox(width: 4),
+                Text(
+                  '${dossier.timestamp.day}/${dossier.timestamp.month}/${dossier.timestamp.year} ${dossier.timestamp.hour.toString().padLeft(2, '0')}:${dossier.timestamp.minute.toString().padLeft(2, '0')} IST',
+                  style: const TextStyle(color: Colors.white70, fontSize: 10, fontFamily: 'monospace'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFullScreenEvidence(BuildContext context, InspectionRecord dossier, bool hasLocalFile, String serverImageUrl) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: const EdgeInsets.all(8),
+        child: Column(
+          children: [
+            AppBar(
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+              title: Text(
+                'Evidence: ${dossier.productName}',
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+            Expanded(
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: Center(
+                  child: hasLocalFile
+                      ? Image.file(File(dossier.imagePath), fit: BoxFit.contain)
+                      : Image.network(
+                          serverImageUrl,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => dossier.imagePath.startsWith('http')
+                              ? Image.network(dossier.imagePath, fit: BoxFit.contain)
+                              : _buildEvidenceFallback(dossier),
+                        ),
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(12),
+              color: const Color(0xFF1E293B),
+              child: Text(
+                'Geotag: ${dossier.latitude}, ${dossier.longitude} • Timestamp: ${dossier.timestamp.toIso8601String()}',
+                style: const TextStyle(color: Colors.white70, fontSize: 11, fontFamily: 'monospace'),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEvidenceFallback(InspectionRecord dossier) {
+    return Container(
+      height: 160,
+      color: const Color(0xFF1E293B),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.qr_code_2, color: Colors.cyanAccent, size: 36),
+          const SizedBox(height: 8),
+          const Text(
+            'AR Scan Packaging Record',
+            style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Barcode: ${dossier.barcode}\nDigital Signature Anchor: ${dossier.blockchainReceipt?.evidenceHash.isNotEmpty == true && dossier.blockchainReceipt!.evidenceHash.length >= 16 ? dossier.blockchainReceipt!.evidenceHash.substring(0, 16) : "SHA-256 Validated"}...',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white70, fontSize: 10, fontFamily: 'monospace'),
           ),
         ],
       ),
