@@ -432,7 +432,7 @@ class _CitizenDashboardScreenState extends State<CitizenDashboardScreen> {
   }
 
   Widget _buildVerifiedReportCard(BuildContext context, InspectionRecord report) {
-    final serverImageUrl = '${ApiClient.baseUrl}/inspections/${report.id}/image';
+    final serverImageUrl = '${ApiClient.defaultBaseUrl}/inspections/${report.id}/image';
     final hasLocalFile = report.imagePath.isNotEmpty && File(report.imagePath).existsSync();
 
     return Container(
@@ -502,12 +502,12 @@ class _CitizenDashboardScreenState extends State<CitizenDashboardScreen> {
                           if (report.status == 'signed_notice_issued' || report.commissionerStatus.contains('SIGNED')) ...[
                             const StatusPill(
                               label: 'NOTICE ISSUED',
-                              isViolation: true,
+                              isCompliant: false,
                             ),
                           ] else ...[
                             const StatusPill(
                               label: 'NODAL VERIFIED',
-                              isSuccess: true,
+                              isCompliant: true,
                             ),
                           ],
                           const Spacer(),
