@@ -5,6 +5,7 @@ import '../models/models.dart';
 /// Local Storage Service for Offline Inspections, Token, and Settings
 class StorageService {
   static const String _keyToken = 'auth_token';
+  static const String _keyRefreshToken = 'auth_refresh_token';
   static const String _keyUser = 'auth_user';
   static const String _keyInspections = 'local_inspections';
   static const String _keySyncQueue = 'sync_queue';
@@ -29,8 +30,18 @@ class StorageService {
     return _prefs.getString(_keyToken);
   }
 
+  // Refresh Token
+  Future<void> saveRefreshToken(String token) async {
+    await _prefs.setString(_keyRefreshToken, token);
+  }
+
+  String? getRefreshToken() {
+    return _prefs.getString(_keyRefreshToken);
+  }
+
   Future<void> clearAuth() async {
     await _prefs.remove(_keyToken);
+    await _prefs.remove(_keyRefreshToken);
     await _prefs.remove(_keyUser);
   }
 

@@ -59,7 +59,7 @@ class Settings(BaseSettings):
     # --- JWT / Authentication ---
     jwt_secret_key: str = "CHANGE_ME_TO_A_STRONG_RANDOM_SECRET"
     jwt_algorithm: str = "HS256"
-    jwt_access_token_expire_minutes: int = 30
+    jwt_access_token_expire_minutes: int = 1440
     jwt_refresh_token_expire_days: int = 7
 
     # --- Google Cloud Vision (OCR) ---

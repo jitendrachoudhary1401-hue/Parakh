@@ -8,14 +8,26 @@ Login, token refresh, and logout.
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_user
 from app.audit.logger import AuditService
 from app.core.rate_limiter import limiter
 from app.core.responses import success_response
 from app.db.postgres import get_db
+from app.models.user import User
 from app.schemas.auth import LoginRequest, RefreshTokenRequest, LogoutRequest
+from app.schemas.user import UserResponse
 from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+
+@router.get("/me")
+async def get_auth_me(current_user: User = Depends(get_current_user)):
+    """Retrieve profile and token validity of currently authenticated user."""
+    return success_response(
+        data=UserResponse.model_validate(current_user).model_dump(),
+        message="Session active",
+    )
 
 
 @router.post("/login")

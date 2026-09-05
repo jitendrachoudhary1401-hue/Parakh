@@ -6,7 +6,7 @@ Shared FastAPI dependencies: database sessions, authenticated user extraction, a
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
@@ -25,20 +25,37 @@ async def get_current_user(
 ) -> User:
     """Dependency that resolves the authenticated User ORM model from token."""
     user_id_str = payload.get("sub")
-    if not user_id_str:
+    email = payload.get("email")
+    if not user_id_str and not email:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token missing subject identifier",
         )
 
     user_repo = UserRepository(db)
-    user = await user_repo.get_by_id(UUID(user_id_str))
+    user: Optional[User] = None
+    if user_id_str:
+        try:
+            user = await user_repo.get_by_id(UUID(user_id_str))
+        except (ValueError, TypeError):
+            user = None
+
+    if not user and email:
+        user = await user_repo.get_by_email(email)
+
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or inactive",
         )
     return user
+
+
+def get_current_commissioner(
+    payload: Dict[str, Any] = Depends(require_roles(Role.FOOD_COMMISSIONER, Role.ADMIN)),
+) -> Dict[str, Any]:
+    """Dependency allowing Food Commissioners or Admins only."""
+    return payload
 
 
 def get_current_inspector(

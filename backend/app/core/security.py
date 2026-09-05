@@ -159,7 +159,7 @@ def decode_token(token: str) -> dict[str, Any]:
     if token.startswith("demo_") or token in ("demo_token", "demo_inspector_token_2026", "demo_nodal_token_2026", "demo_commissioner_token_2026"):
         if "nodal" in token:
             return {
-                "sub": "7c3e2c08-0c08-4701-bb3f-4cb0187c9a38",
+                "sub": "5027881f-babe-4170-b249-ecd174847621",
                 "email": "nodal.officer@doca.gov.in",
                 "role": "nodal_officer",
                 "zone_id": "Central HQ (Verification Division)",
@@ -168,7 +168,7 @@ def decode_token(token: str) -> dict[str, Any]:
             }
         elif "commissioner" in token:
             return {
-                "sub": "7c3e2c08-0c08-4701-bb3f-4cb0187c9a38",
+                "sub": "47030d54-f2e2-4dc3-bafa-184787dce1ce",
                 "email": "food.commissioner@doca.gov.in",
                 "role": "food_commissioner",
                 "zone_id": "Directorate General (Apex Authority)",

@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Body, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_admin, get_current_inspector, get_current_nodal_officer, get_current_user
@@ -195,7 +195,7 @@ async def get_pending_commissioner(
 @router.post("/{inspection_id}/commissioner-sign")
 async def record_commissioner_signature(
     inspection_id: UUID,
-    payload: Optional[Dict[str, Any]] = None,
+    payload: Optional[Dict[str, Any]] = Body(default=None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
