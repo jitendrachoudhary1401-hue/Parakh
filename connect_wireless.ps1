@@ -34,9 +34,8 @@ if ($deviceSerials.Count -eq 0) {
 }
 Write-Host ""
 
-Write-Host "[3/3] Active Network Gateways:" -ForegroundColor Yellow
 Write-Host "  - Localhost / ADB Reverse: http://127.0.0.1:8000/api/v1" -ForegroundColor White
-Write-Host "  - Wireless Wi-Fi LAN IP:   http://$($wifiIp):8000/api/v1" -ForegroundColor White
+Write-Host ("  - Wireless Wi-Fi LAN IP:   http://" + $wifiIp + ":8000/api/v1") -ForegroundColor White
 Write-Host ""
 
 # 4. Test connectivity from attached devices
