@@ -150,10 +150,12 @@ class _NodalDashboardScreenState extends State<NodalDashboardScreen> {
         trailing: isSelected
             ? Icon(Icons.check_circle, color: color, size: 20)
             : const Icon(Icons.chevron_right, size: 18, color: AppTheme.textMuted),
-        onTap: () {
-          auth.switchRole(role);
+        onTap: () async {
           Navigator.pop(ctx);
-          Navigator.pushReplacementNamed(context, '/dashboard');
+          await auth.switchRole(role);
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/dashboard');
+          }
         },
       ),
     );
